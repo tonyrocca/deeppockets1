@@ -13,7 +13,7 @@ struct AffordabilityView: View {
    }
    
    var body: some View {
-       VStack(spacing: 16) {
+       VStack(spacing: 12) {
            // Income Display
            HStack(alignment: .center, spacing: 6) {
                Menu {
@@ -114,7 +114,7 @@ struct AffordabilityView: View {
            )
            .padding(.horizontal, 16)
        }
-       .padding(.top, 16)
+       .padding(.top, 8) // Reduced top padding
    }
    
    private func formatCurrency(_ value: Double) -> String {

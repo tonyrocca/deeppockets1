@@ -17,7 +17,7 @@ struct TabHeaderView: View {
                 action: { selectedTab = 1 }
             )
         }
-        .frame(height: 44)
+        .frame(height: 44) // Standard height for tab bar
         .background(Theme.darkBackground)
     }
 }

@@ -68,7 +68,7 @@ struct SalaryInputView: View {
                .padding(.top, 40)
            }
            .navigationDestination(isPresented: $showAffordability) {
-               MainContentView()
+               MainContentView(monthlyIncome: affordabilityModel.monthlyIncome)
            }
        }
    }
