@@ -4,9 +4,7 @@ import SwiftUI
 struct DeepPocketsApp: App {
     var body: some Scene {
         WindowGroup {
-            NavigationStack {
-                SalaryInputView()
-            }
+            SalaryInputView() // Remove the NavigationStack here
         }
     }
 }
