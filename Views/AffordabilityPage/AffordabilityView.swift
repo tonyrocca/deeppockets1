@@ -13,18 +13,20 @@ struct AffordabilityView: View {
     }
     
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
-                Section(header: StickyIncomeHeader(monthlyIncome: model.monthlyIncome)) {
-                    headerContent
-                    searchBar
-                    categoriesList
+            ScrollView {
+                LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    Section(header: StickyIncomeHeader(monthlyIncome: model.monthlyIncome)) {
+                        headerContent
+                        searchBar
+                        categoriesList
+                    }
                 }
             }
+            .background(Theme.background)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Theme.background, for: .navigationBar) // Add this
+            .toolbarBackground(.visible, for: .navigationBar)        // Add this
         }
-        .background(Theme.background)
-        .navigationBarTitleDisplayMode(.inline)
-    }
     
     private var headerContent: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -249,11 +251,40 @@ struct CategoryRowView: View {
        }
    }
     private func getUnitLabel(for title: String) -> String {
-        switch title {
-        case "Down Payment": return "%"
-        case "Interest Rate": return "%"
-        case "Loan Term (Years)": return "yr"
-        default: return ""
+        // Special cases first
+        if title == "Loan Term" || title == "Years to Save" {
+            return "yr"
         }
+        if title == "Months Coverage" {
+            return "mo"
+        }
+        if title.contains("Rate") || title == "Monthly Save" {
+            return "%"
+        }
+        
+        // Distribution percentages
+        let percentageFields = [
+            "Down Payment",
+            "Fresh Foods", "Pantry Items", "Household",
+            "Car Payment", "Insurance", "Fuel & Maintenance",
+            "Takeout", "Coffee & Snacks", "Delivery Fees",
+            "Public Transit", "Ride Share", "Other",
+            "Food & Supplies", "Vet & Health", "Other Care",
+            "Dining Out", "Special Events", "Tips",
+            "Basics", "Seasonal", "Accessories",
+            "Streaming", "Software", "Other Services",
+            "Gym Access", "Classes", "Equipment",
+            "Stocks", "Bonds", "Other Assets",
+            "Cleaning", "Paper Goods", "Other Items",
+            "Electricity", "Water & Gas", "Internet/Phone",
+            "Travel", "Lodging", "Activities",
+            "Shows", "Sports", "Other Events"
+        ]
+        
+        if percentageFields.contains(title) {
+            return "%"
+        }
+        
+        return ""
     }
 }
