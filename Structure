@@ -1,0 +1,12 @@
+DeepPockets/
+├── App/
+│   └── DeepPocketsApp.swift
+├── Models/
+│   ├── BudgetCategory.swift
+│   ├── PayPeriod.swift
+│   └── AffordabilityModel.swift
+├── Stores/
+│   └── BudgetCategoryStore.swift
+└── Views/
+    ├── SalaryInputView.swift
+    └── AffordabilityView.swift

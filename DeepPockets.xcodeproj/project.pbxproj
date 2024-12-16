@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		7737C12F2D095E4B002A0CAB /* Structure in Resources */ = {isa = PBXBuildFile; fileRef = 7737C12E2D095E4B002A0CAB /* Structure */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		7737C1122D095E2F002A0CAB /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,7 +31,44 @@
 		7737C0FC2D095E2E002A0CAB /* DeepPockets.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeepPockets.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7737C1112D095E2F002A0CAB /* DeepPocketsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DeepPocketsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7737C11B2D095E2F002A0CAB /* DeepPocketsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DeepPocketsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7737C12E2D095E4B002A0CAB /* Structure */ = {isa = PBXFileReference; lastKnownFileType = text; path = Structure; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		7737C13D2D095EA8002A0CAB /* Exceptions for "Views" folder in "DeepPocketsUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AffordabilityPage/AffordabilityView.swift,
+				AffordabilityPage/IncomeDisplay.swift,
+				SalaryInputView.swift,
+				TempView.swift,
+			);
+			target = 7737C11A2D095E2F002A0CAB /* DeepPocketsUITests */;
+		};
+		7737C1442D095EBE002A0CAB /* Exceptions for "Stores" folder in "DeepPocketsUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				BudgetCategoryStore.swift,
+			);
+			target = 7737C11A2D095E2F002A0CAB /* DeepPocketsUITests */;
+		};
+		7737C1482D095EC8002A0CAB /* Exceptions for "Models" folder in "DeepPocketsUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AffordabilityModel.swift,
+				BudgetCategory.swift,
+				PayPeriod.swift,
+			);
+			target = 7737C11A2D095E2F002A0CAB /* DeepPocketsUITests */;
+		};
+		7737C1542D095F9E002A0CAB /* Exceptions for "Theme" folder in "DeepPocketsUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Theme.swift,
+			);
+			target = 7737C11A2D095E2F002A0CAB /* DeepPocketsUITests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		7737C0FE2D095E2E002A0CAB /* DeepPockets */ = {
@@ -43,6 +84,38 @@
 		7737C11E2D095E2F002A0CAB /* DeepPocketsUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = DeepPocketsUITests;
+			sourceTree = "<group>";
+		};
+		7737C1312D095E77002A0CAB /* Models */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7737C1482D095EC8002A0CAB /* Exceptions for "Models" folder in "DeepPocketsUITests" target */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		7737C1332D095E85002A0CAB /* Stores */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7737C1442D095EBE002A0CAB /* Exceptions for "Stores" folder in "DeepPocketsUITests" target */,
+			);
+			path = Stores;
+			sourceTree = "<group>";
+		};
+		7737C1352D095E8D002A0CAB /* Views */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7737C13D2D095EA8002A0CAB /* Exceptions for "Views" folder in "DeepPocketsUITests" target */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		7737C1502D095F97002A0CAB /* Theme */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7737C1542D095F9E002A0CAB /* Exceptions for "Theme" folder in "DeepPocketsUITests" target */,
+			);
+			path = Theme;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -75,6 +148,11 @@
 		7737C0F32D095E2E002A0CAB = {
 			isa = PBXGroup;
 			children = (
+				7737C1502D095F97002A0CAB /* Theme */,
+				7737C1352D095E8D002A0CAB /* Views */,
+				7737C1332D095E85002A0CAB /* Stores */,
+				7737C1312D095E77002A0CAB /* Models */,
+				7737C12E2D095E4B002A0CAB /* Structure */,
 				7737C0FE2D095E2E002A0CAB /* DeepPockets */,
 				7737C1142D095E2F002A0CAB /* DeepPocketsTests */,
 				7737C11E2D095E2F002A0CAB /* DeepPocketsUITests */,
@@ -109,6 +187,10 @@
 			);
 			fileSystemSynchronizedGroups = (
 				7737C0FE2D095E2E002A0CAB /* DeepPockets */,
+				7737C1312D095E77002A0CAB /* Models */,
+				7737C1332D095E85002A0CAB /* Stores */,
+				7737C1352D095E8D002A0CAB /* Views */,
+				7737C1502D095F97002A0CAB /* Theme */,
 			);
 			name = DeepPockets;
 			packageProductDependencies = (
@@ -226,6 +308,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7737C12F2D095E4B002A0CAB /* Structure in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
