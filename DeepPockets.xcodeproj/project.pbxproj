@@ -40,7 +40,10 @@
 			membershipExceptions = (
 				AffordabilityPage/AffordabilityView.swift,
 				AffordabilityPage/IncomeDisplay.swift,
-				SalaryInputView.swift,
+				BudgetPage/BudgetView.swift,
+				MainContentView.swift,
+				Onboarding/SalaryInputView.swift,
+				TabHeaderView.swift,
 				TempView.swift,
 			);
 			target = 7737C11A2D095E2F002A0CAB /* DeepPocketsUITests */;

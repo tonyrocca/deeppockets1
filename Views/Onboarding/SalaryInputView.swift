@@ -68,9 +68,7 @@ struct SalaryInputView: View {
                .padding(.top, 40)
            }
            .navigationDestination(isPresented: $showAffordability) {
-               AffordabilityView(model: affordabilityModel)
-                   .navigationBarBackButtonHidden(true)
-                   .interactiveDismissDisabled()
+               MainContentView()
            }
        }
    }
