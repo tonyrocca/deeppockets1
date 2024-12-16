@@ -25,18 +25,18 @@ extension BudgetCategoryStore {
     func createCategories() -> [BudgetCategory] {
         return [
             BudgetCategory(
-                id: "mortgage",
-                name: "Mortgage (House)",
-                emoji: "🏠",
-                description: "Monthly payment towards a home mortgage, including principal and interest.",
-                allocationPercentage: 0.20,
-                displayType: .monthly,
-                assumptions: [
-                    CategoryAssumption(title: "Down Payment", value: "20% for home purchase"),
-                    CategoryAssumption(title: "Interest Rate", value: "Assume ~6-7% annually"),
-                    CategoryAssumption(title: "Property Taxes/Insurance", value: "Often escrowed into monthly payment")
-                ]
-            ),
+                            id: "house",
+                            name: "House Price",
+                            emoji: "🏠",
+                            description: "Maximum home price you can afford based on your income and current mortgage rates.",
+                            allocationPercentage: 0.20,
+                            displayType: .total,
+                            assumptions: [
+                                CategoryAssumption(title: "Down Payment", value: "20"),
+                                CategoryAssumption(title: "Interest Rate", value: "6.5"),
+                                CategoryAssumption(title: "Loan Term (Years)", value: "30")
+                            ]
+                        ),
             
             BudgetCategory(
                 id: "rent",
