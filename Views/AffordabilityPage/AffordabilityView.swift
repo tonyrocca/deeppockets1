@@ -32,9 +32,12 @@ struct AffordabilityView: View {
                                 Image(systemName: "magnifyingglass")
                                     .foregroundColor(Theme.secondaryLabel)
                                 TextField("Search categories", text: $searchText)
-                                    .font(.system(size: 17))
-                                    .foregroundColor(Theme.label)
-                                    .tint(Theme.tint)
+                                                                    .font(.system(size: 17))
+                                                                    .foregroundColor(Theme.label)
+                                                                    .placeholder(when: searchText.isEmpty) {
+                                                                        Text("Search categories")
+                                                                            .foregroundColor(Theme.label.opacity(0.6))
+                                                                    }
                                 
                                 if !searchText.isEmpty {
                                     Button(action: {

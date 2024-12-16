@@ -25,8 +25,8 @@ struct SalaryInputView: View {
                         TextField("Amount", text: $paycheck)
                             .keyboardType(.decimalPad)
                             .textFieldStyle(Theme.CustomTextFieldStyle())
-                            .tint(Theme.tint)
-                            .foregroundColor(Theme.label)
+                                                        .tint(Theme.tint)
+                                                        .foregroundColor(.white)
                     }
                     
                     VStack(alignment: .leading, spacing: 12) {

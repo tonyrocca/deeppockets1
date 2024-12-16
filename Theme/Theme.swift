@@ -40,14 +40,14 @@ enum Theme {
     
     // MARK: - Text Field Style
     struct CustomTextFieldStyle: TextFieldStyle {
-        func _body(configuration: TextField<Self._Label>) -> some View {
-            configuration
-                .padding()
-                .background(elevatedBackground)
-                .cornerRadius(10)
-                .foregroundColor(.white)
+            func _body(configuration: TextField<Self._Label>) -> some View {
+                configuration
+                    .padding()
+                    .background(Color.black.opacity(0.3))
+                    .cornerRadius(10)
+                    .foregroundColor(.white)
+            }
         }
-    }
 }
 
 // Helper extension for hex colors
@@ -74,5 +74,18 @@ extension Color {
             blue:  Double(b) / 255,
             opacity: Double(a) / 255
         )
+    }
+}
+
+extension View {
+    func placeholder<Content: View>(
+        when shouldShow: Bool,
+        alignment: Alignment = .leading,
+        @ViewBuilder placeholder: () -> Content
+    ) -> some View {
+        ZStack(alignment: alignment) {
+            placeholder().opacity(shouldShow ? 1 : 0)
+            self
+        }
     }
 }
