@@ -42,6 +42,7 @@
 				AffordabilityPage/IncomeDisplay.swift,
 				BudgetPage/BudgetView.swift,
 				HomeView/ActionButtonView.swift,
+				HomeView/AffordabilityCalculator.swift,
 				HomeView/MainContentView.swift,
 				HomeView/TabHeaderView.swift,
 				HomeView/TempView.swift,
