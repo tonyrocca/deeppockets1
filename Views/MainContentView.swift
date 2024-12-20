@@ -13,9 +13,9 @@ struct MainContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             TabHeaderView(selectedTab: $selectedTab)
-                .ignoresSafeArea(edges: .top) // Add this
+                .ignoresSafeArea(edges: .top)
             
-            ScrollView {
+            ScrollView(showsIndicators: false) { // Added showsIndicators: false
                 if selectedTab == 0 {
                     AffordabilityView(model: model)
                 } else {
@@ -24,7 +24,8 @@ struct MainContentView: View {
             }
         }
         .background(Theme.background)
-        .navigationBarHidden(true) // Add this
+        .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
     }
 }
+

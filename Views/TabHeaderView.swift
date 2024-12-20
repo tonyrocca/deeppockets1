@@ -5,7 +5,7 @@ struct TabHeaderView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            Color.black // Add status bar background
+            Color.black
                 .frame(height: UIApplication.shared.windows.first?.safeAreaInsets.top ?? 0)
             
             HStack(spacing: 0) {
@@ -21,7 +21,7 @@ struct TabHeaderView: View {
                     action: { selectedTab = 1 }
                 )
             }
-            .frame(height: 44)
+            .frame(height: 40) // Reduced from 44 to 40
         }
         .background(Theme.darkBackground)
     }

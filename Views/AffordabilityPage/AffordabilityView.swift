@@ -13,7 +13,7 @@ struct AffordabilityView: View {
    }
    
    var body: some View {
-       VStack(spacing: 12) {
+       VStack(spacing: 0) {
            // Income Display
            HStack(alignment: .center, spacing: 6) {
                Menu {
@@ -40,7 +40,7 @@ struct AffordabilityView: View {
                    .font(.system(size: 24, weight: .medium))
                    .foregroundColor(Theme.label)
            }
-           .padding(16)
+           .padding(12)
            .background(Theme.surfaceBackground)
            .cornerRadius(12)
            .padding(.horizontal)
@@ -55,6 +55,7 @@ struct AffordabilityView: View {
                    .foregroundColor(Theme.secondaryLabel)
            }
            .padding(.horizontal, 16)
+           .padding(.top, 12)
            
            // Search Bar
            HStack {
@@ -79,6 +80,7 @@ struct AffordabilityView: View {
            .background(Theme.elevatedBackground)
            .cornerRadius(12)
            .padding(.horizontal, 16)
+           .padding(.top, 12)
            
            // Categories List
            VStack(spacing: 0) {
@@ -113,8 +115,8 @@ struct AffordabilityView: View {
                    .stroke(Theme.separator, lineWidth: 1)
            )
            .padding(.horizontal, 16)
+           .padding(.top, 12)
        }
-       .padding(.top, 8) // Reduced top padding
    }
    
    private func formatCurrency(_ value: Double) -> String {
