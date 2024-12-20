@@ -4,7 +4,6 @@ struct MainContentView: View {
     @StateObject private var model: AffordabilityModel
     @State private var selectedTab = 0
     
-    // Add initializer to receive initial monthly income
     init(monthlyIncome: Double) {
         let model = AffordabilityModel()
         model.monthlyIncome = monthlyIncome
@@ -14,8 +13,8 @@ struct MainContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             TabHeaderView(selectedTab: $selectedTab)
-                .padding(.top, 1)
-                
+                .ignoresSafeArea(edges: .top) // Add this
+            
             ScrollView {
                 if selectedTab == 0 {
                     AffordabilityView(model: model)
@@ -25,9 +24,7 @@ struct MainContentView: View {
             }
         }
         .background(Theme.background)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(Theme.background, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
+        .navigationBarHidden(true) // Add this
         .navigationBarBackButtonHidden(true)
     }
 }

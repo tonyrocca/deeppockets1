@@ -4,20 +4,25 @@ struct TabHeaderView: View {
     @Binding var selectedTab: Int
     
     var body: some View {
-        HStack(spacing: 0) {
-            TabButton(
-                title: "Affordability",
-                isSelected: selectedTab == 0,
-                action: { selectedTab = 0 }
-            )
+        VStack(spacing: 0) {
+            Color.black // Add status bar background
+                .frame(height: UIApplication.shared.windows.first?.safeAreaInsets.top ?? 0)
             
-            TabButton(
-                title: "Budget",
-                isSelected: selectedTab == 1,
-                action: { selectedTab = 1 }
-            )
+            HStack(spacing: 0) {
+                TabButton(
+                    title: "Affordability",
+                    isSelected: selectedTab == 0,
+                    action: { selectedTab = 0 }
+                )
+                
+                TabButton(
+                    title: "Budget",
+                    isSelected: selectedTab == 1,
+                    action: { selectedTab = 1 }
+                )
+            }
+            .frame(height: 44)
         }
-        .frame(height: 44) // Standard height for tab bar
         .background(Theme.darkBackground)
     }
 }
