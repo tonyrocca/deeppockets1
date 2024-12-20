@@ -41,10 +41,11 @@
 				AffordabilityPage/AffordabilityView.swift,
 				AffordabilityPage/IncomeDisplay.swift,
 				BudgetPage/BudgetView.swift,
-				MainContentView.swift,
+				HomeView/ActionButtonView.swift,
+				HomeView/MainContentView.swift,
+				HomeView/TabHeaderView.swift,
+				HomeView/TempView.swift,
 				Onboarding/SalaryInputView.swift,
-				TabHeaderView.swift,
-				TempView.swift,
 			);
 			target = 7737C11A2D095E2F002A0CAB /* DeepPocketsUITests */;
 		};
