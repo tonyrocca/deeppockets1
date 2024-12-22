@@ -5,7 +5,36 @@ struct AffordabilityCalculatorModal: View {
     let monthlyIncome: Double
     @State private var selectedCategory: BudgetCategory?
     @State private var amount: String = ""
-    @State private var displayType: AmountDisplayType = .monthly
+    @State private var showResults = false
+    @State private var selectedTimeframe: TimeFrame = .monthly
+    @State private var searchText = ""
+    
+    enum TimeFrame {
+        case monthly, yearly, overall
+        
+        var text: String {
+            switch self {
+            case .monthly: return "per month"
+            case .yearly: return "per year"
+            case .overall: return "overall"
+            }
+        }
+        
+        var multiplier: Double {
+            switch self {
+            case .monthly: return 1
+            case .yearly: return 12
+            case .overall: return 1
+            }
+        }
+    }
+    
+    private var filteredCategories: [BudgetCategory] {
+        guard !searchText.isEmpty else { return BudgetCategoryStore.shared.categories }
+        return BudgetCategoryStore.shared.categories.filter {
+            $0.name.lowercased().contains(searchText.lowercased())
+        }
+    }
     
     var body: some View {
         ZStack {
@@ -13,12 +42,10 @@ struct AffordabilityCalculatorModal: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Header
+                // Header with close button
                 HStack {
                     Spacer()
-                    Button(action: {
-                        isPresented = false
-                    }) {
+                    Button(action: { isPresented = false }) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 24))
                             .foregroundColor(Theme.secondaryLabel)
@@ -27,108 +54,173 @@ struct AffordabilityCalculatorModal: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
                 
-                // Content
-                VStack(spacing: 24) {
-                    // Title Section
-                    VStack(spacing: 8) {
-                        Text("Affordability Check")
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(Theme.label)
-                        Text("See if you can afford your expenses")
-                            .font(.system(size: 15))
-                            .foregroundColor(Theme.secondaryLabel)
-                    }
-                    .padding(.top, 8)
-                    
-                    // Category Selection
-                    Menu {
-                        ForEach(BudgetCategoryStore.shared.categories) { category in
-                            Button(action: {
-                                selectedCategory = category
-                            }) {
-                                Text(category.name)
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            if let category = selectedCategory {
-                                Text(category.emoji)
-                                Text(category.name)
-                            } else {
-                                Text("Select Category")
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.down")
-                        }
-                        .font(.system(size: 17))
-                        .foregroundColor(Theme.label)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Theme.surfaceBackground)
-                        .cornerRadius(12)
-                    }
-                    
-                    // Amount Input
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Amount")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundColor(Theme.label)
-                        
-                        HStack {
-                            Text("$")
+                ScrollView {
+                    VStack(spacing: 32) {
+                        // Title Section
+                        VStack(spacing: 8) {
+                            Text("Can I afford this?")
+                                .font(.system(size: 28, weight: .bold))
                                 .foregroundColor(Theme.label)
-                            TextField("0", text: $amount)
-                                .keyboardType(.decimalPad)
-                                .foregroundColor(Theme.label)
-                        }
-                        .padding()
-                        .background(Theme.surfaceBackground)
-                        .cornerRadius(12)
-                    }
-                    
-                    // Frequency Selection
-                    Picker("Frequency", selection: $displayType) {
-                        Text("Monthly").tag(AmountDisplayType.monthly)
-                        Text("Total").tag(AmountDisplayType.total)
-                    }
-                    .pickerStyle(.segmented)
-                    
-                    // Results (if input is valid)
-                    if let category = selectedCategory, let amountValue = Double(amount) {
-                        let canAfford = calculateAffordability(amount: amountValue, category: category)
-                        VStack(spacing: 16) {
-                            Text(canAfford.0 ? "You can afford this! 🎉" : "This might be a stretch 😅")
-                                .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(canAfford.0 ? Theme.tint : .red)
-                            
-                            Text(canAfford.1)
-                                .font(.system(size: 15))
+                            Text("Let's find out if your income can handle it")
+                                .font(.system(size: 17))
                                 .foregroundColor(Theme.secondaryLabel)
                                 .multilineTextAlignment(.center)
                         }
-                        .padding(.top, 8)
+                        
+                        if !showResults {
+                            // Input Section
+                            VStack(spacing: 24) {
+                                // Category Selection
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("What would you like to buy?")
+                                        .font(.system(size: 17, weight: .medium))
+                                        .foregroundColor(Theme.label)
+                                    
+                                    // Search Field
+                                    HStack {
+                                        Image(systemName: "magnifyingglass")
+                                            .foregroundColor(Theme.secondaryLabel)
+                                        TextField("Search categories", text: $searchText)
+                                            .textFieldStyle(PlainTextFieldStyle())
+                                            .foregroundColor(Theme.label)
+                                    }
+                                    .padding()
+                                    .background(Theme.surfaceBackground)
+                                    .cornerRadius(12)
+                                    
+                                    // Category List
+                                    if !filteredCategories.isEmpty && !searchText.isEmpty {
+                                        ScrollView {
+                                            LazyVStack(spacing: 0) {
+                                                ForEach(filteredCategories) { category in
+                                                    Button(action: {
+                                                        selectedCategory = category
+                                                        searchText = ""
+                                                    }) {
+                                                        HStack {
+                                                            Text(category.emoji)
+                                                                .font(.title2)
+                                                            Text(category.name)
+                                                                .foregroundColor(Theme.label)
+                                                            Spacer()
+                                                        }
+                                                        .padding()
+                                                        .background(
+                                                            selectedCategory?.id == category.id ?
+                                                            Theme.tint.opacity(0.2) :
+                                                            Color.clear
+                                                        )
+                                                    }
+                                                    
+                                                    Divider()
+                                                        .background(Theme.separator)
+                                                }
+                                            }
+                                        }
+                                        .frame(maxHeight: 200)
+                                        .background(Theme.surfaceBackground)
+                                        .cornerRadius(12)
+                                    }
+                                    
+                                    if let selected = selectedCategory {
+                                        HStack {
+                                            Text(selected.emoji)
+                                                .font(.title2)
+                                            Text(selected.name)
+                                                .foregroundColor(Theme.label)
+                                            Spacer()
+                                        }
+                                        .padding()
+                                        .background(Theme.surfaceBackground)
+                                        .cornerRadius(12)
+                                    }
+                                }
+                                
+                                // Amount Input Section
+                                if selectedCategory != nil {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text("How much will it cost?")
+                                            .font(.system(size: 17, weight: .medium))
+                                            .foregroundColor(Theme.label)
+                                        
+                                        VStack(spacing: 12) {
+                                            // Amount Input
+                                            HStack {
+                                                Text("$")
+                                                    .foregroundColor(Theme.label)
+                                                TextField("0", text: $amount)
+                                                    .keyboardType(.decimalPad)
+                                                    .foregroundColor(Theme.label)
+                                            }
+                                            .padding()
+                                            .background(Theme.surfaceBackground)
+                                            .cornerRadius(12)
+                                            
+                                            // Timeframe Picker
+                                            HStack {
+                                                ForEach([TimeFrame.monthly, TimeFrame.yearly, TimeFrame.overall], id: \.self) { timeframe in
+                                                    Button(action: {
+                                                        selectedTimeframe = timeframe
+                                                    }) {
+                                                        Text(timeframe.text)
+                                                            .font(.system(size: 15, weight: .medium))
+                                                            .foregroundColor(selectedTimeframe == timeframe ? .black : .white)
+                                                            .padding(.vertical, 8)
+                                                            .padding(.horizontal, 16)
+                                                            .frame(maxWidth: .infinity)
+                                                            .background(
+                                                                selectedTimeframe == timeframe ?
+                                                                Color.white :
+                                                                Theme.surfaceBackground
+                                                            )
+                                                            .cornerRadius(8)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Calculate Button
+                                    Button(action: {
+                                        withAnimation {
+                                            showResults = true
+                                        }
+                                    }) {
+                                        Text("Calculate")
+                                            .font(.system(size: 17, weight: .semibold))
+                                            .foregroundColor(.white)
+                                            .frame(maxWidth: .infinity)
+                                            .frame(height: 56)
+                                            .background(Theme.tint)
+                                            .cornerRadius(12)
+                                    }
+                                    .disabled(amount.isEmpty)
+                                    .opacity(amount.isEmpty ? 0.6 : 1)
+                                }
+                            }
+                        } else if let category = selectedCategory,
+                                  let amountValue = Double(amount) {
+                            // Results Section (remove the context header here)
+                            AffordabilityResultView(
+                                category: category,
+                                amount: amountValue,
+                                monthlyIncome: monthlyIncome,
+                                timeframe: selectedTimeframe,
+                                onRecalculate: {
+                                    withAnimation {
+                                        showResults = false
+                                    }
+                                }
+                            )
+                        }
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 20)
                 }
-                .padding(.horizontal, 20)
-                
-                Spacer()
             }
-            .frame(maxWidth: .infinity)
             .background(Theme.background)
             .cornerRadius(20)
             .padding()
-        }
-    }
-    
-    private func calculateAffordability(amount: Double, category: BudgetCategory) -> (Bool, String) {
-        let monthlyAmount = displayType == .monthly ? amount : amount / 12
-        let affordableAmount = monthlyIncome * category.allocationPercentage
-        let difference = abs(affordableAmount - monthlyAmount)
-        
-        if monthlyAmount <= affordableAmount {
-            return (true, "You're under your recommended monthly budget by \(formatCurrency(difference))")
-        } else {
-            return (false, "You're over your recommended monthly budget by \(formatCurrency(difference))")
         }
     }
     
@@ -138,4 +230,243 @@ struct AffordabilityCalculatorModal: View {
         formatter.maximumFractionDigits = 0
         return formatter.string(from: NSNumber(value: value)) ?? "$0"
     }
+}
+
+struct InfoCard: View {
+    let title: String
+    let content: String
+    let icon: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label {
+                Text(title)
+                    .font(.system(size: 13, weight: .bold))
+            } icon: {
+                Image(systemName: icon)
+            }
+            .foregroundColor(Theme.tint)
+            
+            Text(content)
+                .font(.system(size: 15))
+                .foregroundColor(Theme.label)
+                .multilineTextAlignment(.leading)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.surfaceBackground)
+        .cornerRadius(12)
+    }
+}
+
+struct AffordabilityResultView: View {
+    let category: BudgetCategory
+    let amount: Double
+    let monthlyIncome: Double
+    let timeframe: AffordabilityCalculatorModal.TimeFrame
+    let onRecalculate: () -> Void
+    
+    private var analysis: AffordabilityAnalysis {
+        calculateAffordability()
+    }
+    
+    var body: some View {
+        VStack(spacing: 24) {
+            // Header - Category and Amount
+            HStack {
+                HStack {
+                    Text(category.emoji)
+                        .font(.title2)
+                    Text(category.name)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.white)
+                }
+                Spacer()
+                Text(formatCurrency(amount))
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.white)
+            }
+            .padding()
+            .background(Theme.surfaceBackground)
+            .cornerRadius(12)
+            
+            // Primary Result Card
+            VStack(spacing: 12) {
+                Text(analysis.canAfford ? "Yes, you can afford this! 🎉" : "No, this might be a stretch 😅")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(analysis.canAfford ? Theme.tint : .red)
+                    .multilineTextAlignment(.center)
+                
+                Text(analysis.summary)
+                    .font(.system(size: 17))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+            }
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(Theme.surfaceBackground)
+            .cornerRadius(12)
+            
+            // Affordability Breakdown
+            VStack(alignment: .leading, spacing: 16) {
+                Label {
+                    Text("AFFORDABILITY BREAKDOWN")
+                        .font(.system(size: 13, weight: .bold))
+                } icon: {
+                    Image(systemName: "chart.bar.fill")
+                }
+                .foregroundColor(Theme.tint)
+                
+                // Monthly Breakdown
+                VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Monthly Payment")
+                            .font(.system(size: 15))
+                            .foregroundColor(Theme.secondaryLabel)
+                        
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text("Wanted")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(Theme.secondaryLabel)
+                                Text(formatCurrency(analysis.monthlyAmount))
+                                    .font(.system(size: 17, weight: .medium))
+                                    .foregroundColor(.white)
+                            }
+                            
+                            Spacer()
+                            
+                            VStack(alignment: .leading) {
+                                Text("Recommended")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(Theme.secondaryLabel)
+                                Text(formatCurrency(analysis.recommendedMonthly))
+                                    .font(.system(size: 17, weight: .medium))
+                                    .foregroundColor(.white)
+                            }
+                            
+                            Spacer()
+                            
+                            VStack(alignment: .trailing) {
+                                Text("Difference")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(Theme.secondaryLabel)
+                                Text(formatCurrency(abs(analysis.recommendedMonthly - analysis.monthlyAmount)))
+                                    .font(.system(size: 17, weight: .medium))
+                                    .foregroundColor(analysis.canAfford ? Theme.tint : .red)
+                            }
+                        }
+                    }
+                    
+                    // Overall/Yearly Total (if not monthly)
+                    if timeframe != .monthly {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(timeframe == .yearly ? "Yearly Total" : "Overall Total")
+                                .font(.system(size: 15))
+                                .foregroundColor(Theme.secondaryLabel)
+                            
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text("Wanted")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(Theme.secondaryLabel)
+                                    Text(formatCurrency(amount))
+                                        .font(.system(size: 17, weight: .medium))
+                                        .foregroundColor(.white)
+                                }
+                                
+                                Spacer()
+                                
+                                VStack(alignment: .leading) {
+                                    Text("Recommended")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(Theme.secondaryLabel)
+                                    Text(formatCurrency(analysis.recommendedAmount))
+                                        .font(.system(size: 17, weight: .medium))
+                                        .foregroundColor(.white)
+                                }
+                                
+                                Spacer()
+                                
+                                VStack(alignment: .trailing) {
+                                    Text("Difference")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(Theme.secondaryLabel)
+                                    Text(formatCurrency(abs(analysis.recommendedAmount - amount)))
+                                        .font(.system(size: 17, weight: .medium))
+                                        .foregroundColor(analysis.canAfford ? Theme.tint : .red)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .padding()
+            .background(Theme.surfaceBackground)
+            .cornerRadius(12)
+            
+            // Income Context
+            VStack(alignment: .leading, spacing: 8) {
+                Label {
+                    Text("RECOMMENDATION")
+                        .font(.system(size: 13, weight: .bold))
+                } icon: {
+                    Image(systemName: "chart.pie.fill")
+                }
+                .foregroundColor(Theme.tint)
+                
+                Text("Based on your income of \(formatCurrency(monthlyIncome))/month, you should spend no more than \(formatCurrency(analysis.recommendedMonthly)) per month on \(category.name.lowercased())")
+                    .font(.system(size: 15))
+                    .foregroundColor(.white)
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.surfaceBackground)
+            .cornerRadius(12)
+            
+            // Recalculate Button
+            Button(action: onRecalculate) {
+                Text("Calculate Something Else")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .background(Theme.tint)
+                    .cornerRadius(12)
+            }
+        }
+    }
+    
+    private func calculateAffordability() -> AffordabilityAnalysis {
+        let monthlyAmount = timeframe == .monthly ? amount : amount / 12
+        let maxMonthlyAmount = monthlyIncome * category.allocationPercentage
+        let recommendedAmount = timeframe == .monthly ? maxMonthlyAmount : maxMonthlyAmount * 12
+        let canAfford = amount <= recommendedAmount
+        let difference = abs(recommendedAmount - amount)
+        
+        return AffordabilityAnalysis(
+            canAfford: canAfford,
+            summary: canAfford ?
+                "You're under budget by \(formatCurrency(difference))" :
+                "You're over budget by \(formatCurrency(difference))",
+            recommendedAmount: recommendedAmount,
+            recommendedMonthly: maxMonthlyAmount,
+            monthlyAmount: monthlyAmount
+        )
+    }
+    
+    private func formatCurrency(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: value)) ?? "$0"
+    }
+}
+
+struct AffordabilityAnalysis {
+    let canAfford: Bool
+    let summary: String
+    let recommendedAmount: Double
+    let recommendedMonthly: Double
+    let monthlyAmount: Double
 }
