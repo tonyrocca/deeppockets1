@@ -328,3 +328,4 @@ struct CategoryRowView: View {
         return ""
     }
 }
+
