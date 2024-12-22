@@ -13,7 +13,7 @@ struct MainContentView: View {
     }
     
     var body: some View {
-        ZStack(alignment: .bottomTrailing) { // Add alignment here
+        ZStack(alignment: .bottomTrailing) {
             VStack(spacing: 0) {
                 TabHeaderView(selectedTab: $selectedTab)
                     .ignoresSafeArea(edges: .top)
@@ -35,21 +35,24 @@ struct MainContentView: View {
                 )
             }
             
-            ActionButtonMenu(
-                onClose: { },
-                onAffordabilityTap: {
-                    withAnimation {
-                        showActionMenu = false
-                        showAffordabilityCalculator = true
-                    }
-                },
-                onSavingsTap: {
-                    // Handle savings calculator tap
-                },
-                isShowing: $showActionMenu
-            )
-            .frame(maxWidth: .infinity, alignment: .trailing) // Add this to ensure right alignment
-            .padding(.trailing, 16) // Add right padding
+            // Only show ActionButtonMenu if no calculator is showing
+            if !showAffordabilityCalculator {
+                ActionButtonMenu(
+                    onClose: { },
+                    onAffordabilityTap: {
+                        withAnimation {
+                            showActionMenu = false
+                            showAffordabilityCalculator = true
+                        }
+                    },
+                    onSavingsTap: {
+                        // Handle savings calculator tap
+                    },
+                    isShowing: $showActionMenu
+                )
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.trailing, 16)
+            }
         }
         .background(Theme.background)
         .navigationBarHidden(true)
