@@ -5,6 +5,7 @@ struct MainContentView: View {
     @State private var selectedTab = 0
     @State private var showActionMenu = false
     @State private var showAffordabilityCalculator = false
+    @State private var showSavingsCalculator = false  // Add this
     
     init(monthlyIncome: Double) {
         let model = AffordabilityModel()
@@ -35,24 +36,31 @@ struct MainContentView: View {
                 )
             }
             
-            // Only show ActionButtonMenu if no calculator is showing
-            if !showAffordabilityCalculator {
-                ActionButtonMenu(
-                    onClose: { },
-                    onAffordabilityTap: {
-                        withAnimation {
-                            showActionMenu = false
-                            showAffordabilityCalculator = true
-                        }
-                    },
-                    onSavingsTap: {
-                        // Handle savings calculator tap
-                    },
-                    isShowing: $showActionMenu
+            if showSavingsCalculator {  // Add this
+                SavingsCalculatorModal(
+                    isPresented: $showSavingsCalculator,
+                    monthlyIncome: model.monthlyIncome
                 )
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .padding(.trailing, 16)
             }
+            
+            ActionButtonMenu(
+                onClose: { },
+                onAffordabilityTap: {
+                    withAnimation {
+                        showActionMenu = false
+                        showAffordabilityCalculator = true
+                    }
+                },
+                onSavingsTap: {
+                    withAnimation {
+                        showActionMenu = false
+                        showSavingsCalculator = true
+                    }
+                },
+                isShowing: $showActionMenu
+            )
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.trailing, 16)
         }
         .background(Theme.background)
         .navigationBarHidden(true)
