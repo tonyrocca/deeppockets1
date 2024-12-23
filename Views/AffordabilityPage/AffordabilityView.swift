@@ -13,7 +13,7 @@ struct AffordabilityView: View {
     }
     
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             // Search Bar
             HStack {
                 Image(systemName: "magnifyingglass")
@@ -37,6 +37,7 @@ struct AffordabilityView: View {
             .background(Theme.elevatedBackground)
             .cornerRadius(12)
             .padding(.horizontal, 16)
+            .padding(.top, 4)
             
             // Categories List
             VStack(spacing: 0) {
