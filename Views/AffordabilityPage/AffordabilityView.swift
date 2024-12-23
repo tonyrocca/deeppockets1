@@ -13,136 +13,83 @@ struct AffordabilityView: View {
     }
     
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {  // Added ZStack for floating button
-            VStack(spacing: 0) {
-                // Income Display
-                HStack(alignment: .center, spacing: 6) {
-                    Menu {
-                        Button(action: { /* toggle annual/monthly */ }) {
-                            Label("Annual Income", systemImage: "checkmark")
-                        }
-                        Button(action: { /* toggle annual/monthly */ }) {
-                            Label("Monthly Income", systemImage: "")
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text("Annual Income")
-                                .font(.system(size: 24, weight: .medium))
-                                .foregroundColor(Theme.label)
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 16))
-                                .foregroundColor(Theme.label)
-                        }
-                    }
-                    
-                    Spacer()
-                    
-                    Text(formatCurrency(model.monthlyIncome * 12))
-                        .font(.system(size: 24, weight: .medium))
-                        .foregroundColor(Theme.label)
-                }
-                .padding(8)
-                .background(Theme.surfaceBackground)
-                .cornerRadius(12)
-                .padding(.horizontal)
-                .padding(.top, 12)
-                
-                // Content
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("What You Can Afford")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(Theme.label)
-                    Text("This is what you can afford based on your income")
-                        .font(.system(size: 15))
-                        .foregroundColor(Theme.secondaryLabel)
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                
-                // Search Bar
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(Theme.secondaryLabel)
-                    TextField("Search categories", text: $searchText)
-                        .font(.system(size: 17))
-                        .foregroundColor(Theme.label)
-                        .placeholder(when: searchText.isEmpty) {
-                            Text("Search categories")
-                                .foregroundColor(Theme.label.opacity(0.6))
-                        }
-                    
-                    if !searchText.isEmpty {
-                        Button(action: { searchText = "" }) {
-                            Image(systemName: "xmark.circle.fill")
+        ScrollView {
+            LazyVStack(pinnedViews: [.sectionHeaders]) {
+                Section(header:
+                    StickyIncomeHeader(monthlyIncome: model.monthlyIncome)
+                        .background(Theme.background)
+                ) {
+                    VStack(spacing: 16) {
+                        // Search Bar
+                        HStack {
+                            Image(systemName: "magnifyingglass")
                                 .foregroundColor(Theme.secondaryLabel)
-                        }
-                    }
-                }
-                .padding(12)
-                .background(Theme.elevatedBackground)
-                .cornerRadius(12)
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                
-                // Categories List
-                VStack(spacing: 0) {
-                    if filteredCategories.isEmpty {
-                        Text("No matching categories found")
-                            .font(.system(size: 15))
-                            .foregroundColor(Theme.secondaryLabel)
-                            .padding(.vertical, 20)
-                    } else {
-                        ForEach(filteredCategories) { category in
-                            CategoryRowView(
-                                category: category,
-                                amount: model.calculateAffordableAmount(for: category),
-                                displayType: category.displayType,
-                                onAssumptionsChanged: model.updateAssumptions
-                            )
+                            TextField("Search categories", text: $searchText)
+                                .font(.system(size: 17))
+                                .foregroundColor(Theme.label)
+                                .placeholder(when: searchText.isEmpty) {
+                                    Text("Search categories")
+                                        .foregroundColor(Theme.label.opacity(0.6))
+                                }
                             
-                            if category.id != filteredCategories.last?.id {
-                                Divider()
-                                    .background(Theme.separator)
-                                    .padding(.horizontal, 20)
+                            if !searchText.isEmpty {
+                                Button(action: { searchText = "" }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(Theme.secondaryLabel)
+                                }
                             }
                         }
+                        .padding(12)
+                        .background(Theme.elevatedBackground)
+                        .cornerRadius(12)
+                        .padding(.horizontal, 16)
+                        
+                        // Categories List
+                        VStack(spacing: 0) {
+                            if filteredCategories.isEmpty {
+                                Text("No matching categories found")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(Theme.secondaryLabel)
+                                    .padding(.vertical, 20)
+                            } else {
+                                ForEach(filteredCategories) { category in
+                                    CategoryRowView(
+                                        category: category,
+                                        amount: model.calculateAffordableAmount(for: category),
+                                        displayType: category.displayType,
+                                        onAssumptionsChanged: model.updateAssumptions
+                                    )
+                                    
+                                    if category.id != filteredCategories.last?.id {
+                                        Divider()
+                                            .background(Theme.separator)
+                                            .padding(.horizontal, 20)
+                                    }
+                                }
+                            }
+                        }
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Theme.surfaceBackground)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Theme.separator, lineWidth: 1)
+                        )
+                        .padding(.horizontal, 16)
                     }
+                    .padding(.top, 16)
                 }
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Theme.surfaceBackground)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Theme.separator, lineWidth: 1)
-                )
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
             }
-            
-            // Floating Action Button
-            Button(action: {
-                // Your action here
-            }) {
-                Image(systemName: "plus")
-                    .font(.title2)
-                    .foregroundColor(.white)
-                    .frame(width: 56, height: 56)
-                    .background(Theme.tint)
-                    .clipShape(Circle())
-                    .shadow(radius: 4)
-            }
-            .padding(.trailing, 16)
-            .padding(.bottom, 16)
         }
     }
-   
-   private func formatCurrency(_ value: Double) -> String {
-       let formatter = NumberFormatter()
-       formatter.numberStyle = .currency
-       formatter.maximumFractionDigits = 0
-       return formatter.string(from: NSNumber(value: value)) ?? "$0"
-   }
+    
+    private func formatCurrency(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: value)) ?? "$0"
+    }
 }
 
 struct CategoryRowView: View {

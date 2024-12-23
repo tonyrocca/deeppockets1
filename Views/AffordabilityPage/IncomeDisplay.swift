@@ -2,45 +2,77 @@ import SwiftUI
 
 struct StickyIncomeHeader: View {
     let monthlyIncome: Double
-    @State private var isAnnual: Bool = true
+    private let incomePercentiles: [(threshold: Double, percentile: Int)] = [
+        (650000, 1),
+        (250000, 5),
+        (180000, 10),
+        (120000, 20),
+        (90000, 30),
+        (70000, 40),
+        (50000, 50),
+        (35000, 60),
+        (25000, 70)
+    ]
     
-    private var displayAmount: Double {
-        isAnnual ? monthlyIncome * 12 : monthlyIncome
+    private var annualIncome: Double {
+        monthlyIncome * 12
+    }
+    
+    private var incomePercentile: Int {
+        for (threshold, percentile) in incomePercentiles {
+            if annualIncome >= threshold {
+                return percentile
+            }
+        }
+        return 80 // Default if below all thresholds
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .center, spacing: 6) {
-                Menu {
-                    Button(action: { isAnnual = true }) {
-                        Label("Annual Income", systemImage: isAnnual ? "checkmark" : "")
-                    }
-                    Button(action: { isAnnual = false }) {
-                        Label("Monthly Income", systemImage: !isAnnual ? "checkmark" : "")
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(isAnnual ? "Annual Income" : "Monthly Income")
-                            .font(.system(size: 24, weight: .medium))
-                            .foregroundColor(Theme.label)
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 16))
-                            .foregroundColor(Theme.label)
-                    }
+        VStack(spacing: 0) {
+            // Main Income Section
+            VStack(spacing: 12) {
+                // Income Row
+                HStack {
+                    Text("Annual Income")
+                        .font(.system(size: 17))
+                        .foregroundColor(Theme.label)
+                    
+                    Spacer()
+                    
+                    Text(formatCurrency(annualIncome))
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(Theme.label)
                 }
                 
-                Spacer()
-                
-                Text(formatCurrency(displayAmount))
-                    .font(.system(size: 24, weight: .medium))
-                    .foregroundColor(Theme.label)
+                // Percentile Row
+                HStack {
+                    Text("You are a top \(incomePercentile)% earner in the United States based on your salary")
+                        .font(.system(size: 15))
+                        .foregroundColor(Theme.secondaryLabel)
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "chart.bar.fill")
+                        Text("Top \(incomePercentile)%")
+                    }
+                    .font(.system(size: 13))
+                    .foregroundColor(Theme.tint)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Theme.tint.opacity(0.15))
+                    .cornerRadius(8)
+                }
             }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
+            .padding(16)
             .background(Theme.surfaceBackground)
-            .cornerRadius(12)
-            .padding(.top, 4)
+            .cornerRadius(16)
             
+            Divider()
+                .background(Theme.separator)
+                .padding(.vertical, 16)
+            
+            // Title Section
             VStack(alignment: .leading, spacing: 4) {
                 Text("What You Can Afford")
                     .font(.system(size: 20, weight: .bold))
@@ -49,9 +81,9 @@ struct StickyIncomeHeader: View {
                     .font(.system(size: 15))
                     .foregroundColor(Theme.secondaryLabel)
             }
-            .padding(.horizontal)
-            .padding(.top, 8)
+            .padding(.horizontal, 16)
         }
+        .padding(.top, 16)
         .background(Theme.background)
     }
     
