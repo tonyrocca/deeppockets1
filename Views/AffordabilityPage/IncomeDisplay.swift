@@ -10,50 +10,48 @@ struct StickyIncomeHeader: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("How Much You Make")
-                .font(.system(size: 20, weight: .bold))
-                .foregroundColor(Theme.label)
-            Text("This is how much you income you bring in")
-                .font(.system(size: 15))
-                .foregroundColor(Theme.secondaryLabel)
-            
-            VStack(spacing: 0) {
-                HStack(alignment: .center, spacing: 6) {
-                    Menu {
-                        Button(action: { isAnnual = true }) {
-                            Label("Annual Income", systemImage: isAnnual ? "checkmark" : "")
-                        }
-                        Button(action: { isAnnual = false }) {
-                            Label("Monthly Income", systemImage: !isAnnual ? "checkmark" : "")
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text(isAnnual ? "Annual Income" : "Monthly Income")
-                                .font(.system(size: 24, weight: .medium))
-                                .foregroundColor(Theme.label)
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 16))
-                                .foregroundColor(Theme.label)
-                        }
+            HStack(alignment: .center, spacing: 6) {
+                Menu {
+                    Button(action: { isAnnual = true }) {
+                        Label("Annual Income", systemImage: isAnnual ? "checkmark" : "")
                     }
-                    
-                    Spacer()
-                    
-                    Text(formatCurrency(displayAmount))
-                        .font(.system(size: 24, weight: .medium))
-                        .foregroundColor(Theme.label)
+                    Button(action: { isAnnual = false }) {
+                        Label("Monthly Income", systemImage: !isAnnual ? "checkmark" : "")
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(isAnnual ? "Annual Income" : "Monthly Income")
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundColor(Theme.label)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 16))
+                            .foregroundColor(Theme.label)
+                    }
                 }
-                .padding(16)
-                .background(Theme.surfaceBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Theme.separator, lineWidth: 1)
-                )
+                
+                Spacer()
+                
+                Text(formatCurrency(displayAmount))
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(Theme.label)
             }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+            .background(Theme.surfaceBackground)
+            .cornerRadius(12)
+            .padding(.top, 4)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text("What You Can Afford")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(Theme.label)
+                Text("This is what you can afford based on your income")
+                    .font(.system(size: 15))
+                    .foregroundColor(Theme.secondaryLabel)
+            }
+            .padding(.horizontal)
             .padding(.top, 8)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
         .background(Theme.background)
     }
     

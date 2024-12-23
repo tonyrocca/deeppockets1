@@ -23,8 +23,10 @@ struct MainContentView: View {
                 ScrollView {
                     if selectedTab == 0 {
                         AffordabilityView(model: model)
+                            .padding(.top, 4)  // Minimal padding
                     } else {
                         BudgetView()
+                            .padding(.top, 4)  // Minimal padding
                     }
                 }
             }

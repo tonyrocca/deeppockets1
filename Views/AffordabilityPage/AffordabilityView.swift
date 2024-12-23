@@ -41,10 +41,11 @@ struct AffordabilityView: View {
                         .font(.system(size: 24, weight: .medium))
                         .foregroundColor(Theme.label)
                 }
-                .padding(12)
+                .padding(8)
                 .background(Theme.surfaceBackground)
                 .cornerRadius(12)
                 .padding(.horizontal)
+                .padding(.top, 12)
                 
                 // Content
                 VStack(alignment: .leading, spacing: 4) {
@@ -328,4 +329,3 @@ struct CategoryRowView: View {
         return ""
     }
 }
-

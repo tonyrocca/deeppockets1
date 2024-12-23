@@ -21,7 +21,7 @@ struct TabHeaderView: View {
                     action: { selectedTab = 1 }
                 )
             }
-            .frame(height: 40) // Reduced from 44 to 40
+            .frame(height: 40)
         }
         .background(Theme.darkBackground)
     }
