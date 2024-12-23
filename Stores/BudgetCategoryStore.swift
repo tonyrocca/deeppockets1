@@ -2,14 +2,19 @@ import SwiftUI
 import Foundation
 
 class BudgetCategoryStore: ObservableObject {
+    
+    // MARK: - Singleton
     static let shared = BudgetCategoryStore()
     
+    // MARK: - Published Properties
     @Published var categories: [BudgetCategory] = []
     
+    // MARK: - Init
     private init() {
         self.categories = createCategories()
     }
     
+    // MARK: - Public Methods
     func category(for id: String) -> BudgetCategory? {
         return categories.first { $0.id == id }
     }
@@ -19,16 +24,28 @@ class BudgetCategoryStore: ObservableObject {
             categories[index].recommendedAmount = amount
         }
     }
-}
-
-extension BudgetCategoryStore {
+    
+    /// Calculate recommended amounts for all categories based on `monthlyIncome`.
+    /// This will call each category's `calculateRecommendedAmount` method in turn.
+    func calculateAllRecommendedAmounts(monthlyIncome: Double) {
+        for i in 0..<categories.count {
+            categories[i].calculateRecommendedAmount(monthlyIncome: monthlyIncome)
+        }
+    }
+    
+    // MARK: - Factory Method
+    /// Creates the initial array of BudgetCategories with only the necessary assumptions
+    /// for the categories that truly need them.
     func createCategories() -> [BudgetCategory] {
         return [
+            // -----------------------
+            // BIG / COMPLEX CATEGORIES (keep assumptions)
+            // -----------------------
             BudgetCategory(
                 id: "house",
                 name: "House Price",
                 emoji: "🏠",
-                description: "Maximum home price you can afford based on your income and current mortgage rates.",
+                description: "Maximum home price you can afford based on your income and mortgage rates.",
                 allocationPercentage: 0.20,
                 displayType: .total,
                 assumptions: [
@@ -37,12 +54,11 @@ extension BudgetCategoryStore {
                     CategoryAssumption(title: "Loan Term", value: "30")
                 ]
             ),
-            
             BudgetCategory(
                 id: "car",
                 name: "Car",
                 emoji: "🚗",
-                description: "Monthly car expenses including loan payment, insurance, fuel, and maintenance.",
+                description: "Monthly car costs (payment, insurance, fuel, maintenance).",
                 allocationPercentage: 0.10,
                 displayType: .monthly,
                 assumptions: [
@@ -51,54 +67,11 @@ extension BudgetCategoryStore {
                     CategoryAssumption(title: "Fuel & Maintenance", value: "20")
                 ]
             ),
-            
-            BudgetCategory(
-                id: "groceries",
-                name: "Groceries",
-                emoji: "🛒",
-                description: "Monthly food and household kitchen staples budget.",
-                allocationPercentage: 0.10,
-                displayType: .monthly,
-                assumptions: [
-                    CategoryAssumption(title: "Fresh Foods", value: "40"),
-                    CategoryAssumption(title: "Pantry Items", value: "40"),
-                    CategoryAssumption(title: "Household", value: "20")
-                ]
-            ),
-            
-            BudgetCategory(
-                id: "eating_out",
-                name: "Quick Bites",
-                emoji: "🍔",
-                description: "Monthly budget for casual dining, takeout, and quick meals.",
-                allocationPercentage: 0.05,
-                displayType: .monthly,
-                assumptions: [
-                    CategoryAssumption(title: "Takeout", value: "50"),
-                    CategoryAssumption(title: "Coffee & Snacks", value: "30"),
-                    CategoryAssumption(title: "Delivery Fees", value: "20")
-                ]
-            ),
-            
-            BudgetCategory(
-                id: "public_transportation",
-                name: "Transit",
-                emoji: "🚆",
-                description: "Monthly transportation costs including public transit and ride services.",
-                allocationPercentage: 0.05,
-                displayType: .monthly,
-                assumptions: [
-                    CategoryAssumption(title: "Public Transit", value: "70"),
-                    CategoryAssumption(title: "Ride Share", value: "20"),
-                    CategoryAssumption(title: "Other", value: "10")
-                ]
-            ),
-            
             BudgetCategory(
                 id: "emergency_savings",
                 name: "Emergency Fund",
                 emoji: "🆘",
-                description: "Total emergency fund target based on essential monthly expenses.",
+                description: "Total emergency fund target based on your essential monthly expenses.",
                 allocationPercentage: 0.05,
                 displayType: .total,
                 assumptions: [
@@ -107,82 +80,11 @@ extension BudgetCategoryStore {
                     CategoryAssumption(title: "Interest Rate", value: "4.5")
                 ]
             ),
-            
-            BudgetCategory(
-                id: "pet",
-                name: "Pet Care",
-                emoji: "🐾",
-                description: "Monthly pet expenses including food, supplies, and healthcare.",
-                allocationPercentage: 0.02,
-                displayType: .monthly,
-                assumptions: [
-                    CategoryAssumption(title: "Food & Supplies", value: "50"),
-                    CategoryAssumption(title: "Vet & Health", value: "30"),
-                    CategoryAssumption(title: "Other Care", value: "20")
-                ]
-            ),
-            
-            BudgetCategory(
-                id: "restaurants",
-                name: "Fine Dining",
-                emoji: "🍽️",
-                description: "Monthly budget for restaurant dining and special occasions.",
-                allocationPercentage: 0.05,
-                displayType: .monthly,
-                assumptions: [
-                    CategoryAssumption(title: "Dining Out", value: "70"),
-                    CategoryAssumption(title: "Special Events", value: "20"),
-                    CategoryAssumption(title: "Tips", value: "10")
-                ]
-            ),
-            
-            BudgetCategory(
-                id: "clothes",
-                name: "Clothing",
-                emoji: "👕",
-                description: "Monthly clothing and accessories budget.",
-                allocationPercentage: 0.03,
-                displayType: .monthly,
-                assumptions: [
-                    CategoryAssumption(title: "Basics", value: "50"),
-                    CategoryAssumption(title: "Seasonal", value: "30"),
-                    CategoryAssumption(title: "Accessories", value: "20")
-                ]
-            ),
-            
-            BudgetCategory(
-                id: "subscriptions",
-                name: "Subscriptions",
-                emoji: "📱",
-                description: "Monthly digital subscriptions and services.",
-                allocationPercentage: 0.02,
-                displayType: .monthly,
-                assumptions: [
-                    CategoryAssumption(title: "Streaming", value: "40"),
-                    CategoryAssumption(title: "Software", value: "35"),
-                    CategoryAssumption(title: "Other Services", value: "25")
-                ]
-            ),
-            
-            BudgetCategory(
-                id: "gym",
-                name: "Fitness",
-                emoji: "💪",
-                description: "Monthly fitness and wellness expenses.",
-                allocationPercentage: 0.02,
-                displayType: .monthly,
-                assumptions: [
-                    CategoryAssumption(title: "Gym Access", value: "60"),
-                    CategoryAssumption(title: "Classes", value: "25"),
-                    CategoryAssumption(title: "Equipment", value: "15")
-                ]
-            ),
-            
             BudgetCategory(
                 id: "investments",
                 name: "Investments",
                 emoji: "📈",
-                description: "Monthly investment contributions outside of retirement accounts.",
+                description: "Monthly investment contributions (e.g., stocks, bonds, etc.).",
                 allocationPercentage: 0.05,
                 displayType: .monthly,
                 assumptions: [
@@ -191,40 +93,11 @@ extension BudgetCategoryStore {
                     CategoryAssumption(title: "Other Assets", value: "10")
                 ]
             ),
-            
-            BudgetCategory(
-                id: "home_supplies",
-                name: "Home Supplies",
-                emoji: "🧻",
-                description: "Monthly household supplies and essentials.",
-                allocationPercentage: 0.02,
-                displayType: .monthly,
-                assumptions: [
-                    CategoryAssumption(title: "Cleaning", value: "40"),
-                    CategoryAssumption(title: "Paper Goods", value: "35"),
-                    CategoryAssumption(title: "Other Items", value: "25")
-                ]
-            ),
-            
-            BudgetCategory(
-                id: "home_utilities",
-                name: "Utilities",
-                emoji: "💡",
-                description: "Monthly home utilities including electricity, water, gas, internet, and phone.",
-                allocationPercentage: 0.08,
-                displayType: .monthly,
-                assumptions: [
-                    CategoryAssumption(title: "Electricity", value: "30"),
-                    CategoryAssumption(title: "Water & Gas", value: "35"),
-                    CategoryAssumption(title: "Internet/Phone", value: "35")
-                ]
-            ),
-            
             BudgetCategory(
                 id: "college_savings",
-                name: "Education",
+                name: "College Savings",
                 emoji: "🎓",
-                description: "Monthly education savings contribution.",
+                description: "Monthly contribution for education/college savings.",
                 allocationPercentage: 0.02,
                 displayType: .monthly,
                 assumptions: [
@@ -233,12 +106,11 @@ extension BudgetCategoryStore {
                     CategoryAssumption(title: "Years to Save", value: "18")
                 ]
             ),
-            
             BudgetCategory(
                 id: "vacation",
                 name: "Vacation",
                 emoji: "✈️",
-                description: "Annual vacation budget including travel, accommodations, and activities.",
+                description: "Annual vacation budget including travel, lodging, and activities.",
                 allocationPercentage: 0.03,
                 displayType: .total,
                 assumptions: [
@@ -248,19 +120,231 @@ extension BudgetCategoryStore {
                 ]
             ),
             
+            // -----------------------
+            // SIMPLE / FLAT CATEGORIES (remove assumptions)
+            // -----------------------
+            BudgetCategory(
+                id: "groceries",
+                name: "Groceries",
+                emoji: "🛒",
+                description: "Monthly food and household staples budget.",
+                allocationPercentage: 0.10,
+                displayType: .monthly,
+                assumptions: []
+            ),
+            BudgetCategory(
+                id: "eating_out",
+                name: "Quick Bites",
+                emoji: "🍔",
+                description: "Fast food, coffee, takeout, and quick meals.",
+                allocationPercentage: 0.05,
+                displayType: .monthly,
+                assumptions: []
+            ),
+            BudgetCategory(
+                id: "public_transportation",
+                name: "Transit",
+                emoji: "🚆",
+                description: "Buses, trains, ride-shares, etc.",
+                allocationPercentage: 0.05,
+                displayType: .monthly,
+                assumptions: []
+            ),
+            BudgetCategory(
+                id: "pet",
+                name: "Pet Care",
+                emoji: "🐾",
+                description: "Food, supplies, vet care.",
+                allocationPercentage: 0.02,
+                displayType: .monthly,
+                assumptions: []
+            ),
+            BudgetCategory(
+                id: "restaurants",
+                name: "Fine Dining",
+                emoji: "🍽️",
+                description: "Sit-down restaurants, date nights, etc.",
+                allocationPercentage: 0.05,
+                displayType: .monthly,
+                assumptions: []
+            ),
+            BudgetCategory(
+                id: "clothes",
+                name: "Clothing",
+                emoji: "👕",
+                description: "Clothes, accessories, and shoes.",
+                allocationPercentage: 0.03,
+                displayType: .monthly,
+                assumptions: []
+            ),
+            BudgetCategory(
+                id: "subscriptions",
+                name: "Subscriptions",
+                emoji: "📱",
+                description: "Streaming services, music, apps.",
+                allocationPercentage: 0.02,
+                displayType: .monthly,
+                assumptions: []
+            ),
+            BudgetCategory(
+                id: "gym",
+                name: "Fitness",
+                emoji: "💪",
+                description: "Gym membership, classes, wellness apps.",
+                allocationPercentage: 0.02,
+                displayType: .monthly,
+                assumptions: []
+            ),
+            BudgetCategory(
+                id: "home_supplies",
+                name: "Home Supplies",
+                emoji: "🧻",
+                description: "Cleaning products, paper goods, etc.",
+                allocationPercentage: 0.02,
+                displayType: .monthly,
+                assumptions: []
+            ),
+            BudgetCategory(
+                id: "home_utilities",
+                name: "Utilities",
+                emoji: "💡",
+                description: "Electricity, water, gas, internet, phone.",
+                allocationPercentage: 0.08,
+                displayType: .monthly,
+                assumptions: []
+            ),
             BudgetCategory(
                 id: "tickets",
                 name: "Entertainment",
                 emoji: "🎟️",
-                description: "Monthly entertainment and event budget.",
+                description: "Concerts, sports events, movies.",
                 allocationPercentage: 0.02,
                 displayType: .monthly,
-                assumptions: [
-                    CategoryAssumption(title: "Shows", value: "40"),
-                    CategoryAssumption(title: "Sports", value: "35"),
-                    CategoryAssumption(title: "Other Events", value: "25")
-                ]
+                assumptions: []
+            ),
+            
+            // -----------------------
+            // NEW COMMONLY-MISSED CATEGORIES
+            // -----------------------
+            BudgetCategory(
+                id: "medical",
+                name: "Medical/Healthcare",
+                emoji: "🏥",
+                description: "Doctor visits, prescriptions, copays, etc.",
+                allocationPercentage: 0.03,
+                displayType: .monthly,
+                assumptions: []
+            ),
+            BudgetCategory(
+                id: "credit_cards",
+                name: "Credit Cards",
+                emoji: "💳",
+                description: "Monthly credit card payments.",
+                allocationPercentage: 0.05,
+                displayType: .monthly,
+                assumptions: []
+            ),
+            BudgetCategory(
+                id: "student_loans",
+                name: "Student Loans",
+                emoji: "🎓",
+                description: "Monthly student loan payments.",
+                allocationPercentage: 0.05,
+                displayType: .monthly,
+                assumptions: []
+            ),
+            BudgetCategory(
+                id: "personal_loans",
+                name: "Personal Loans",
+                emoji: "🏦",
+                description: "Monthly personal loan payments.",
+                allocationPercentage: 0.05,
+                displayType: .monthly,
+                assumptions: []
+            ),
+            BudgetCategory(
+                id: "car_loan",
+                name: "Car Loan",
+                emoji: "🚗",
+                description: "Monthly car loan payments.",
+                allocationPercentage: 0.05,
+                displayType: .monthly,
+                assumptions: []
+            ),
+            BudgetCategory(
+                id: "charity",
+                name: "Charitable Giving",
+                emoji: "❤️",
+                description: "Donations to charities or religious tithes.",
+                allocationPercentage: 0.02,
+                displayType: .monthly,
+                assumptions: []
             )
         ]
+    }
+}
+
+
+extension BudgetCategory {
+    
+    /// Calculates and updates this category's `recommendedAmount`
+    /// based on its displayType and assumptions.
+    mutating func calculateRecommendedAmount(monthlyIncome: Double) {
+        switch displayType {
+        case .monthly:
+            // Example: monthly = monthlyIncome * allocationPercentage
+            recommendedAmount = monthlyIncome * allocationPercentage
+            
+        case .total:
+            // Custom logic for total categories
+            if id == "house" {
+                // House Price Calculation (illustrative)
+                let monthlyBudget = monthlyIncome * allocationPercentage
+                let interestRateStr = assumptions.first { $0.title == "Interest Rate" }?.value ?? "6.5"
+                let loanTermStr     = assumptions.first { $0.title == "Loan Term" }?.value ?? "30"
+                let downPaymentStr  = assumptions.first { $0.title == "Down Payment" }?.value ?? "20"
+                
+                guard
+                    let interestRate = Double(interestRateStr),
+                    let loanTerm     = Double(loanTermStr),
+                    let downPayment  = Double(downPaymentStr)
+                else {
+                    // Fallback if parsing fails
+                    recommendedAmount = monthlyBudget
+                    return
+                }
+                
+                let r = (interestRate / 100.0) / 12.0   // monthly interest
+                let n = loanTerm * 12.0                // months
+                if r > 0 {
+                    let numerator   = pow(1 + r, n) - 1
+                    let denominator = r * pow(1 + r, n)
+                    let principal   = monthlyBudget * (numerator / denominator)
+                    let dpFraction  = downPayment / 100.0
+                    recommendedAmount = principal / (1.0 - dpFraction)
+                } else {
+                    // Zero interest fallback
+                    recommendedAmount = monthlyBudget * n
+                }
+                
+            } else if id == "emergency_savings" {
+                // Simple emergency fund: months coverage * essential monthly expenses
+                let monthsCoverageStr = assumptions.first { $0.title == "Months Coverage" }?.value ?? "6"
+                guard let monthsCoverage = Double(monthsCoverageStr) else {
+                    recommendedAmount = monthlyIncome * allocationPercentage
+                    return
+                }
+                let essentialExpenses = monthlyIncome * 0.5
+                recommendedAmount = essentialExpenses * monthsCoverage
+                
+            } else if id == "vacation" {
+                // E.g. total for one year
+                recommendedAmount = (monthlyIncome * allocationPercentage) * 12.0
+                
+            } else {
+                // Default total category logic
+                recommendedAmount = (monthlyIncome * allocationPercentage) * 12.0
+            }
+        }
     }
 }

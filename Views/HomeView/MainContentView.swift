@@ -25,7 +25,7 @@ struct MainContentView: View {
                         AffordabilityView(model: model)
                             .padding(.top, 4)  // Minimal padding
                     } else {
-                        BudgetView()
+                        BudgetView(monthlyIncome: model.monthlyIncome)
                             .padding(.top, 4)  // Minimal padding
                     }
                 }
