@@ -59,7 +59,7 @@ struct StickyIncomeHeader: View {
                     .font(.system(size: 13))
                     .foregroundColor(Theme.tint)
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 12)
                     .background(Theme.tint.opacity(0.15))
                     .cornerRadius(8)
                 }
@@ -70,7 +70,7 @@ struct StickyIncomeHeader: View {
             
             Divider()
                 .background(Theme.separator)
-                .padding(.vertical, 16)
+                .padding(.vertical, 12)
             
             // Title Section
             VStack(alignment: .leading, spacing: 4) {
@@ -83,7 +83,6 @@ struct StickyIncomeHeader: View {
             }
             .padding(.horizontal, 16)
         }
-        .padding(.top, 16)
         .background(Theme.background)
     }
     

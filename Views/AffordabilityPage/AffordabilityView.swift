@@ -14,7 +14,7 @@ struct AffordabilityView: View {
     
     var body: some View {
         ScrollView {
-            LazyVStack(pinnedViews: [.sectionHeaders]) {
+            LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                 Section(header:
                     StickyIncomeHeader(monthlyIncome: model.monthlyIncome)
                         .background(Theme.background)
@@ -78,7 +78,6 @@ struct AffordabilityView: View {
                         )
                         .padding(.horizontal, 16)
                     }
-                    .padding(.top, 16)
                 }
             }
         }
