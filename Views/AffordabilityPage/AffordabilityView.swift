@@ -13,74 +13,76 @@ struct AffordabilityView: View {
     }
     
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
-                Section(header:
-                    StickyIncomeHeader(monthlyIncome: model.monthlyIncome)
-                        .background(Theme.background)
-                ) {
-                    VStack(spacing: 16) {
-                        // Search Bar
-                        HStack {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundColor(Theme.secondaryLabel)
-                            TextField("Search categories", text: $searchText)
-                                .font(.system(size: 17))
-                                .foregroundColor(Theme.label)
-                                .placeholder(when: searchText.isEmpty) {
-                                    Text("Search categories")
-                                        .foregroundColor(Theme.label.opacity(0.6))
-                                }
-                            
-                            if !searchText.isEmpty {
-                                Button(action: { searchText = "" }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(Theme.secondaryLabel)
-                                }
-                            }
-                        }
-                        .padding(12)
-                        .background(Theme.elevatedBackground)
-                        .cornerRadius(12)
-                        .padding(.horizontal, 16)
-                        
-                        // Categories List
-                        VStack(spacing: 0) {
-                            if filteredCategories.isEmpty {
-                                Text("No matching categories found")
-                                    .font(.system(size: 15))
-                                    .foregroundColor(Theme.secondaryLabel)
-                                    .padding(.vertical, 20)
-                            } else {
-                                ForEach(filteredCategories) { category in
-                                    CategoryRowView(
-                                        category: category,
-                                        amount: model.calculateAffordableAmount(for: category),
-                                        displayType: category.displayType,
-                                        onAssumptionsChanged: model.updateAssumptions
-                                    )
-                                    
-                                    if category.id != filteredCategories.last?.id {
-                                        Divider()
-                                            .background(Theme.separator)
-                                            .padding(.horizontal, 20)
-                                    }
-                                }
-                            }
-                        }
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Theme.surfaceBackground)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Theme.separator, lineWidth: 1)
-                        )
-                        .padding(.horizontal, 16)
-                    }
-                }
-            }
-        }
+       ScrollView {
+           LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+               Section(header:
+                   StickyIncomeHeader(monthlyIncome: model.monthlyIncome)
+                       .background(Theme.background)
+               ) {
+                   VStack(spacing: 16) {
+                       // Search Bar
+                       HStack {
+                           Image(systemName: "magnifyingglass")
+                               .foregroundColor(Theme.secondaryLabel)
+                           TextField("Search categories", text: $searchText)
+                               .font(.system(size: 17))
+                               .foregroundColor(Theme.label)
+                               .placeholder(when: searchText.isEmpty) {
+                                   Text("Search categories")
+                                       .foregroundColor(Theme.label.opacity(0.6))
+                               }
+                           
+                           if !searchText.isEmpty {
+                               Button(action: { searchText = "" }) {
+                                   Image(systemName: "xmark.circle.fill")
+                                       .foregroundColor(Theme.secondaryLabel)
+                               }
+                           }
+                       }
+                       .padding(12)
+                       .background(Theme.elevatedBackground)
+                       .cornerRadius(12)
+                       .padding(.horizontal, 16)
+                       .padding(.top, 8)  // Added top padding
+                       
+                       // Categories List
+                       VStack(spacing: 0) {
+                           if filteredCategories.isEmpty {
+                               Text("No matching categories found")
+                                   .font(.system(size: 15))
+                                   .foregroundColor(Theme.secondaryLabel)
+                                   .padding(.vertical, 20)
+                           } else {
+                               ForEach(filteredCategories) { category in
+                                   CategoryRowView(
+                                       category: category,
+                                       amount: model.calculateAffordableAmount(for: category),
+                                       displayType: category.displayType,
+                                       onAssumptionsChanged: model.updateAssumptions
+                                   )
+                                   
+                                   if category.id != filteredCategories.last?.id {
+                                       Divider()
+                                           .background(Theme.separator)
+                                           .padding(.horizontal, 20)
+                                   }
+                               }
+                           }
+                       }
+                       .background(
+                           RoundedRectangle(cornerRadius: 16)
+                               .fill(Theme.surfaceBackground)
+                       )
+                       .overlay(
+                           RoundedRectangle(cornerRadius: 16)
+                               .stroke(Theme.separator, lineWidth: 1)
+                       )
+                       .padding(.horizontal, 16)
+                   }
+                   .padding(.bottom, 16) // Added bottom padding for list
+               }
+           }
+       }
     }
     
     private func formatCurrency(_ value: Double) -> String {
