@@ -1,10 +1,46 @@
 import SwiftUI
 
+struct CustomPickerView: View {
+    @Binding var selectedPayPeriod: PayPeriod?
+    @Binding var isPresented: Bool
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(PayPeriod.allCases, id: \.self) { period in
+                Button(action: {
+                    selectedPayPeriod = period
+                    isPresented = false
+                }) {
+                    Text(period.rawValue)
+                        .font(.system(size: 17))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 16)
+                        .background(
+                            selectedPayPeriod == period ?
+                            Theme.tint.opacity(0.2) :
+                            Color.clear
+                        )
+                }
+                
+                if period != PayPeriod.allCases.last {
+                    Divider()
+                        .background(Theme.separator)
+                }
+            }
+        }
+        .background(Theme.surfaceBackground)
+        .cornerRadius(12)
+    }
+}
+
 struct SalaryInputView: View {
     @StateObject private var affordabilityModel = AffordabilityModel()
     @State private var paycheck: String = ""
     @State private var selectedPayPeriod: PayPeriod?
     @State private var showAffordability = false
+    @State private var showPicker = false
     
     var body: some View {
         NavigationStack {
@@ -12,63 +48,22 @@ struct SalaryInputView: View {
                 Theme.background
                     .ignoresSafeArea()
                 
-                VStack(spacing: 24) {
-                    // Take Home Pay Section
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Take Home Pay")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(Theme.label)
-                        Text("Enter your take-home pay per paycheck")
-                            .font(.system(size: 15))
-                            .foregroundColor(Theme.secondaryLabel)
-                            .padding(.bottom, 8)
-                        
-                        HStack {
-                            Text("$")
-                                .font(.system(size: 17))
-                                .foregroundColor(Theme.label)
-                            TextField("0", text: $paycheck)
-                                .keyboardType(.decimalPad)
-                                .font(.system(size: 17))
-                                .foregroundColor(Theme.label)
-                        }
-                        .padding(16)
-                        .background(Theme.surfaceBackground)
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Theme.separator, lineWidth: 1)
-                        )
-                    }
-                    .padding(.horizontal)
-                    
+                VStack(alignment: .leading, spacing: 24) {
                     // Pay Period Selection
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Pay Frequency")
-                            .font(.system(size: 20, weight: .bold))
+                            .font(.system(size: 24, weight: .bold))
                             .foregroundColor(Theme.label)
-                        Text("How often do you receive this amount?")
-                            .font(.system(size: 15))
+                        Text("How often do you receive your paycheck?")
+                            .font(.system(size: 17))
                             .foregroundColor(Theme.secondaryLabel)
-                            .padding(.bottom, 8)
+                            .padding(.bottom, 4)
                         
-                        Menu {
-                            ForEach(PayPeriod.allCases, id: \.self) { period in
-                                Button(action: {
-                                    selectedPayPeriod = period
-                                }) {
-                                    HStack {
-                                        Text(period.rawValue)
-                                            .foregroundColor(Theme.label)
-                                        Spacer()
-                                        if period == selectedPayPeriod {
-                                            Image(systemName: "checkmark")
-                                                .foregroundColor(Theme.label)
-                                        }
-                                    }
-                                }
+                        Button(action: {
+                            withAnimation {
+                                showPicker.toggle()
                             }
-                        } label: {
+                        }) {
                             HStack {
                                 Text(selectedPayPeriod?.rawValue ?? "Select frequency")
                                     .font(.system(size: 17))
@@ -77,8 +72,10 @@ struct SalaryInputView: View {
                                 Image(systemName: "chevron.down")
                                     .font(.system(size: 16))
                                     .foregroundColor(Theme.label)
+                                    .rotationEffect(showPicker ? .degrees(180) : .degrees(0))
                             }
                             .padding(16)
+                            .frame(maxWidth: .infinity)
                             .background(Theme.surfaceBackground)
                             .cornerRadius(12)
                             .overlay(
@@ -86,12 +83,50 @@ struct SalaryInputView: View {
                                     .stroke(Theme.separator, lineWidth: 1)
                             )
                         }
+                        
+                        if showPicker {
+                            CustomPickerView(selectedPayPeriod: $selectedPayPeriod, isPresented: $showPicker)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, 16)
+                    
+                    // Take Home Pay Section (only shows after pay period selection)
+                    if selectedPayPeriod != nil {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Take Home Pay")
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(Theme.label)
+                            Text("Enter your take-home pay per paycheck")
+                                .font(.system(size: 17))
+                                .foregroundColor(Theme.secondaryLabel)
+                                .padding(.bottom, 4)
+                            
+                            HStack {
+                                Text("$")
+                                    .font(.system(size: 17))
+                                    .foregroundColor(Theme.label)
+                                TextField("0", text: $paycheck)
+                                    .keyboardType(.decimalPad)
+                                    .font(.system(size: 17))
+                                    .foregroundColor(Theme.label)
+                            }
+                            .padding(16)
+                            .frame(maxWidth: .infinity)
+                            .background(Theme.surfaceBackground)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Theme.separator, lineWidth: 1)
+                            )
+                        }
+                        .padding(.horizontal, 16)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
                     
                     Spacer()
                     
-                    // Calculate Button
+                    // Calculate Button (only shows after entering amount)
                     if !paycheck.isEmpty && selectedPayPeriod != nil {
                         Button {
                             if let amount = Double(paycheck),
@@ -104,15 +139,17 @@ struct SalaryInputView: View {
                                 .font(.system(size: 17, weight: .semibold))
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
-                                .padding()
+                                .frame(height: 56)
                                 .background(Theme.tint)
                                 .cornerRadius(12)
                         }
-                        .padding(.horizontal)
-                        .padding(.bottom, 34)
+                        .padding(.horizontal, 16)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
                 }
                 .padding(.top, 60)
+                .animation(.spring(), value: selectedPayPeriod)
+                .animation(.spring(), value: paycheck)
             }
             .navigationDestination(isPresented: $showAffordability) {
                 MainContentView(monthlyIncome: affordabilityModel.monthlyIncome)
@@ -121,10 +158,9 @@ struct SalaryInputView: View {
     }
 }
 
-// Preview Provider
 struct SalaryInputView_Previews: PreviewProvider {
-   static var previews: some View {
-       SalaryInputView()
-           .preferredColorScheme(.dark)
-   }
+    static var previews: some View {
+        SalaryInputView()
+            .preferredColorScheme(.dark)
+    }
 }
