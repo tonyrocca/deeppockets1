@@ -60,7 +60,7 @@ struct SalaryInputView: View {
                             .padding(.bottom, 4)
                         
                         Button(action: {
-                            withAnimation {
+                            withAnimation(.easeInOut(duration: 0.2)) {
                                 showPicker.toggle()
                             }
                         }) {
@@ -86,12 +86,12 @@ struct SalaryInputView: View {
                         
                         if showPicker {
                             CustomPickerView(selectedPayPeriod: $selectedPayPeriod, isPresented: $showPicker)
-                                .transition(.opacity.combined(with: .move(edge: .top)))
+                                .transition(.opacity)
                         }
                     }
                     .padding(.horizontal, 16)
                     
-                    // Take Home Pay Section (only shows after pay period selection)
+                    // Take Home Pay Section
                     if selectedPayPeriod != nil {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Take Home Pay")
@@ -121,12 +121,12 @@ struct SalaryInputView: View {
                             )
                         }
                         .padding(.horizontal, 16)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
+                        .transition(.opacity)
                     }
                     
                     Spacer()
                     
-                    // Calculate Button (only shows after entering amount)
+                    // Calculate Button
                     if !paycheck.isEmpty && selectedPayPeriod != nil {
                         Button {
                             if let amount = Double(paycheck),
@@ -144,12 +144,10 @@ struct SalaryInputView: View {
                                 .cornerRadius(12)
                         }
                         .padding(.horizontal, 16)
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                        .transition(.opacity)
                     }
                 }
                 .padding(.top, 60)
-                .animation(.spring(), value: selectedPayPeriod)
-                .animation(.spring(), value: paycheck)
             }
             .navigationDestination(isPresented: $showAffordability) {
                 MainContentView(monthlyIncome: affordabilityModel.monthlyIncome)
