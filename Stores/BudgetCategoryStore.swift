@@ -1,6 +1,13 @@
 import SwiftUI
 import Foundation
 
+// MARK: - DisplayType Enum
+enum DisplayType {
+    case monthly
+    case total
+}
+
+// MARK: - BudgetCategoryStore Class
 class BudgetCategoryStore: ObservableObject {
     
     // MARK: - Singleton
@@ -34,39 +41,68 @@ class BudgetCategoryStore: ObservableObject {
     }
     
     // MARK: - Factory Method
-    /// Creates the initial array of BudgetCategories with only the necessary assumptions
-    /// for the categories that truly need them.
+    /// Creates the initial array of BudgetCategories with consistent assumption styling.
     func createCategories() -> [BudgetCategory] {
         return [
-            // -----------------------
-            // BIG / COMPLEX CATEGORIES (keep assumptions)
-            // -----------------------
+            // ----------------------------------------------------------------
+            // BIG / COMPLEX CATEGORIES (each has 'assumptions')
+            // ----------------------------------------------------------------
             BudgetCategory(
                 id: "house",
                 name: "House Price",
                 emoji: "🏠",
                 description: "Maximum home price you can afford based on your income and mortgage rates.",
-                allocationPercentage: 0.20,
+                allocationPercentage: 0.28,
                 displayType: .total,
                 assumptions: [
-                    CategoryAssumption(title: "Down Payment", value: "20"),
-                    CategoryAssumption(title: "Interest Rate", value: "6.5"),
-                    CategoryAssumption(title: "Loan Term", value: "30")
+                    CategoryAssumption(
+                        title: "Down Payment",
+                        value: "20",
+                        inputType: .percentageSlider(step: 1),
+                        description: "Higher down payment means lower monthly payments and better loan terms"
+                    ),
+                    CategoryAssumption(
+                        title: "Interest Rate",
+                        value: "6.5",
+                        inputType: .percentageSlider(step: 0.25),
+                        description: "Current mortgage rates in your area may vary"
+                    ),
+                    CategoryAssumption(
+                        title: "Loan Term",
+                        value: "30",
+                        inputType: .yearSlider(min: 15, max: 30),
+                        description: "Longer terms mean lower monthly payments but more interest paid overall"
+                    )
                 ]
             ),
             BudgetCategory(
                 id: "car",
-                                name: "Car",
-                                emoji: "🚗",
-                                description: "Maximum car price you can afford including loan, insurance, fuel, and maintenance.",
-                                allocationPercentage: 0.15,
-                                displayType: .total,
-                                assumptions: [
-                                    CategoryAssumption(title: "Down Payment", value: "20"),
-                                    CategoryAssumption(title: "Interest Rate", value: "7.5"),
-                                    CategoryAssumption(title: "Loan Term", value: "5")
-                                ]
-                            ),
+                name: "Car",
+                emoji: "🚗",
+                description: "Monthly car costs including payment, insurance, fuel, and maintenance.",
+                allocationPercentage: 0.15,
+                displayType: .total,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Down Payment",
+                        value: "20",
+                        inputType: .percentageSlider(step: 1),
+                        description: "Higher down payment means lower monthly payments and better loan terms"
+                    ),
+                    CategoryAssumption(
+                        title: "Interest Rate",
+                        value: "7.5",
+                        inputType: .percentageSlider(step: 0.25),
+                        description: "Auto loan rates are typically higher than mortgage rates"
+                    ),
+                    CategoryAssumption(
+                        title: "Loan Term",
+                        value: "5",
+                        inputType: .yearSlider(min: 3, max: 7),
+                        description: "Most auto loans range from 3-7 years"
+                    )
+                ]
+            ),
             BudgetCategory(
                 id: "emergency_savings",
                 name: "Emergency Fund",
@@ -75,9 +111,24 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.05,
                 displayType: .total,
                 assumptions: [
-                    CategoryAssumption(title: "Months Coverage", value: "6"),
-                    CategoryAssumption(title: "Monthly Save", value: "20"),
-                    CategoryAssumption(title: "Interest Rate", value: "4.5")
+                    CategoryAssumption(
+                        title: "Months Coverage",
+                        value: "6",
+                        inputType: .textField,
+                        description: "Number of months of expenses to save"
+                    ),
+                    CategoryAssumption(
+                        title: "Monthly Save",
+                        value: "20",
+                        inputType: .percentageSlider(step: 5),
+                        description: "Percentage of income to save monthly"
+                    ),
+                    CategoryAssumption(
+                        title: "Interest Rate",
+                        value: "4.5",
+                        inputType: .percentageSlider(step: 0.25),
+                        description: "Expected interest rate on savings"
+                    )
                 ]
             ),
             BudgetCategory(
@@ -88,9 +139,24 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.05,
                 displayType: .monthly,
                 assumptions: [
-                    CategoryAssumption(title: "Stocks", value: "60"),
-                    CategoryAssumption(title: "Bonds", value: "30"),
-                    CategoryAssumption(title: "Other Assets", value: "10")
+                    CategoryAssumption(
+                        title: "Stocks",
+                        value: "60",
+                        inputType: .percentageSlider(step: 5),
+                        description: "Percentage allocated to stocks"
+                    ),
+                    CategoryAssumption(
+                        title: "Bonds",
+                        value: "30",
+                        inputType: .percentageSlider(step: 5),
+                        description: "Percentage allocated to bonds"
+                    ),
+                    CategoryAssumption(
+                        title: "Other Assets",
+                        value: "10",
+                        inputType: .percentageSlider(step: 5),
+                        description: "Percentage allocated to other assets"
+                    )
                 ]
             ),
             BudgetCategory(
@@ -101,9 +167,24 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.02,
                 displayType: .monthly,
                 assumptions: [
-                    CategoryAssumption(title: "Monthly Save", value: "100"),
-                    CategoryAssumption(title: "Return Rate", value: "5"),
-                    CategoryAssumption(title: "Years to Save", value: "18")
+                    CategoryAssumption(
+                        title: "Monthly Save",
+                        value: "100",
+                        inputType: .textField,
+                        description: "How much you contribute monthly"
+                    ),
+                    CategoryAssumption(
+                        title: "Return Rate",
+                        value: "5",
+                        inputType: .percentageSlider(step: 0.25),
+                        description: "Expected annual return rate on the college fund"
+                    ),
+                    CategoryAssumption(
+                        title: "Years to Save",
+                        value: "18",
+                        inputType: .yearSlider(min: 1, max: 25),
+                        description: "How many years until college expenses"
+                    )
                 ]
             ),
             BudgetCategory(
@@ -114,15 +195,30 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.03,
                 displayType: .total,
                 assumptions: [
-                    CategoryAssumption(title: "Travel", value: "40"),
-                    CategoryAssumption(title: "Lodging", value: "40"),
-                    CategoryAssumption(title: "Activities", value: "20")
+                    CategoryAssumption(
+                        title: "Travel",
+                        value: "40",
+                        inputType: .percentageSlider(step: 5),
+                        description: "Portion of vacation budget for travel"
+                    ),
+                    CategoryAssumption(
+                        title: "Lodging",
+                        value: "40",
+                        inputType: .percentageSlider(step: 5),
+                        description: "Portion of vacation budget for lodging"
+                    ),
+                    CategoryAssumption(
+                        title: "Activities",
+                        value: "20",
+                        inputType: .percentageSlider(step: 5),
+                        description: "Portion of vacation budget for activities"
+                    )
                 ]
             ),
             
-            // -----------------------
-            // SIMPLE / FLAT CATEGORIES (remove assumptions)
-            // -----------------------
+            // ----------------------------------------------------------------
+            // SIMPLE / FLAT CATEGORIES (assumptions = [])
+            // ----------------------------------------------------------------
             BudgetCategory(
                 id: "groceries",
                 name: "Groceries",
@@ -223,9 +319,9 @@ class BudgetCategoryStore: ObservableObject {
                 assumptions: []
             ),
             
-            // -----------------------
-            // NEW COMMONLY-MISSED CATEGORIES
-            // -----------------------
+            // ----------------------------------------------------------------
+            // NEW COMMONLY-MISSED CATEGORIES (assumptions = [])
+            // ----------------------------------------------------------------
             BudgetCategory(
                 id: "medical",
                 name: "Medical/Healthcare",
@@ -284,7 +380,7 @@ class BudgetCategoryStore: ObservableObject {
     }
 }
 
-
+// MARK: - BudgetCategory Extension
 extension BudgetCategory {
     
     /// Calculates and updates this category's `recommendedAmount`
@@ -334,6 +430,7 @@ extension BudgetCategory {
                     recommendedAmount = monthlyIncome * allocationPercentage
                     return
                 }
+                // (Example) Use 50% of monthly income as 'essential expenses'
                 let essentialExpenses = monthlyIncome * 0.5
                 recommendedAmount = essentialExpenses * monthsCoverage
                 
