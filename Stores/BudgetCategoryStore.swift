@@ -56,17 +56,17 @@ class BudgetCategoryStore: ObservableObject {
             ),
             BudgetCategory(
                 id: "car",
-                name: "Car",
-                emoji: "🚗",
-                description: "Monthly car costs (payment, insurance, fuel, maintenance).",
-                allocationPercentage: 0.10,
-                displayType: .monthly,
-                assumptions: [
-                    CategoryAssumption(title: "Car Payment", value: "60"),
-                    CategoryAssumption(title: "Insurance", value: "20"),
-                    CategoryAssumption(title: "Fuel & Maintenance", value: "20")
-                ]
-            ),
+                                name: "Car",
+                                emoji: "🚗",
+                                description: "Maximum car price you can afford including loan, insurance, fuel, and maintenance.",
+                                allocationPercentage: 0.15,
+                                displayType: .total,
+                                assumptions: [
+                                    CategoryAssumption(title: "Down Payment", value: "20"),
+                                    CategoryAssumption(title: "Interest Rate", value: "7.5"),
+                                    CategoryAssumption(title: "Loan Term", value: "5")
+                                ]
+                            ),
             BudgetCategory(
                 id: "emergency_savings",
                 name: "Emergency Fund",
