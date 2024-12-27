@@ -33,7 +33,7 @@ struct ActionButtonMenu: View {
                             onAffordabilityTap()
                         }
                     }) {
-                        Text("Affordability Calculator")
+                        Text("Can I afford this?")
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(.white)
                             .frame(height: 56)
@@ -51,7 +51,7 @@ struct ActionButtonMenu: View {
                             onSavingsTap()
                         }
                     }) {
-                        Text("Savings Calculator")
+                        Text("Saving for something...")
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(.white)
                             .frame(height: 56)
