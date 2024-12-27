@@ -107,27 +107,15 @@ class BudgetCategoryStore: ObservableObject {
                 id: "emergency_savings",
                 name: "Emergency Fund",
                 emoji: "🆘",
-                description: "Total emergency fund target based on your essential monthly expenses.",
+                description: "Essential expenses coverage for unexpected events like job loss or medical emergencies.",
                 allocationPercentage: 0.05,
                 displayType: .total,
                 assumptions: [
                     CategoryAssumption(
                         title: "Months Coverage",
                         value: "6",
-                        inputType: .textField,
-                        description: "Number of months of expenses to save"
-                    ),
-                    CategoryAssumption(
-                        title: "Monthly Save",
-                        value: "20",
-                        inputType: .percentageSlider(step: 5),
-                        description: "Percentage of income to save monthly"
-                    ),
-                    CategoryAssumption(
-                        title: "Interest Rate",
-                        value: "4.5",
-                        inputType: .percentageSlider(step: 0.25),
-                        description: "Expected interest rate on savings"
+                        inputType: .percentageSlider(step: 1), // Changed from .yearSlider to .percentageSlider
+                        description: "Industry standard is 3-6 months, more if job is unstable"
                     )
                 ]
             ),
@@ -163,27 +151,15 @@ class BudgetCategoryStore: ObservableObject {
                 id: "college_savings",
                 name: "College Savings",
                 emoji: "🎓",
-                description: "Monthly contribution for education/college savings.",
-                allocationPercentage: 0.02,
+                description: "Monthly savings needed for future college expenses based on public university costs.",
+                allocationPercentage: 0.05,
                 displayType: .monthly,
                 assumptions: [
                     CategoryAssumption(
-                        title: "Monthly Save",
-                        value: "100",
-                        inputType: .textField,
-                        description: "How much you contribute monthly"
-                    ),
-                    CategoryAssumption(
-                        title: "Return Rate",
-                        value: "5",
-                        inputType: .percentageSlider(step: 0.25),
-                        description: "Expected annual return rate on the college fund"
-                    ),
-                    CategoryAssumption(
-                        title: "Years to Save",
+                        title: "Years to College",
                         value: "18",
-                        inputType: .yearSlider(min: 1, max: 25),
-                        description: "How many years until college expenses"
+                        inputType: .yearSlider(min: 1, max: 18),
+                        description: "Years until college starts"
                     )
                 ]
             ),
@@ -191,27 +167,15 @@ class BudgetCategoryStore: ObservableObject {
                 id: "vacation",
                 name: "Vacation",
                 emoji: "✈️",
-                description: "Annual vacation budget including travel, lodging, and activities.",
+                description: "Annual vacation budget adjusted for your travel style.",
                 allocationPercentage: 0.03,
                 displayType: .total,
                 assumptions: [
                     CategoryAssumption(
-                        title: "Travel",
-                        value: "40",
-                        inputType: .percentageSlider(step: 5),
-                        description: "Portion of vacation budget for travel"
-                    ),
-                    CategoryAssumption(
-                        title: "Lodging",
-                        value: "40",
-                        inputType: .percentageSlider(step: 5),
-                        description: "Portion of vacation budget for lodging"
-                    ),
-                    CategoryAssumption(
-                        title: "Activities",
-                        value: "20",
-                        inputType: .percentageSlider(step: 5),
-                        description: "Portion of vacation budget for activities"
+                        title: "Destination Type",
+                        value: "Domestic",
+                        inputType: .textField,
+                        description: "Choose: Domestic, International, or Luxury"
                     )
                 ]
             ),

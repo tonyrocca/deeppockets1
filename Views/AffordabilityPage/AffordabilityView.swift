@@ -85,6 +85,16 @@ struct AssumptionSliderView: View {
     @Binding var value: String
     let onChanged: (String) -> Void
     
+    private var displayValue: String {
+        if title == "Months Coverage" {
+            // For months coverage, show just the number without decimal places
+            if let doubleValue = Double(value) {
+                return String(format: "%.0f", doubleValue)
+            }
+        }
+        return value + suffix
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -92,9 +102,15 @@ struct AssumptionSliderView: View {
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(Theme.label)
                 Spacer()
-                Text("\(value)\(suffix)")
-                    .font(.system(size: 15))
-                    .foregroundColor(Theme.label)
+                if title == "Months Coverage" {
+                    Text("\(displayValue) months")
+                        .font(.system(size: 15))
+                        .foregroundColor(Theme.label)
+                } else {
+                    Text(displayValue)
+                        .font(.system(size: 15))
+                        .foregroundColor(Theme.label)
+                }
             }
             
             Slider(
@@ -290,7 +306,7 @@ struct AssumptionView: View {
             return "yr"
         }
         if title == "Months Coverage" {
-            return "mo"
+            return "mo"  // Ensure months is displayed for Months Coverage
         }
         if title.contains("Rate") || title == "Monthly Save" {
             return "%"
