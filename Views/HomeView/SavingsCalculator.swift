@@ -149,16 +149,21 @@ struct SavingsCalculatorModal: View {
                                             .font(.system(size: 17, weight: .medium))
                                             .foregroundColor(.white)
                                         
-                                        DatePicker("Target Date",
-                                                  selection: $targetDate,
-                                                  in: Date()...,
-                                                  displayedComponents: .date)
-                                            .datePickerStyle(.compact)
-                                            .foregroundColor(.white)
-                                            .tint(.white)
-                                            .padding()
-                                            .background(Theme.surfaceBackground)
-                                            .cornerRadius(12)
+                                        HStack {
+                                            Text("Target Date")
+                                                .foregroundColor(.white)
+                                            Spacer()
+                                            DatePicker("",
+                                                      selection: $targetDate,
+                                                      in: Date()...,
+                                                      displayedComponents: .date)
+                                                .datePickerStyle(.compact)
+                                                .colorScheme(.dark)
+                                                .labelsHidden()
+                                        }
+                                        .padding()
+                                        .background(Theme.surfaceBackground)
+                                        .cornerRadius(12)
                                     }
                                     
                                     // Calculate Button
