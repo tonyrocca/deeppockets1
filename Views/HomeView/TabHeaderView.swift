@@ -22,8 +22,8 @@ struct TabHeaderView: View {
                 )
             }
             .frame(height: 40)
+            .background(Theme.darkBackground)
         }
-        .background(Theme.darkBackground)
     }
 }
 
