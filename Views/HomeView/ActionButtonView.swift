@@ -51,7 +51,7 @@ struct ActionButtonMenu: View {
                             onSavingsTap()
                         }
                     }) {
-                        Text("Saving for something...")
+                        Text("Create savings goal")
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(.white)
                             .frame(height: 56)

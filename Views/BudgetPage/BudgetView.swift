@@ -1,7 +1,5 @@
-// BudgetView.swift
 import SwiftUI
 
-// Update BudgetView.swift
 struct BudgetView: View {
     @StateObject private var budgetModel: BudgetModel
     @State private var showingBuildBudget = false
@@ -28,26 +26,16 @@ struct BudgetView: View {
     }
     
     private var budgetContent: some View {
-        VStack(spacing: 0) {
-            // Income Summary
+        VStack(spacing: 16) {
+            // Unallocated Amount Card
             HStack {
-                VStack(alignment: .leading) {
-                    Text("Monthly Income")
-                        .font(.system(size: 15))
-                        .foregroundColor(Theme.secondaryLabel)
-                    Text(formatCurrency(budgetModel.monthlyIncome))
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(Theme.label)
-                }
+                Text("Unallocated")
+                    .font(.system(size: 15))
+                    .foregroundColor(Theme.secondaryLabel)
                 Spacer()
-                VStack(alignment: .trailing) {
-                    Text("Unallocated")
-                        .font(.system(size: 15))
-                        .foregroundColor(Theme.secondaryLabel)
-                    Text(formatCurrency(budgetModel.unusedAmount))
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(budgetModel.unusedAmount >= 0 ? Theme.tint : .red)
-                }
+                Text(formatCurrency(budgetModel.unusedAmount))
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(budgetModel.unusedAmount >= 0 ? Theme.tint : .red)
             }
             .padding()
             .background(Theme.surfaceBackground)
@@ -75,7 +63,8 @@ struct BudgetView: View {
                 .background(Theme.tint)
                 .cornerRadius(12)
             }
-            .padding()
+            .padding(.horizontal)
+            .padding(.bottom)
         }
     }
     
@@ -188,4 +177,9 @@ struct BudgetView: View {
             .padding(.horizontal)
         }
     }
+}
+
+#Preview {
+    BudgetView(monthlyIncome: 10000)
+        .preferredColorScheme(.dark)
 }

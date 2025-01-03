@@ -106,10 +106,15 @@ struct SalaryInputView: View {
                                 Text("$")
                                     .font(.system(size: 17))
                                     .foregroundColor(Theme.label)
-                                TextField("0", text: $paycheck)
+                                TextField("e.g. 2000", text: $paycheck)
                                     .keyboardType(.decimalPad)
                                     .font(.system(size: 17))
                                     .foregroundColor(Theme.label)
+                                if let period = selectedPayPeriod {
+                                    Text("/\(period.rawValue.lowercased())")
+                                        .font(.system(size: 17))
+                                        .foregroundColor(Theme.secondaryLabel)
+                                }
                             }
                             .padding(16)
                             .frame(maxWidth: .infinity)
@@ -150,15 +155,16 @@ struct SalaryInputView: View {
                 .padding(.top, 60)
             }
             .navigationDestination(isPresented: $showAffordability) {
-                MainContentView(monthlyIncome: affordabilityModel.monthlyIncome)
+                MainContentView(
+                    monthlyIncome: affordabilityModel.monthlyIncome,
+                    payPeriod: selectedPayPeriod ?? .monthly
+                )
             }
         }
     }
 }
 
-struct SalaryInputView_Previews: PreviewProvider {
-    static var previews: some View {
-        SalaryInputView()
-            .preferredColorScheme(.dark)
-    }
+#Preview {
+    SalaryInputView()
+        .preferredColorScheme(.dark)
 }

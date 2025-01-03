@@ -1,13 +1,13 @@
 import Foundation
 
-enum PayPeriod: String, CaseIterable {
+public enum PayPeriod: String, CaseIterable {
     case weekly = "Weekly"
     case biweekly = "Bi-weekly"
     case semimonthly = "Semi-monthly"
     case monthly = "Monthly"
     case yearly = "Yearly"
     
-    var multiplier: Double {
+    public var multiplier: Double {
         switch self {
         case .weekly: return 52/12
         case .biweekly: return 26/12
@@ -17,7 +17,7 @@ enum PayPeriod: String, CaseIterable {
         }
     }
     
-    var payPeriodsPerYear: Int {
+    public var payPeriodsPerYear: Int {
         switch self {
         case .weekly: return 52
         case .biweekly: return 26

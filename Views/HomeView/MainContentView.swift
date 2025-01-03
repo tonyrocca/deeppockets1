@@ -6,11 +6,13 @@ struct MainContentView: View {
     @State private var showActionMenu = false
     @State private var showAffordabilityCalculator = false
     @State private var showSavingsCalculator = false
+    let payPeriod: PayPeriod
     
-    init(monthlyIncome: Double) {
+    init(monthlyIncome: Double, payPeriod: PayPeriod) {
         let model = AffordabilityModel()
         model.monthlyIncome = monthlyIncome
         _model = StateObject(wrappedValue: model)
+        self.payPeriod = payPeriod
     }
     
     var body: some View {
@@ -25,16 +27,23 @@ struct MainContentView: View {
                         .ignoresSafeArea()
                     
                     ScrollView {
-                        VStack(spacing: 0) {
-                            // Income Header
-                            StickyIncomeHeader(monthlyIncome: model.monthlyIncome)
-                                .background(Theme.background)
-                            
-                            // Content
+                        LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                             if selectedTab == 0 {
-                                AffordabilityView(model: model)
+                                // Affordability Tab
+                                Section(header:
+                                    StickyIncomeHeader(monthlyIncome: model.monthlyIncome)
+                                        .background(Theme.background)
+                                ) {
+                                    AffordabilityView(model: model)
+                                }
                             } else {
-                                BudgetView(monthlyIncome: model.monthlyIncome)
+                                // Budget Tab
+                                Section(header:
+                                    BudgetHeader(monthlyIncome: model.monthlyIncome, payPeriod: payPeriod)
+                                        .background(Theme.background)
+                                ) {
+                                    BudgetView(monthlyIncome: model.monthlyIncome)
+                                }
                             }
                         }
                     }
@@ -43,7 +52,7 @@ struct MainContentView: View {
             }
             .blur(radius: showActionMenu ? 3 : 0)
             
-            // Action Button (middle layer)
+            // Action Button and Modals remain the same
             if !showAffordabilityCalculator && !showSavingsCalculator {
                 VStack {
                     Spacer()
@@ -71,7 +80,6 @@ struct MainContentView: View {
                 }
             }
             
-            // Modals (top layer)
             if showAffordabilityCalculator {
                 AffordabilityCalculatorModal(
                     isPresented: $showAffordabilityCalculator,
