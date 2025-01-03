@@ -17,87 +17,100 @@ struct MainContentView: View {
     
     var body: some View {
         ZStack {
-            // Base content
+            // Main Content
             VStack(spacing: 0) {
                 TabHeaderView(selectedTab: $selectedTab)
                     .ignoresSafeArea(edges: .top)
                 
-                ZStack {
-                    Theme.background
-                        .ignoresSafeArea()
-                    
-                    ScrollView {
-                        LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
-                            if selectedTab == 0 {
-                                // Affordability Tab
-                                Section(header:
-                                    StickyIncomeHeader(monthlyIncome: model.monthlyIncome)
-                                        .background(Theme.background)
-                                ) {
-                                    AffordabilityView(model: model)
-                                }
-                            } else {
-                                // Budget Tab
-                                Section(header:
-                                    BudgetHeader(monthlyIncome: model.monthlyIncome, payPeriod: payPeriod)
-                                        .background(Theme.background)
-                                ) {
-                                    BudgetView(monthlyIncome: model.monthlyIncome)
-                                }
-                            }
-                        }
+                ScrollView {
+                    LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                        mainSection
                     }
-                    .scrollIndicators(.hidden)
                 }
+                .scrollIndicators(.hidden)
             }
             .blur(radius: showActionMenu ? 3 : 0)
             
-            // Action Button and Modals remain the same
-            if !showAffordabilityCalculator && !showSavingsCalculator {
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        ActionButtonMenu(
-                            onClose: { },
-                            onAffordabilityTap: {
-                                withAnimation {
-                                    showActionMenu = false
-                                    showAffordabilityCalculator = true
-                                }
-                            },
-                            onSavingsTap: {
-                                withAnimation {
-                                    showActionMenu = false
-                                    showSavingsCalculator = true
-                                }
-                            },
-                            isShowing: $showActionMenu
-                        )
-                        .padding(.trailing, 16)
-                        .padding(.bottom, 16)
-                    }
-                }
-            }
-            
-            if showAffordabilityCalculator {
-                AffordabilityCalculatorModal(
-                    isPresented: $showAffordabilityCalculator,
-                    monthlyIncome: model.monthlyIncome
-                )
-                .zIndex(2)
-            }
-            
-            if showSavingsCalculator {
-                SavingsCalculatorModal(
-                    isPresented: $showSavingsCalculator,
-                    monthlyIncome: model.monthlyIncome
-                )
-                .zIndex(2)
-            }
+            // Overlay Content
+            overlayContent
         }
         .background(Theme.background)
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
+    }
+    
+    // MARK: - Content Views
+    @ViewBuilder
+    private var mainSection: some View {
+        if selectedTab == 0 {
+            Section(header: affordabilityHeader) {
+                AffordabilityView(model: model)
+            }
+        } else {
+            Section(header: budgetHeader) {
+                BudgetView(monthlyIncome: model.monthlyIncome)
+            }
+        }
+    }
+    
+    private var affordabilityHeader: some View {
+        StickyIncomeHeader(monthlyIncome: model.monthlyIncome)
+            .background(Theme.background)
+    }
+    
+    private var budgetHeader: some View {
+        BudgetHeader(monthlyIncome: model.monthlyIncome, payPeriod: payPeriod)
+            .background(Theme.background)
+    }
+    
+    // MARK: - Overlay Content
+    @ViewBuilder
+    private var overlayContent: some View {
+        if !showAffordabilityCalculator && !showSavingsCalculator {
+            actionButton
+        }
+        
+        if showAffordabilityCalculator {
+            AffordabilityCalculatorModal(
+                isPresented: $showAffordabilityCalculator,
+                monthlyIncome: model.monthlyIncome
+            )
+            .zIndex(2)
+        }
+        
+        if showSavingsCalculator {
+            SavingsCalculatorModal(
+                isPresented: $showSavingsCalculator,
+                monthlyIncome: model.monthlyIncome
+            )
+            .zIndex(2)
+        }
+    }
+    
+    private var actionButton: some View {
+        VStack {
+            Spacer()
+            HStack {
+                Spacer()
+                ActionButtonMenu(
+                    onClose: { },
+                    onAffordabilityTap: {
+                        withAnimation {
+                            showActionMenu = false
+                            showAffordabilityCalculator = true
+                        }
+                    },
+                    onSavingsTap: {
+                        withAnimation {
+                            showActionMenu = false
+                            showSavingsCalculator = true
+                        }
+                    },
+                    isShowing: $showActionMenu
+                )
+                .padding(.trailing, 16)
+                .padding(.bottom, 16)
+            }
+        }
     }
 }
