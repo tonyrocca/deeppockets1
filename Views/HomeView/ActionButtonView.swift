@@ -12,7 +12,7 @@ struct ActionButtonMenu: View {
             // Dimmed background
             if isShowing {
                 Color.black
-                    .opacity(0.5)
+                    .opacity(0.4)  // Slightly reduced opacity
                     .ignoresSafeArea()
                     .onTapGesture {
                         withAnimation {
@@ -27,60 +27,14 @@ struct ActionButtonMenu: View {
                 Spacer()
                 
                 if isShowing {
-                    // Affordability Calculator Button
-                    Button(action: {
-                        withAnimation {
-                            isShowing = false
-                            onAffordabilityTap()
-                        }
-                    }) {
-                        Text("Can I afford this?")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(height: 56)
-                            .frame(maxWidth: .infinity)
-                            .background(Theme.tint)
-                            .cornerRadius(28)
+                    // Menu Container
+                    VStack(spacing: 8) {  // Reduced spacing between buttons
+                        menuButton(title: "Can I afford this?", action: onAffordabilityTap)
+                        menuButton(title: "Calculate debt payoff", action: onDebtTap)
+                        menuButton(title: "Create savings goal", action: onSavingsTap)
                     }
                     .padding(.horizontal, 20)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    
-                    // Debt Calculator Button
-                    Button(action: {
-                        withAnimation {
-                            isShowing = false
-                            onDebtTap()
-                        }
-                    }) {
-                        Text("Calculate debt payoff")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(height: 56)
-                            .frame(maxWidth: .infinity)
-                            .background(Theme.tint)
-                            .cornerRadius(28)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    
-                    // Savings Calculator Button
-                    Button(action: {
-                        withAnimation {
-                            isShowing = false
-                            onSavingsTap()
-                        }
-                    }) {
-                        Text("Create savings goal")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(height: 56)
-                            .frame(maxWidth: .infinity)
-                            .background(Theme.tint)
-                            .cornerRadius(28)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
+                    .padding(.bottom, 8)  // Add some space before FAB
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 
@@ -94,18 +48,39 @@ struct ActionButtonMenu: View {
                     }
                 }) {
                     Image(systemName: isShowing ? "xmark" : "plus")
-                        .font(.system(size: 24, weight: .semibold))
+                        .font(.system(size: 22, weight: .semibold))  // Slightly smaller icon
                         .foregroundColor(.white)
                         .frame(width: 56, height: 56)
                         .background(Theme.tint)
                         .clipShape(Circle())
-                        .shadow(color: Theme.tint.opacity(0.3), radius: 10, x: 0, y: 4)
+                        .shadow(color: Theme.tint.opacity(0.2), radius: 8, x: 0, y: 4)  // Subtle shadow
                 }
-                .rotationEffect(Angle(degrees: isShowing ? 90 : 0))
+                .rotationEffect(Angle(degrees: isShowing ? 45 : 0))  // Changed rotation
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
-                .padding(.top, isShowing ? 12 : 0)
             }
+        }
+    }
+    
+    // Helper function for consistent button styling
+    private func menuButton(title: String, action: @escaping () -> Void) -> some View {
+        Button(action: {
+            withAnimation {
+                isShowing = false
+                action()
+            }
+        }) {
+            Text(title)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(height: 50)  // Slightly reduced height
+                .frame(maxWidth: .infinity)
+                .background(Theme.surfaceBackground.opacity(0.8))  // Semi-transparent background
+                .cornerRadius(25)  // Rounded corners
+                .overlay(
+                    RoundedRectangle(cornerRadius: 25)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)  // Subtle border
+                )
         }
     }
 }
