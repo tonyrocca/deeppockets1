@@ -104,17 +104,21 @@ struct SalaryInputView: View {
                             
                             HStack {
                                 Text("$")
-                                    .font(.system(size: 17))
-                                    .foregroundColor(Theme.label)
-                                TextField("e.g. 2000", text: $paycheck)
-                                    .keyboardType(.decimalPad)
-                                    .font(.system(size: 17))
-                                    .foregroundColor(Theme.label)
-                                if let period = selectedPayPeriod {
-                                    Text("/\(period.rawValue.lowercased())")
                                         .font(.system(size: 17))
-                                        .foregroundColor(Theme.secondaryLabel)
-                                }
+                                        .foregroundColor(.white)
+                                    TextField("e.g. 2000", text: $paycheck)  // Change the placeholder text to be clearer
+                                        .keyboardType(.decimalPad)
+                                        .font(.system(size: 17))
+                                        .foregroundColor(.white)
+                                        .placeholder(when: paycheck.isEmpty) {
+                                            Text("e.g. 2000")
+                                                .foregroundColor(Color.white.opacity(0.6))  // Increased opacity for better visibility
+                                        }
+                                    if let period = selectedPayPeriod {
+                                        Text("/\(period.rawValue.lowercased())")
+                                            .font(.system(size: 17))
+                                            .foregroundColor(Color.white.opacity(0.6))  // Matching opacity
+                                    }
                             }
                             .padding(16)
                             .frame(maxWidth: .infinity)
