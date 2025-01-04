@@ -6,6 +6,7 @@ struct MainContentView: View {
     @State private var showActionMenu = false
     @State private var showAffordabilityCalculator = false
     @State private var showSavingsCalculator = false
+    @State private var showDebtCalculator = false  // New state variable
     let payPeriod: PayPeriod
     
     init(monthlyIncome: Double, payPeriod: PayPeriod) {
@@ -66,7 +67,7 @@ struct MainContentView: View {
     // MARK: - Overlay Content
     @ViewBuilder
     private var overlayContent: some View {
-        if !showAffordabilityCalculator && !showSavingsCalculator {
+        if !showAffordabilityCalculator && !showSavingsCalculator && !showDebtCalculator {
             actionButton
         }
         
@@ -81,6 +82,14 @@ struct MainContentView: View {
         if showSavingsCalculator {
             SavingsCalculatorModal(
                 isPresented: $showSavingsCalculator,
+                monthlyIncome: model.monthlyIncome
+            )
+            .zIndex(2)
+        }
+        
+        if showDebtCalculator {
+            DebtCalculatorModal(
+                isPresented: $showDebtCalculator,
                 monthlyIncome: model.monthlyIncome
             )
             .zIndex(2)
@@ -104,6 +113,12 @@ struct MainContentView: View {
                         withAnimation {
                             showActionMenu = false
                             showSavingsCalculator = true
+                        }
+                    },
+                    onDebtTap: {
+                        withAnimation {
+                            showActionMenu = false
+                            showDebtCalculator = true
                         }
                     },
                     isShowing: $showActionMenu

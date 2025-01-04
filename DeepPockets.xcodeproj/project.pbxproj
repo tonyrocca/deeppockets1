@@ -48,6 +48,7 @@
 				BudgetPage/SimplifiedCategoryRow.swift,
 				HomeView/ActionButtonView.swift,
 				HomeView/AffordabilityCalculator.swift,
+				HomeView/DebtCalculator.swift,
 				HomeView/MainContentView.swift,
 				HomeView/SavingsCalculator.swift,
 				HomeView/TabHeaderView.swift,

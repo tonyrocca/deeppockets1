@@ -4,6 +4,7 @@ struct ActionButtonMenu: View {
     let onClose: () -> Void
     let onAffordabilityTap: () -> Void
     let onSavingsTap: () -> Void
+    let onDebtTap: () -> Void
     @Binding var isShowing: Bool
     
     var body: some View {
@@ -42,6 +43,25 @@ struct ActionButtonMenu: View {
                             .cornerRadius(28)
                     }
                     .padding(.horizontal, 20)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    
+                    // Debt Calculator Button
+                    Button(action: {
+                        withAnimation {
+                            isShowing = false
+                            onDebtTap()
+                        }
+                    }) {
+                        Text("Calculate debt payoff")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(height: 56)
+                            .frame(maxWidth: .infinity)
+                            .background(Theme.tint)
+                            .cornerRadius(28)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     
                     // Savings Calculator Button
