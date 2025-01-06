@@ -57,6 +57,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				BudgetCategoryStore.swift,
+				BudgetStore.swift,
 			);
 			target = 7737C11A2D095E2F002A0CAB /* DeepPocketsUITests */;
 		};

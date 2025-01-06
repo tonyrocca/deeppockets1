@@ -25,24 +25,6 @@ struct BudgetView: View {
     @State private var showBudgetBuilder = false
     @StateObject private var budgetStore = BudgetStore()
     
-    private var debtCategories: [BudgetCategory] {
-        BudgetCategoryStore.shared.categories.filter {
-            budgetStore.isSelected($0) && isDebtCategory($0.id)
-        }
-    }
-    
-    private var expenseCategories: [BudgetCategory] {
-        BudgetCategoryStore.shared.categories.filter {
-            budgetStore.isSelected($0) && !isDebtCategory($0.id) && !isSavingsCategory($0.id)
-        }
-    }
-    
-    private var savingsCategories: [BudgetCategory] {
-        BudgetCategoryStore.shared.categories.filter {
-            budgetStore.isSelected($0) && isSavingsCategory($0.id)
-        }
-    }
-    
     var body: some View {
         VStack(spacing: 0) {
             // Income Display Section
@@ -88,7 +70,7 @@ struct BudgetView: View {
             .padding(.vertical, 24)
             .background(Theme.background)
             
-            if budgetStore.selectedCategories.isEmpty {
+            if budgetStore.configurations.isEmpty {
                 // Empty State
                 VStack(spacing: 20) {
                     Spacer()
@@ -120,19 +102,60 @@ struct BudgetView: View {
                 // Budget Categories List
                 ScrollView {
                     VStack(spacing: 24) {
+                        let debtCategories = budgetStore.debtCategories()
+                        let expenseCategories = budgetStore.expenseCategories()
+                        let savingsCategories = budgetStore.savingsCategories()
+                        
                         // Debt Categories
                         if !debtCategories.isEmpty {
-                            categorySection(title: "Debt", categories: debtCategories)
+                            categorySection(title: "Debt", configurations: debtCategories)
                         }
                         
                         // Expense Categories
                         if !expenseCategories.isEmpty {
-                            categorySection(title: "Monthly Expenses", categories: expenseCategories)
+                            categorySection(title: "Monthly Expenses", configurations: expenseCategories)
                         }
                         
                         // Savings Categories
                         if !savingsCategories.isEmpty {
-                            categorySection(title: "Savings Goals", categories: savingsCategories)
+                            categorySection(title: "Savings Goals", configurations: savingsCategories)
+                        }
+                        
+                        // Total Budget Summary
+                        if selectedTimePeriod == .monthly {
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("MONTHLY SUMMARY")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(Theme.tint)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Theme.tint.opacity(0.1))
+                                    .cornerRadius(4)
+                                
+                                VStack(spacing: 12) {
+                                    budgetSummaryRow(
+                                        title: "Debt Payments",
+                                        amount: budgetStore.totalDebtPayments
+                                    )
+                                    budgetSummaryRow(
+                                        title: "Monthly Expenses",
+                                        amount: budgetStore.totalMonthlyExpenses
+                                    )
+                                    budgetSummaryRow(
+                                        title: "Monthly Savings",
+                                        amount: budgetStore.totalMonthlySavings
+                                    )
+                                    Divider().background(Theme.separator)
+                                    budgetSummaryRow(
+                                        title: "Total Monthly Budget",
+                                        amount: budgetStore.totalMonthlyBudget,
+                                        isTotal: true
+                                    )
+                                }
+                                .padding()
+                                .background(Theme.surfaceBackground)
+                                .cornerRadius(12)
+                            }
                         }
                     }
                     .padding()
@@ -148,7 +171,7 @@ struct BudgetView: View {
         }
     }
     
-    private func categorySection(title: String, categories: [BudgetCategory]) -> some View {
+    private func categorySection(title: String, configurations: [BudgetStore.CategoryConfiguration]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title.uppercased())
                 .font(.system(size: 13, weight: .bold))
@@ -158,19 +181,25 @@ struct BudgetView: View {
                 .background(Theme.tint.opacity(0.1))
                 .cornerRadius(4)
             
-            ForEach(categories) { category in
+            ForEach(configurations, id: \.category.id) { config in
                 HStack {
-                    Text(category.emoji)
+                    Text(config.category.emoji)
                         .font(.title2)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(category.name)
+                        Text(config.category.name)
                             .font(.system(size: 17))
                             .foregroundColor(.white)
                         
-                        let recommendedAmount = monthlyIncome * category.allocationPercentage
-                        Text("\(formatCurrency(recommendedAmount))/mo • \(Int(category.allocationPercentage * 100))% of income")
-                            .font(.system(size: 13))
-                            .foregroundColor(Theme.secondaryLabel)
+                        switch config.displayType {
+                        case .monthly:
+                            Text("\(formatCurrency(config.amount))/mo")
+                                .font(.system(size: 13))
+                                .foregroundColor(Theme.secondaryLabel)
+                        case .total:
+                            Text("\(formatCurrency(config.amount)) total")
+                                .font(.system(size: 13))
+                                .foregroundColor(Theme.secondaryLabel)
+                        }
                     }
                     Spacer()
                 }
@@ -181,12 +210,16 @@ struct BudgetView: View {
         }
     }
     
-    private func isDebtCategory(_ id: String) -> Bool {
-        ["credit_cards", "student_loans", "personal_loans", "car_loan"].contains(id)
-    }
-    
-    private func isSavingsCategory(_ id: String) -> Bool {
-        ["emergency_savings", "investments", "college_savings", "vacation"].contains(id)
+    private func budgetSummaryRow(title: String, amount: Double, isTotal: Bool = false) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: isTotal ? 17 : 15, weight: isTotal ? .semibold : .regular))
+                .foregroundColor(isTotal ? Theme.label : Theme.secondaryLabel)
+            Spacer()
+            Text(formatCurrency(amount))
+                .font(.system(size: isTotal ? 17 : 15, weight: isTotal ? .semibold : .regular))
+                .foregroundColor(isTotal ? Theme.label : Theme.secondaryLabel)
+        }
     }
     
     private func formatIncome() -> String {
