@@ -378,11 +378,222 @@ struct DebtConfigurationView: View {
     let monthlyIncome: Double
     @Binding var amount: Double?
     
+    @State private var debtAmount = ""
+    @State private var interestRate = ""
+    @State private var minimumPayment = ""
+    @State private var payoffPlan: DebtPayoffPlan?
+    
     var body: some View {
         VStack(spacing: 24) {
-            // TODO: Add debt configuration UI similar to DebtCalculatorModal
-            Text("Debt Configuration Placeholder")
+            // Selected Category Header
+            HStack(alignment: .center, spacing: 12) {
+                Text(category.emoji)
+                    .font(.system(size: 28))
+                Text(category.name)
+                    .font(.title)
+                    .foregroundColor(.white)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            
+            // Debt Amount Input
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Total \(category.name) Debt")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundColor(.white)
+                
+                HStack {
+                    Text("$")
+                        .foregroundColor(.white)
+                    TextField("", text: $debtAmount)
+                        .keyboardType(.decimalPad)
+                        .foregroundColor(.white)
+                        .placeholder(when: debtAmount.isEmpty) {
+                            Text("0")
+                                .foregroundColor(Theme.secondaryLabel)
+                        }
+                        .onChange(of: debtAmount) { _ in
+                            calculatePayoffPlan()
+                        }
+                }
+                .padding()
+                .background(Theme.surfaceBackground)
+                .cornerRadius(12)
+            }
+            
+            // Interest Rate Input
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Interest Rate (%)")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundColor(.white)
+                
+                HStack {
+                    TextField("", text: $interestRate)
+                        .keyboardType(.decimalPad)
+                        .foregroundColor(.white)
+                        .placeholder(when: interestRate.isEmpty) {
+                            Text("0.0")
+                                .foregroundColor(Theme.secondaryLabel)
+                        }
+                        .onChange(of: interestRate) { _ in
+                            calculatePayoffPlan()
+                        }
+                    Text("%")
+                        .foregroundColor(.white)
+                }
+                .padding()
+                .background(Theme.surfaceBackground)
+                .cornerRadius(12)
+            }
+            
+            // Minimum Payment Input
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Current Monthly Minimum Payment")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundColor(.white)
+                
+                HStack {
+                    Text("$")
+                        .foregroundColor(.white)
+                    TextField("", text: $minimumPayment)
+                        .keyboardType(.decimalPad)
+                        .foregroundColor(.white)
+                        .placeholder(when: minimumPayment.isEmpty) {
+                            Text("0")
+                                .foregroundColor(Theme.secondaryLabel)
+                        }
+                        .onChange(of: minimumPayment) { _ in
+                            calculatePayoffPlan()
+                        }
+                }
+                .padding()
+                .background(Theme.surfaceBackground)
+                .cornerRadius(12)
+            }
+            
+            // Payoff Plan Summary
+            if let plan = payoffPlan {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Payoff Plan Summary")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.white)
+                    
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Monthly Payment")
+                                .font(.system(size: 15))
+                                .foregroundColor(Theme.secondaryLabel)
+                            Text(formatCurrency(plan.monthlyPayment))
+                                .font(.system(size: 17))
+                                .foregroundColor(.white)
+                        }
+                        
+                        Spacer()
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Payoff Date")
+                                .font(.system(size: 15))
+                                .foregroundColor(Theme.secondaryLabel)
+                            Text(formatDate(plan.payoffDate))
+                                .font(.system(size: 17))
+                                .foregroundColor(.white)
+                        }
+                    }
+                    
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Total Interest")
+                                .font(.system(size: 15))
+                                .foregroundColor(Theme.secondaryLabel)
+                            Text(formatCurrency(plan.totalInterest))
+                                .font(.system(size: 17))
+                                .foregroundColor(.white)
+                        }
+                        
+                        Spacer()
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Total Cost")
+                                .font(.system(size: 15))
+                                .foregroundColor(Theme.secondaryLabel)
+                            Text(formatCurrency(plan.totalCost))
+                                .font(.system(size: 17))
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
+                .padding()
+                .background(Theme.surfaceBackground)
+                .cornerRadius(12)
+            }
         }
+    }
+    
+    private func calculatePayoffPlan() {
+        guard
+            let debt = Double(debtAmount),
+            let rate = Double(interestRate),
+            let minPayment = Double(minimumPayment)
+        else {
+            payoffPlan = nil
+            amount = nil
+            return
+        }
+        
+        let plan = DebtPayoffPlan(
+            debtAmount: debt,
+            interestRate: rate,
+            minimumPayment: minPayment,
+            monthlyIncome: monthlyIncome
+        )
+        
+        payoffPlan = plan
+        amount = plan.monthlyPayment
+    }
+    
+    private func formatCurrency(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: value)) ?? "$0"
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM yyyy"
+        return formatter.string(from: date)
+    }
+}
+
+struct DebtPayoffPlan {
+    let debtAmount: Double
+    let interestRate: Double
+    let minimumPayment: Double
+    let monthlyIncome: Double
+    
+    var monthlyPayment: Double {
+        max(minimumPayment, monthlyIncome * 0.1)
+    }
+    
+    var payoffDate: Date {
+        let months = calculateMonthsToPayoff()
+        return Calendar.current.date(byAdding: .month, value: months, to: Date()) ?? Date()
+    }
+    
+    var totalInterest: Double {
+        let months = calculateMonthsToPayoff()
+        let totalPayments = monthlyPayment * Double(months)
+        return totalPayments - debtAmount
+    }
+    
+    var totalCost: Double {
+        debtAmount + totalInterest
+    }
+    
+    private func calculateMonthsToPayoff() -> Int {
+        let monthlyRate = interestRate / 100 / 12
+        let numerator = log(monthlyPayment / (monthlyPayment - monthlyRate * debtAmount))
+        let denominator = log(1 + monthlyRate)
+        return Int(ceil(numerator / denominator))
     }
 }
 
