@@ -6,7 +6,7 @@ struct MainContentView: View {
     @State private var showActionMenu = false
     @State private var showAffordabilityCalculator = false
     @State private var showSavingsCalculator = false
-    @State private var showDebtCalculator = false  // New state variable
+    @State private var showDebtCalculator = false
     let payPeriod: PayPeriod
     
     init(monthlyIncome: Double, payPeriod: PayPeriod) {
@@ -48,19 +48,12 @@ struct MainContentView: View {
                 AffordabilityView(model: model)
             }
         } else {
-            Section(header: budgetHeader) {
-                BudgetView(monthlyIncome: model.monthlyIncome)
-            }
+            BudgetView(monthlyIncome: model.monthlyIncome, payPeriod: payPeriod)
         }
     }
     
     private var affordabilityHeader: some View {
         StickyIncomeHeader(monthlyIncome: model.monthlyIncome)
-            .background(Theme.background)
-    }
-    
-    private var budgetHeader: some View {
-        BudgetHeader(monthlyIncome: model.monthlyIncome, payPeriod: payPeriod)
             .background(Theme.background)
     }
     
