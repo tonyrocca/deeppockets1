@@ -40,6 +40,7 @@ struct BudgetBuilderModal: View {
     @State private var phase: BudgetBuilderPhase = .debtSelection
     @State private var selectedCategories: Set<String> = []
     @State private var temporaryAmounts: [String: Double] = [:]
+    @State private var debtInputData: [String: DebtInputData] = [:]
     
     var body: some View {
         ZStack {
@@ -108,7 +109,10 @@ struct BudgetBuilderModal: View {
                                     DebtConfigurationView(
                                         category: category,
                                         monthlyIncome: monthlyIncome,
-                                        amount: binding(for: category)
+                                        inputData: Binding(
+                                            get: { debtInputData[category.id] ?? DebtInputData() },
+                                            set: { debtInputData[category.id] = $0 }
+                                        )
                                     )
                                     
                                 case .expenseSelection:
@@ -191,8 +195,14 @@ struct BudgetBuilderModal: View {
         switch phase {
         case .debtSelection, .expenseSelection, .savingsSelection:
             return true // Can always skip
-        case .debtConfiguration(let category),
-             .expenseConfiguration(let category),
+        case .debtConfiguration(let category):
+            // We only enable the button if there's a valid payoff plan
+            if let inputData = debtInputData[category.id],
+               let _ = inputData.payoffPlan {
+                return true
+            }
+            return false
+        case .expenseConfiguration(let category),
              .savingsConfiguration(let category):
             return temporaryAmounts[category.id] != nil
         }
@@ -227,19 +237,24 @@ struct BudgetBuilderModal: View {
             if let nextCategory = selectedCategories.compactMap({ id in
                 debtCategories.first(where: { $0.id == id })
             }).first {
+                // Initialize DebtInputData for the first selected debt
+                debtInputData[nextCategory.id] = DebtInputData()
                 phase = .debtConfiguration(nextCategory)
             } else {
                 phase = .expenseSelection
             }
             
         case .debtConfiguration(let category):
-            if let amount = temporaryAmounts[category.id] {
+            // Pull the payoff plan from the stored input data
+            if let inputData = debtInputData[category.id],
+               let amount = inputData.payoffPlan?.monthlyPayment {
                 budgetStore.setCategory(category, amount: amount)
                 selectedCategories.remove(category.id)
                 
                 if let nextCategory = selectedCategories.compactMap({ id in
                     debtCategories.first(where: { $0.id == id })
                 }).first {
+                    debtInputData[nextCategory.id] = DebtInputData()
                     phase = .debtConfiguration(nextCategory)
                 } else {
                     phase = .expenseSelection
@@ -317,6 +332,14 @@ struct BudgetBuilderModal: View {
     }
 }
 
+// A container for user input in the debt configuration phase
+struct DebtInputData {
+    var debtAmount: String = ""
+    var interestRate: String = ""
+    var minimumPayment: String = ""
+    var payoffPlan: DebtPayoffPlan?
+}
+
 // MARK: - Category Selection View
 struct CategorySelectionView: View {
     let categories: [BudgetCategory]
@@ -376,12 +399,7 @@ struct CategorySelectionView: View {
 struct DebtConfigurationView: View {
     let category: BudgetCategory
     let monthlyIncome: Double
-    @Binding var amount: Double?
-    
-    @State private var debtAmount = ""
-    @State private var interestRate = ""
-    @State private var minimumPayment = ""
-    @State private var payoffPlan: DebtPayoffPlan?
+    @Binding var inputData: DebtInputData
     
     var body: some View {
         VStack(spacing: 24) {
@@ -404,14 +422,14 @@ struct DebtConfigurationView: View {
                 HStack {
                     Text("$")
                         .foregroundColor(.white)
-                    TextField("", text: $debtAmount)
+                    TextField("", text: $inputData.debtAmount)
                         .keyboardType(.decimalPad)
                         .foregroundColor(.white)
-                        .placeholder(when: debtAmount.isEmpty) {
+                        .placeholder(when: inputData.debtAmount.isEmpty) {
                             Text("0")
                                 .foregroundColor(Theme.secondaryLabel)
                         }
-                        .onChange(of: debtAmount) { _ in
+                        .onChange(of: inputData.debtAmount) { _ in
                             calculatePayoffPlan()
                         }
                 }
@@ -427,14 +445,14 @@ struct DebtConfigurationView: View {
                     .foregroundColor(.white)
                 
                 HStack {
-                    TextField("", text: $interestRate)
+                    TextField("", text: $inputData.interestRate)
                         .keyboardType(.decimalPad)
                         .foregroundColor(.white)
-                        .placeholder(when: interestRate.isEmpty) {
+                        .placeholder(when: inputData.interestRate.isEmpty) {
                             Text("0.0")
                                 .foregroundColor(Theme.secondaryLabel)
                         }
-                        .onChange(of: interestRate) { _ in
+                        .onChange(of: inputData.interestRate) { _ in
                             calculatePayoffPlan()
                         }
                     Text("%")
@@ -454,14 +472,14 @@ struct DebtConfigurationView: View {
                 HStack {
                     Text("$")
                         .foregroundColor(.white)
-                    TextField("", text: $minimumPayment)
+                    TextField("", text: $inputData.minimumPayment)
                         .keyboardType(.decimalPad)
                         .foregroundColor(.white)
-                        .placeholder(when: minimumPayment.isEmpty) {
+                        .placeholder(when: inputData.minimumPayment.isEmpty) {
                             Text("0")
                                 .foregroundColor(Theme.secondaryLabel)
                         }
-                        .onChange(of: minimumPayment) { _ in
+                        .onChange(of: inputData.minimumPayment) { _ in
                             calculatePayoffPlan()
                         }
                 }
@@ -471,7 +489,7 @@ struct DebtConfigurationView: View {
             }
             
             // Payoff Plan Summary
-            if let plan = payoffPlan {
+            if let plan = inputData.payoffPlan {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Payoff Plan Summary")
                         .font(.system(size: 20, weight: .bold))
@@ -530,12 +548,11 @@ struct DebtConfigurationView: View {
     
     private func calculatePayoffPlan() {
         guard
-            let debt = Double(debtAmount),
-            let rate = Double(interestRate),
-            let minPayment = Double(minimumPayment)
+            let debt = Double(inputData.debtAmount),
+            let rate = Double(inputData.interestRate),
+            let minPayment = Double(inputData.minimumPayment)
         else {
-            payoffPlan = nil
-            amount = nil
+            inputData.payoffPlan = nil
             return
         }
         
@@ -546,8 +563,7 @@ struct DebtConfigurationView: View {
             monthlyIncome: monthlyIncome
         )
         
-        payoffPlan = plan
-        amount = plan.monthlyPayment
+        inputData.payoffPlan = plan
     }
     
     private func formatCurrency(_ value: Double) -> String {
@@ -571,6 +587,7 @@ struct DebtPayoffPlan {
     let monthlyIncome: Double
     
     var monthlyPayment: Double {
+        // Simple calculation for demonstration purposes
         max(minimumPayment, monthlyIncome * 0.1)
     }
     
@@ -591,8 +608,17 @@ struct DebtPayoffPlan {
     
     private func calculateMonthsToPayoff() -> Int {
         let monthlyRate = interestRate / 100 / 12
+        // Avoid division by zero or negative scenarios
+        guard monthlyPayment > monthlyRate * debtAmount else { return Int.max }
+        
         let numerator = log(monthlyPayment / (monthlyPayment - monthlyRate * debtAmount))
         let denominator = log(1 + monthlyRate)
+        
+        // If numerator or denominator is invalid, return a large number to represent a lengthy payoff
+        if numerator.isNaN || denominator.isNaN || denominator == 0 {
+            return 999
+        }
+        
         return Int(ceil(numerator / denominator))
     }
 }
