@@ -812,11 +812,202 @@ struct SavingsConfigurationView: View {
     let category: BudgetCategory
     let monthlyIncome: Double
     @Binding var amount: Double?
+    @State private var inputMode: SavingsInputMode = .recommended
+    @State private var targetAmount: String = ""
+    @State private var targetDate = Date().addingTimeInterval(365 * 24 * 60 * 60) // Default to 1 year
+    
+    enum SavingsInputMode {
+        case recommended
+        case custom
+    }
+    
+    private var recommendedAmount: Double {
+        monthlyIncome * category.allocationPercentage
+    }
+    
+    private var monthsToGoal: Int {
+        Calendar.current.dateComponents([.month], from: Date(), to: targetDate).month ?? 12
+    }
+    
+    private var requiredMonthlySavings: Double? {
+        guard let target = Double(targetAmount) else { return nil }
+        return target / Double(max(1, monthsToGoal))
+    }
     
     var body: some View {
-        VStack(spacing: 24) {
-            // TODO: Add savings configuration UI similar to SavingsCalculatorModal
-            Text("Savings Configuration Placeholder")
+        VStack(spacing: 20) {
+            // Header
+            HStack(spacing: 8) {
+                Text(category.emoji)
+                    .font(.title)
+                Text(category.name)
+                    .font(.title)
+                    .foregroundColor(.white)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            
+            // Options Section
+            VStack(spacing: 16) {
+                // Recommended Amount Option
+                Button(action: { selectMode(.recommended) }) {
+                    HStack(spacing: 12) {
+                        Circle()
+                            .stroke(Theme.secondaryLabel, lineWidth: 2)
+                            .frame(width: 24, height: 24)
+                            .overlay {
+                                if inputMode == .recommended {
+                                    Circle()
+                                        .fill(Theme.tint)
+                                        .frame(width: 16, height: 16)
+                                }
+                            }
+                        
+                        Text("\(formatCurrency(recommendedAmount))/month")
+                            .font(.system(size: 17))
+                            .foregroundColor(.white)
+                        
+                        Text("(\(Int(category.allocationPercentage * 100))% of income)")
+                            .font(.system(size: 15))
+                            .foregroundColor(Theme.secondaryLabel)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Theme.surfaceBackground)
+                    .cornerRadius(12)
+                }
+                
+                // Custom Goal Section
+                VStack(spacing: 0) {
+                    // Custom Header
+                    Button(action: { selectMode(.custom) }) {
+                        HStack(spacing: 12) {
+                            Circle()
+                                .stroke(Theme.secondaryLabel, lineWidth: 2)
+                                .frame(width: 24, height: 24)
+                                .overlay {
+                                    if inputMode == .custom {
+                                        Circle()
+                                            .fill(Theme.tint)
+                                            .frame(width: 16, height: 16)
+                                    }
+                                }
+                            
+                            Text("Set savings goal")
+                                .font(.system(size: 17))
+                                .foregroundColor(.white)
+                            
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                    }
+                    
+                    // Goal Input Fields (when selected)
+                    if inputMode == .custom {
+                        VStack(spacing: 16) {
+                            // Target Amount
+                            HStack(spacing: 8) {
+                                Text("$")
+                                    .foregroundColor(Theme.secondaryLabel)
+                                TextField("", text: $targetAmount)
+                                    .keyboardType(.decimalPad)
+                                    .foregroundColor(.white)
+                                    .placeholder(when: targetAmount.isEmpty) {
+                                        Text("e.g. 10000")
+                                            .foregroundColor(Theme.secondaryLabel)
+                                    }
+                                    .onChange(of: targetAmount) { _ in
+                                        updateCalculation()
+                                    }
+                                Text("total goal")
+                                    .foregroundColor(Theme.secondaryLabel)
+                            }
+                            .padding(.horizontal, 16)
+                            
+                            // Target Date
+                            HStack {
+                                Text("By")
+                                    .foregroundColor(Theme.secondaryLabel)
+                                DatePicker("", selection: $targetDate,
+                                         in: Date()...,
+                                         displayedComponents: .date)
+                                    .datePickerStyle(.compact)
+                                    .colorScheme(.dark)
+                                    .onChange(of: targetDate) { _ in
+                                    updateCalculation()
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            
+                            // Savings Summary
+                            if let monthlySavings = requiredMonthlySavings {
+                                VStack(spacing: 8) {
+                                    HStack {
+                                        Text("Required monthly savings:")
+                                            .foregroundColor(Theme.secondaryLabel)
+                                        Spacer()
+                                        Text(formatCurrency(monthlySavings))
+                                            .foregroundColor(.white)
+                                    }
+                                    
+                                    // Compare to recommended
+                                    let difference = monthlySavings - recommendedAmount
+                                    let percentDifference = (difference / recommendedAmount) * 100
+                                    
+                                    HStack {
+                                        Image(systemName: difference >= 0 ? "arrow.up.right" : "arrow.down.right")
+                                        Text("\(String(format: "%.1f", abs(percentDifference)))% \(difference >= 0 ? "above" : "below") recommended")
+                                    }
+                                    .font(.system(size: 13))
+                                    .foregroundColor(difference >= 0 ? .red : Theme.tint)
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                            }
+                        }
+                        .padding(.vertical, 12)
+                    }
+                }
+                .background(Theme.surfaceBackground)
+                .cornerRadius(12)
+            }
+            
+            Spacer()
+            
+            // Helper Text
+            Text("We'll help you reach your savings goal by recommending the right monthly contribution")
+                .font(.system(size: 15))
+                .foregroundColor(Theme.secondaryLabel)
+                .multilineTextAlignment(.center)
         }
+        .padding(.horizontal, 20)
+    }
+    
+    private func selectMode(_ mode: SavingsInputMode) {
+        withAnimation {
+            inputMode = mode
+            if mode == .recommended {
+                targetAmount = ""
+                targetDate = Date().addingTimeInterval(365 * 24 * 60 * 60)
+                amount = recommendedAmount
+            } else {
+                amount = nil
+            }
+        }
+    }
+    
+    private func updateCalculation() {
+        if let savings = requiredMonthlySavings {
+            amount = savings
+        } else {
+            amount = nil
+        }
+    }
+    
+    private func formatCurrency(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: value)) ?? "$0"
     }
 }
