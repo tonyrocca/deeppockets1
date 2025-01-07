@@ -663,26 +663,19 @@ struct ExpenseConfigurationView: View {
     }
     
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
             // Category Info
-            VStack(spacing: 8) {
-                HStack(alignment: .center, spacing: 12) {
-                    Text(category.emoji)
-                        .font(.system(size: 28))
-                    Text(category.name)
-                        .font(.title)
-                        .foregroundColor(.white)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                
-                Text(category.description)
-                    .font(.system(size: 15))
-                    .foregroundColor(Theme.secondaryLabel)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: 8) {
+                Text(category.emoji)
+                    .font(.title)
+                Text(category.name)
+                    .font(.title)
+                    .foregroundColor(.white)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             
             // Options Section
-            VStack(spacing: 12) {
+            VStack(spacing: 16) {
                 // Recommended Amount Option
                 Button(action: { selectMode(.recommended) }) {
                     HStack(spacing: 12) {
@@ -711,9 +704,9 @@ struct ExpenseConfigurationView: View {
                     .cornerRadius(12)
                 }
                 
-                // Custom Amount Option
-                Button(action: { selectMode(.custom) }) {
-                    VStack(spacing: 8) {
+                // Custom Amount Section
+                VStack(spacing: 0) {
+                    Button(action: { selectMode(.custom) }) {
                         HStack(spacing: 12) {
                             Circle()
                                 .stroke(Theme.secondaryLabel, lineWidth: 2)
@@ -729,15 +722,24 @@ struct ExpenseConfigurationView: View {
                             Text("Custom amount")
                                 .font(.system(size: 17))
                                 .foregroundColor(.white)
+                            
+                            Spacer()
                         }
-                        
-                        if inputMode == .custom {
+                        .padding()
+                    }
+                    
+                    if inputMode == .custom {
+                        VStack(spacing: 12) {
                             HStack {
                                 Text("$")
                                     .foregroundColor(.white)
-                                TextField("0", text: $customAmount)
+                                TextField("", text: $customAmount)
                                     .keyboardType(.decimalPad)
                                     .foregroundColor(.white)
+                                    .placeholder(when: customAmount.isEmpty) {
+                                        Text("e.g. 2000")
+                                            .foregroundColor(Theme.secondaryLabel)
+                                    }
                                     .onChange(of: customAmount) { newValue in
                                         if let value = Double(newValue) {
                                             amount = value
@@ -745,11 +747,10 @@ struct ExpenseConfigurationView: View {
                                             amount = nil
                                         }
                                     }
-                                Spacer()
-                                Text("per month")
+                                Text("/month")
                                     .foregroundColor(Theme.secondaryLabel)
                             }
-                            .padding(.horizontal)
+                            .padding()
                             
                             if let customValue = Double(customAmount) {
                                 let difference = customValue - recommendedAmount
@@ -758,18 +759,17 @@ struct ExpenseConfigurationView: View {
                                 HStack {
                                     Image(systemName: difference >= 0 ? "arrow.up.right" : "arrow.down.right")
                                     Text("\(String(format: "%.1f", abs(percentDifference)))% \(difference >= 0 ? "above" : "below") recommended")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(difference >= 0 ? .red : Theme.tint)
                                 }
-                                .font(.system(size: 13))
-                                .foregroundColor(difference >= 0 ? .red : Theme.tint)
                                 .padding(.horizontal)
+                                .padding(.bottom)
                             }
                         }
                     }
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Theme.surfaceBackground)
-                    .cornerRadius(12)
                 }
+                .background(Theme.surfaceBackground)
+                .cornerRadius(12)
             }
             
             Spacer()
@@ -785,6 +785,7 @@ struct ExpenseConfigurationView: View {
                     .foregroundColor(Theme.secondaryLabel)
             }
         }
+        .padding(.horizontal, 20)
     }
     
     private func selectMode(_ mode: ExpenseInputMode) {
@@ -794,7 +795,7 @@ struct ExpenseConfigurationView: View {
                 customAmount = ""
                 amount = recommendedAmount
             } else {
-                customAmount = ""  // Clear any previous custom amount
+                customAmount = ""
                 amount = nil
             }
         }
@@ -814,7 +815,7 @@ struct SavingsConfigurationView: View {
     @Binding var amount: Double?
     @State private var inputMode: SavingsInputMode = .recommended
     @State private var targetAmount: String = ""
-    @State private var targetDate = Date().addingTimeInterval(365 * 24 * 60 * 60) // Default to 1 year
+    @State private var targetDate = Date().addingTimeInterval(365 * 24 * 60 * 60)
     
     enum SavingsInputMode {
         case recommended
@@ -835,7 +836,7 @@ struct SavingsConfigurationView: View {
     }
     
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
             // Header
             HStack(spacing: 8) {
                 Text(category.emoji)
@@ -870,15 +871,14 @@ struct SavingsConfigurationView: View {
                             .font(.system(size: 15))
                             .foregroundColor(Theme.secondaryLabel)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Theme.surfaceBackground)
                     .cornerRadius(12)
                 }
                 
                 // Custom Goal Section
                 VStack(spacing: 0) {
-                    // Custom Header
                     Button(action: { selectMode(.custom) }) {
                         HStack(spacing: 12) {
                             Circle()
@@ -898,17 +898,15 @@ struct SavingsConfigurationView: View {
                             
                             Spacer()
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
+                        .padding()
                     }
                     
-                    // Goal Input Fields (when selected)
                     if inputMode == .custom {
                         VStack(spacing: 16) {
                             // Target Amount
-                            HStack(spacing: 8) {
+                            HStack {
                                 Text("$")
-                                    .foregroundColor(Theme.secondaryLabel)
+                                    .foregroundColor(.white)
                                 TextField("", text: $targetAmount)
                                     .keyboardType(.decimalPad)
                                     .foregroundColor(.white)
@@ -922,24 +920,25 @@ struct SavingsConfigurationView: View {
                                 Text("total goal")
                                     .foregroundColor(Theme.secondaryLabel)
                             }
-                            .padding(.horizontal, 16)
+                            .padding()
                             
                             // Target Date
                             HStack {
                                 Text("By")
-                                    .foregroundColor(Theme.secondaryLabel)
+                                    .foregroundColor(.white)
+                                Spacer()
                                 DatePicker("", selection: $targetDate,
                                          in: Date()...,
                                          displayedComponents: .date)
                                     .datePickerStyle(.compact)
                                     .colorScheme(.dark)
                                     .onChange(of: targetDate) { _ in
-                                    updateCalculation()
-                                }
+                                        updateCalculation()
+                                    }
                             }
-                            .padding(.horizontal, 16)
+                            .padding()
                             
-                            // Savings Summary
+                            // Required Monthly Savings
                             if let monthlySavings = requiredMonthlySavings {
                                 VStack(spacing: 8) {
                                     HStack {
@@ -950,22 +949,20 @@ struct SavingsConfigurationView: View {
                                             .foregroundColor(.white)
                                     }
                                     
-                                    // Compare to recommended
                                     let difference = monthlySavings - recommendedAmount
                                     let percentDifference = (difference / recommendedAmount) * 100
                                     
                                     HStack {
                                         Image(systemName: difference >= 0 ? "arrow.up.right" : "arrow.down.right")
                                         Text("\(String(format: "%.1f", abs(percentDifference)))% \(difference >= 0 ? "above" : "below") recommended")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(difference >= 0 ? .red : Theme.tint)
                                     }
-                                    .font(.system(size: 13))
-                                    .foregroundColor(difference >= 0 ? .red : Theme.tint)
                                 }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
+                                .padding(.horizontal)
+                                .padding(.bottom)
                             }
                         }
-                        .padding(.vertical, 12)
                     }
                 }
                 .background(Theme.surfaceBackground)
