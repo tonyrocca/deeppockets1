@@ -96,54 +96,58 @@ struct BudgetBuilderModal: View {
                             }
                             
                             // Phase Content
-                            Group {
-                                switch phase {
-                                case .debtSelection:
-                                    CategorySelectionView(
-                                        categories: debtCategories,
-                                        selectedCategories: $selectedCategories,
-                                        monthlyIncome: monthlyIncome
-                                    )
-                                    
-                                case .debtConfiguration(let category):
-                                    DebtConfigurationView(
-                                        category: category,
-                                        monthlyIncome: monthlyIncome,
-                                        inputData: Binding(
-                                            get: { debtInputData[category.id] ?? DebtInputData() },
-                                            set: { debtInputData[category.id] = $0 }
+                            AnyView(
+                                VStack {
+                                    switch phase {
+                                    case .debtSelection:
+                                        CategorySelectionView(
+                                            categories: debtCategories,
+                                            selectedCategories: $selectedCategories,
+                                            monthlyIncome: monthlyIncome
                                         )
-                                    )
-                                    
-                                case .expenseSelection:
-                                    CategorySelectionView(
-                                        categories: expenseCategories,
-                                        selectedCategories: $selectedCategories,
-                                        monthlyIncome: monthlyIncome
-                                    )
-                                    
-                                case .expenseConfiguration(let category):
-                                    ExpenseConfigurationView(
-                                        category: category,
-                                        monthlyIncome: monthlyIncome,
-                                        amount: binding(for: category)
-                                    )
-                                    
-                                case .savingsSelection:
-                                    CategorySelectionView(
-                                        categories: savingsCategories,
-                                        selectedCategories: $selectedCategories,
-                                        monthlyIncome: monthlyIncome
-                                    )
-                                    
-                                case .savingsConfiguration(let category):
-                                    SavingsConfigurationView(
-                                        category: category,
-                                        monthlyIncome: monthlyIncome,
-                                        amount: binding(for: category)
-                                    )
+                                        
+                                    case .debtConfiguration(let category):
+                                        DebtConfigurationView(
+                                            category: category,
+                                            monthlyIncome: monthlyIncome,
+                                            inputData: Binding(
+                                                get: { debtInputData[category.id] ?? DebtInputData() },
+                                                set: { debtInputData[category.id] = $0 }
+                                            )
+                                        )
+                                        
+                                    case .expenseSelection:
+                                        CategorySelectionView(
+                                            categories: expenseCategories,
+                                            selectedCategories: $selectedCategories,
+                                            monthlyIncome: monthlyIncome
+                                        )
+                                        
+                                    case .expenseConfiguration(let category):
+                                        ExpenseConfigurationView(
+                                            category: category,
+                                            monthlyIncome: monthlyIncome,
+                                            totalCategories: getTotalConfigurableExpenses(),
+                                            currentIndex: getCurrentExpenseIndex(for: category),
+                                            amount: binding(for: category)
+                                        )
+                                        
+                                    case .savingsSelection:
+                                        CategorySelectionView(
+                                            categories: savingsCategories,
+                                            selectedCategories: $selectedCategories,
+                                            monthlyIncome: monthlyIncome
+                                        )
+                                        
+                                    case .savingsConfiguration(let category):
+                                        SavingsConfigurationView(
+                                            category: category,
+                                            monthlyIncome: monthlyIncome,
+                                            amount: binding(for: category)
+                                        )
+                                    }
                                 }
-                            }
+                            )
                             
                             // Spacer to ensure content scrolls above button
                             Color.clear.frame(height: 100)
@@ -329,6 +333,23 @@ struct BudgetBuilderModal: View {
     
     private func isSavingsCategory(_ id: String) -> Bool {
         ["emergency_savings", "investments", "college_savings", "vacation"].contains(id)
+    }
+    
+    private func getTotalConfigurableExpenses() -> Int {
+        return selectedCategories.filter { id in
+            expenseCategories.contains(where: { $0.id == id })
+        }.count
+    }
+
+    private func getCurrentExpenseIndex(for category: BudgetCategory) -> Int {
+        let selectedExpenseIds = selectedCategories.filter { id in
+            expenseCategories.contains(where: { $0.id == id })
+        }.sorted() // Sort to maintain consistent order
+        
+        if let index = selectedExpenseIds.firstIndex(of: category.id) {
+            return index
+        }
+        return 0
     }
 }
 
@@ -626,13 +647,164 @@ struct DebtPayoffPlan {
 struct ExpenseConfigurationView: View {
     let category: BudgetCategory
     let monthlyIncome: Double
+    let totalCategories: Int
+    let currentIndex: Int
     @Binding var amount: Double?
+    @State private var inputMode: ExpenseInputMode = .recommended
+    @State private var customAmount: String = ""
+    
+    enum ExpenseInputMode {
+        case recommended
+        case custom
+    }
+    
+    private var recommendedAmount: Double {
+        monthlyIncome * category.allocationPercentage
+    }
     
     var body: some View {
-        VStack(spacing: 24) {
-            // TODO: Add expense configuration UI
-            Text("Expense Configuration Placeholder")
+        VStack(spacing: 20) {
+            // Category Info
+            VStack(spacing: 8) {
+                HStack(alignment: .center, spacing: 12) {
+                    Text(category.emoji)
+                        .font(.system(size: 28))
+                    Text(category.name)
+                        .font(.title)
+                        .foregroundColor(.white)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Text(category.description)
+                    .font(.system(size: 15))
+                    .foregroundColor(Theme.secondaryLabel)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            
+            // Options Section
+            VStack(spacing: 12) {
+                // Recommended Amount Option
+                Button(action: { selectMode(.recommended) }) {
+                    HStack(spacing: 12) {
+                        Circle()
+                            .stroke(Theme.secondaryLabel, lineWidth: 2)
+                            .frame(width: 24, height: 24)
+                            .overlay {
+                                if inputMode == .recommended {
+                                    Circle()
+                                        .fill(Theme.tint)
+                                        .frame(width: 16, height: 16)
+                                }
+                            }
+                        
+                        Text("\(formatCurrency(recommendedAmount))/month")
+                            .font(.system(size: 17))
+                            .foregroundColor(.white)
+                        
+                        Text("(\(Int(category.allocationPercentage * 100))% of income)")
+                            .font(.system(size: 15))
+                            .foregroundColor(Theme.secondaryLabel)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.surfaceBackground)
+                    .cornerRadius(12)
+                }
+                
+                // Custom Amount Option
+                Button(action: { selectMode(.custom) }) {
+                    VStack(spacing: 8) {
+                        HStack(spacing: 12) {
+                            Circle()
+                                .stroke(Theme.secondaryLabel, lineWidth: 2)
+                                .frame(width: 24, height: 24)
+                                .overlay {
+                                    if inputMode == .custom {
+                                        Circle()
+                                            .fill(Theme.tint)
+                                            .frame(width: 16, height: 16)
+                                    }
+                                }
+                            
+                            Text("Custom amount")
+                                .font(.system(size: 17))
+                                .foregroundColor(.white)
+                        }
+                        
+                        if inputMode == .custom {
+                            HStack {
+                                Text("$")
+                                    .foregroundColor(.white)
+                                TextField("0", text: $customAmount)
+                                    .keyboardType(.decimalPad)
+                                    .foregroundColor(.white)
+                                    .onChange(of: customAmount) { newValue in
+                                        if let value = Double(newValue) {
+                                            amount = value
+                                        } else {
+                                            amount = nil
+                                        }
+                                    }
+                                Spacer()
+                                Text("per month")
+                                    .foregroundColor(Theme.secondaryLabel)
+                            }
+                            .padding(.horizontal)
+                            
+                            if let customValue = Double(customAmount) {
+                                let difference = customValue - recommendedAmount
+                                let percentDifference = (difference / recommendedAmount) * 100
+                                
+                                HStack {
+                                    Image(systemName: difference >= 0 ? "arrow.up.right" : "arrow.down.right")
+                                    Text("\(String(format: "%.1f", abs(percentDifference)))% \(difference >= 0 ? "above" : "below") recommended")
+                                }
+                                .font(.system(size: 13))
+                                .foregroundColor(difference >= 0 ? .red : Theme.tint)
+                                .padding(.horizontal)
+                            }
+                        }
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.surfaceBackground)
+                    .cornerRadius(12)
+                }
+            }
+            
+            Spacer()
+            
+            // Navigation Hint
+            if currentIndex < totalCategories - 1 {
+                Text("Continue to set up your next expense")
+                    .font(.system(size: 15))
+                    .foregroundColor(Theme.secondaryLabel)
+            } else {
+                Text("Almost done! One final review after this.")
+                    .font(.system(size: 15))
+                    .foregroundColor(Theme.secondaryLabel)
+            }
         }
+    }
+    
+    private func selectMode(_ mode: ExpenseInputMode) {
+        withAnimation {
+            inputMode = mode
+            if mode == .recommended {
+                customAmount = ""
+                amount = recommendedAmount
+            } else {
+                customAmount = ""  // Clear any previous custom amount
+                amount = nil
+            }
+        }
+    }
+    
+    private func formatCurrency(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: value)) ?? "$0"
     }
 }
 
