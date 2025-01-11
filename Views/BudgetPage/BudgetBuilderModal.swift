@@ -414,170 +414,214 @@ struct DebtConfigurationView: View {
     let category: BudgetCategory
     let monthlyIncome: Double
     @Binding var inputData: DebtInputData
+    @State private var inputMode: DebtInputMode?
+    
+    enum DebtInputMode {
+        case recommended
+        case custom
+    }
+    
+    private var recommendedAmount: Double {
+        monthlyIncome * category.allocationPercentage
+    }
     
     var body: some View {
         VStack(spacing: 24) {
-            // Selected Category Header
-            HStack(alignment: .center, spacing: 12) {
+            // Header
+            HStack(spacing: 8) {
                 Text(category.emoji)
-                    .font(.system(size: 28))
+                    .font(.title)
                 Text(category.name)
                     .font(.title)
                     .foregroundColor(.white)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             
-            // Debt Amount Input
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Total \(category.name) Debt")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundColor(.white)
-                
-                HStack {
-                    Text("$")
-                        .foregroundColor(.white)
-                    TextField("", text: $inputData.debtAmount)
-                        .keyboardType(.decimalPad)
-                        .foregroundColor(.white)
-                        .placeholder(when: inputData.debtAmount.isEmpty) {
-                            Text("0")
-                                .foregroundColor(Theme.secondaryLabel)
-                        }
-                        .onChange(of: inputData.debtAmount) { _ in
-                            calculatePayoffPlan()
-                        }
-                }
-                .padding()
-                .background(Theme.surfaceBackground)
-                .cornerRadius(12)
-            }
-            
-            // Interest Rate Input
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Interest Rate (%)")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundColor(.white)
-                
-                HStack {
-                    TextField("", text: $inputData.interestRate)
-                        .keyboardType(.decimalPad)
-                        .foregroundColor(.white)
-                        .placeholder(when: inputData.interestRate.isEmpty) {
-                            Text("0.0")
-                                .foregroundColor(Theme.secondaryLabel)
-                        }
-                        .onChange(of: inputData.interestRate) { _ in
-                            calculatePayoffPlan()
-                        }
-                    Text("%")
-                        .foregroundColor(.white)
-                }
-                .padding()
-                .background(Theme.surfaceBackground)
-                .cornerRadius(12)
-            }
-            
-            // Minimum Payment Input
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Current Monthly Minimum Payment")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundColor(.white)
-                
-                HStack {
-                    Text("$")
-                        .foregroundColor(.white)
-                    TextField("", text: $inputData.minimumPayment)
-                        .keyboardType(.decimalPad)
-                        .foregroundColor(.white)
-                        .placeholder(when: inputData.minimumPayment.isEmpty) {
-                            Text("0")
-                                .foregroundColor(Theme.secondaryLabel)
-                        }
-                        .onChange(of: inputData.minimumPayment) { _ in
-                            calculatePayoffPlan()
-                        }
-                }
-                .padding()
-                .background(Theme.surfaceBackground)
-                .cornerRadius(12)
-            }
-            
-            // Payoff Plan Summary
-            if let plan = inputData.payoffPlan {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Payoff Plan Summary")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.white)
-                    
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Monthly Payment")
-                                .font(.system(size: 15))
-                                .foregroundColor(Theme.secondaryLabel)
-                            Text(formatCurrency(plan.monthlyPayment))
+            // Options Section
+            VStack(spacing: 16) {
+                // Recommended Amount Option
+                Button(action: { selectMode(.recommended) }) {
+                    HStack(spacing: 12) {
+                        Circle()
+                            .stroke(Theme.secondaryLabel, lineWidth: 2)
+                            .frame(width: 24, height: 24)
+                            .overlay {
+                                if inputMode == .recommended {
+                                    Circle()
+                                        .fill(Theme.tint)
+                                        .frame(width: 16, height: 16)
+                                }
+                            }
+                        
+                        VStack(alignment: .leading) {
+                            Text("\(formatCurrency(recommendedAmount))/month")
                                 .font(.system(size: 17))
                                 .foregroundColor(.white)
+                            
+                            Text("(\(Int(category.allocationPercentage * 100))% of income)")
+                                .font(.system(size: 15))
+                                .foregroundColor(Theme.secondaryLabel)
                         }
                         
                         Spacer()
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Payoff Date")
-                                .font(.system(size: 15))
-                                .foregroundColor(Theme.secondaryLabel)
-                            Text(formatDate(plan.payoffDate))
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Theme.surfaceBackground)
+                    .cornerRadius(12)
+                }
+                
+                // Custom Payment Section
+                VStack(spacing: 0) {
+                    Button(action: { selectMode(.custom) }) {
+                        HStack(spacing: 12) {
+                            Circle()
+                                .stroke(Theme.secondaryLabel, lineWidth: 2)
+                                .frame(width: 24, height: 24)
+                                .overlay {
+                                    if inputMode == .custom {
+                                        Circle()
+                                            .fill(Theme.tint)
+                                            .frame(width: 16, height: 16)
+                                    }
+                                }
+                            
+                            Text("Custom debt setup")
                                 .font(.system(size: 17))
                                 .foregroundColor(.white)
+                            
+                            Spacer()
                         }
+                        .padding()
+                        .frame(maxWidth: .infinity)
                     }
                     
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Total Interest")
-                                .font(.system(size: 15))
-                                .foregroundColor(Theme.secondaryLabel)
-                            Text(formatCurrency(plan.totalInterest))
-                                .font(.system(size: 17))
-                                .foregroundColor(.white)
+                    if inputMode == .custom {
+                        VStack(spacing: 16) {
+                            // Debt Amount Input
+                            debtInputField(title: "Total Debt Amount", text: $inputData.debtAmount, placeholder: "Enter amount")
+                            
+                            // Interest Rate Input
+                            debtInputField(title: "Interest Rate", text: $inputData.interestRate, placeholder: "Enter rate", suffix: "%")
+                            
+                            // Minimum Payment Input
+                            debtInputField(title: "Minimum Payment", text: $inputData.minimumPayment, placeholder: "Enter amount", prefix: "$")
                         }
-                        
-                        Spacer()
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Total Cost")
-                                .font(.system(size: 15))
-                                .foregroundColor(Theme.secondaryLabel)
-                            Text(formatCurrency(plan.totalCost))
-                                .font(.system(size: 17))
-                                .foregroundColor(.white)
-                        }
+                        .padding()
                     }
                 }
-                .padding()
                 .background(Theme.surfaceBackground)
                 .cornerRadius(12)
+                
+                // Payoff Plan Summary (if applicable)
+                if let plan = inputData.payoffPlan {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Payoff Plan Summary")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.white)
+                        
+                        payoffSummaryRow("Monthly Payment", formatCurrency(plan.monthlyPayment))
+                        payoffSummaryRow("Total Interest", formatCurrency(plan.totalInterest))
+                        payoffSummaryRow("Total Cost", formatCurrency(plan.totalCost))
+                        payoffSummaryRow("Payoff Date", formatDate(plan.payoffDate))
+                    }
+                    .padding()
+                    .background(Theme.surfaceBackground)
+                    .cornerRadius(12)
+                }
+            }
+            
+            Spacer()
+            
+            Text("Almost done! One final review after this.")
+                .font(.system(size: 15))
+                .foregroundColor(Theme.secondaryLabel)
+                .multilineTextAlignment(.center)
+        }
+    }
+    
+    private func debtInputField(title: String, text: Binding<String>, placeholder: String, prefix: String = "", suffix: String = "") -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 15))
+                .foregroundColor(Theme.secondaryLabel)
+            
+            HStack {
+                if !prefix.isEmpty {
+                    Text(prefix)
+                        .foregroundColor(.white)
+                }
+                
+                TextField("", text: text)
+                    .keyboardType(.decimalPad)
+                    .foregroundColor(.white)
+                    .placeholder(when: text.wrappedValue.isEmpty) {
+                        Text(placeholder)
+                            .foregroundColor(Theme.secondaryLabel)
+                    }
+                    .onChange(of: text.wrappedValue) { _ in
+                        calculatePayoffPlan()
+                    }
+                
+                if !suffix.isEmpty {
+                    Text(suffix)
+                        .foregroundColor(.white)
+                }
+            }
+            .padding()
+            .background(Theme.surfaceBackground)
+            .cornerRadius(8)
+        }
+    }
+    
+    private func payoffSummaryRow(_ title: String, _ value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 15))
+                .foregroundColor(Theme.secondaryLabel)
+            Spacer()
+            Text(value)
+                .font(.system(size: 15))
+                .foregroundColor(.white)
+        }
+    }
+    
+    private func selectMode(_ mode: DebtInputMode) {
+        withAnimation {
+            if inputMode != mode {
+                inputMode = mode
+                inputData.debtAmount = ""
+                inputData.interestRate = ""
+                inputData.minimumPayment = ""
+                inputData.payoffPlan = nil
+                if mode == .recommended {
+                    // Set recommended payment plan
+                    inputData.payoffPlan = DebtPayoffPlan(
+                        debtAmount: 0,
+                        interestRate: 0,
+                        minimumPayment: recommendedAmount,
+                        monthlyIncome: monthlyIncome
+                    )
+                }
             }
         }
     }
     
     private func calculatePayoffPlan() {
-        guard
-            let debt = Double(inputData.debtAmount),
-            let rate = Double(inputData.interestRate),
-            let minPayment = Double(inputData.minimumPayment)
+        guard let debt = Double(inputData.debtAmount),
+              let rate = Double(inputData.interestRate),
+              let minPayment = Double(inputData.minimumPayment)
         else {
             inputData.payoffPlan = nil
             return
         }
         
-        let plan = DebtPayoffPlan(
+        inputData.payoffPlan = DebtPayoffPlan(
             debtAmount: debt,
             interestRate: rate,
             minimumPayment: minPayment,
             monthlyIncome: monthlyIncome
         )
-        
-        inputData.payoffPlan = plan
     }
     
     private func formatCurrency(_ value: Double) -> String {
@@ -804,7 +848,7 @@ struct SavingsConfigurationView: View {
     let category: BudgetCategory
     let monthlyIncome: Double
     @Binding var amount: Double?
-    @State private var inputMode: SavingsInputMode = .recommended
+    @State private var inputMode: SavingsInputMode?
     @State private var targetAmount: String = ""
     @State private var targetDate = Date().addingTimeInterval(365 * 24 * 60 * 60)
     
@@ -828,17 +872,15 @@ struct SavingsConfigurationView: View {
     
     var body: some View {
         VStack(spacing: 24) {
-            // Title Section
-            VStack(spacing: 8) {
-                HStack(spacing: 8) {
-                    Text(category.emoji)
-                        .font(.title)
-                    Text(category.name)
-                        .font(.title)
-                        .foregroundColor(.white)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+            // Header
+            HStack(spacing: 8) {
+                Text(category.emoji)
+                    .font(.title)
+                Text(category.name)
+                    .font(.title)
+                    .foregroundColor(.white)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             
             // Options Section
             VStack(spacing: 16) {
@@ -856,7 +898,7 @@ struct SavingsConfigurationView: View {
                                 }
                             }
                         
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading) {
                             Text("\(formatCurrency(recommendedAmount))/month")
                                 .font(.system(size: 17))
                                 .foregroundColor(.white)
@@ -909,7 +951,7 @@ struct SavingsConfigurationView: View {
                                     .keyboardType(.decimalPad)
                                     .foregroundColor(.white)
                                     .placeholder(when: targetAmount.isEmpty) {
-                                        Text("e.g. 10000")
+                                        Text("Enter goal amount")
                                             .foregroundColor(Theme.secondaryLabel)
                                     }
                                     .onChange(of: targetAmount) { _ in
@@ -969,8 +1011,7 @@ struct SavingsConfigurationView: View {
             
             Spacer()
             
-            // Helper Text
-            Text("We'll help you reach your savings goal by recommending the right monthly contribution")
+            Text("Almost done! One final review after this.")
                 .font(.system(size: 15))
                 .foregroundColor(Theme.secondaryLabel)
                 .multilineTextAlignment(.center)
@@ -979,13 +1020,10 @@ struct SavingsConfigurationView: View {
     
     private func selectMode(_ mode: SavingsInputMode) {
         withAnimation {
-            inputMode = mode
-            if mode == .recommended {
+            if inputMode != mode {
+                inputMode = mode
                 targetAmount = ""
-                targetDate = Date().addingTimeInterval(365 * 24 * 60 * 60)
-                amount = recommendedAmount
-            } else {
-                amount = nil
+                amount = mode == .recommended ? recommendedAmount : nil
             }
         }
     }
