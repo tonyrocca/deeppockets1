@@ -657,15 +657,17 @@ struct ExpenseConfigurationView: View {
     
     var body: some View {
         VStack(spacing: 24) {
-            // Category Info
-            HStack(spacing: 8) {
-                Text(category.emoji)
-                    .font(.title)
-                Text(category.name)
-                    .font(.title)
-                    .foregroundColor(.white)
+            // Title Section
+            VStack(spacing: 8) {
+                HStack(spacing: 8) {
+                    Text(category.emoji)
+                        .font(.title)
+                    Text(category.name)
+                        .font(.title)
+                        .foregroundColor(.white)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             
             // Options Section
             VStack(spacing: 16) {
@@ -683,16 +685,20 @@ struct ExpenseConfigurationView: View {
                                 }
                             }
                         
-                        Text("\(formatCurrency(recommendedAmount))/month")
-                            .font(.system(size: 17))
-                            .foregroundColor(.white)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("\(formatCurrency(recommendedAmount))/month")
+                                .font(.system(size: 17))
+                                .foregroundColor(.white)
+                            
+                            Text("(\(Int(category.allocationPercentage * 100))% of income)")
+                                .font(.system(size: 15))
+                                .foregroundColor(Theme.secondaryLabel)
+                        }
                         
-                        Text("(\(Int(category.allocationPercentage * 100))% of income)")
-                            .font(.system(size: 15))
-                            .foregroundColor(Theme.secondaryLabel)
+                        Spacer()
                     }
                     .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity)
                     .background(Theme.surfaceBackground)
                     .cornerRadius(12)
                 }
@@ -719,6 +725,7 @@ struct ExpenseConfigurationView: View {
                             Spacer()
                         }
                         .padding()
+                        .frame(maxWidth: .infinity)
                     }
                     
                     if inputMode == .custom {
@@ -778,7 +785,6 @@ struct ExpenseConfigurationView: View {
                     .foregroundColor(Theme.secondaryLabel)
             }
         }
-        .padding(.horizontal, 20)
     }
     
     private func selectMode(_ mode: ExpenseInputMode) {
