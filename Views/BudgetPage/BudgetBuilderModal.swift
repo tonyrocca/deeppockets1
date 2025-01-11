@@ -375,16 +375,9 @@ struct CategorySelectionView: View {
                         Text(category.emoji)
                             .font(.title2)
                         
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(category.name)
-                                .font(.system(size: 17))
-                                .foregroundColor(.white)
-                            
-                            let recommendedAmount = monthlyIncome * category.allocationPercentage
-                            Text("\(formatCurrency(recommendedAmount))/mo • \(Int(category.allocationPercentage * 100))% of income")
-                                .font(.system(size: 13))
-                                .foregroundColor(Theme.secondaryLabel)
-                        }
+                        Text(category.name)
+                            .font(.system(size: 17))
+                            .foregroundColor(.white)
                         
                         Spacer()
                         
