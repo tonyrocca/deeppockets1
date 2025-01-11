@@ -148,27 +148,25 @@ struct BudgetView: View {
             Text(title.uppercased())
                 .font(.system(size: 13, weight: .bold))
                 .foregroundColor(Theme.tint)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Theme.tint.opacity(0.1))
-                .cornerRadius(4)
             
             ForEach(configurations, id: \.category.id) { config in
-                HStack {
+                // Single row with horizontal layout
+                HStack(spacing: 12) {
                     Text(config.category.emoji)
-                        .font(.title2)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(config.category.name)
-                            .font(.system(size: 17))
-                            .foregroundColor(.white)
-                        
-                        Text("\(formatCurrency(config.amount * periodMultiplier))/\(periodSuffix)")
-                            .font(.system(size: 13))
-                            .foregroundColor(Theme.secondaryLabel)
-                    }
-                    Spacer()
+                        .font(.system(size: 20))
+                    
+                    Text(config.category.name)
+                        .font(.system(size: 17))
+                        .foregroundColor(.white)
+                    
+                    Spacer(minLength: 16)
+                    
+                    Text("\(formatCurrency(config.amount * periodMultiplier))/\(periodSuffix)")
+                        .font(.system(size: 15))
+                        .foregroundColor(Theme.secondaryLabel)
                 }
-                .padding()
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
                 .background(Theme.surfaceBackground)
                 .cornerRadius(12)
             }
