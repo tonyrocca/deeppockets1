@@ -21,43 +21,46 @@ enum IncomePeriod: String, CaseIterable {
 struct BudgetView: View {
     let monthlyIncome: Double
     let payPeriod: PayPeriod
+    @State private var selectedPeriod: IncomePeriod = .monthly
     @State private var showBudgetBuilder = false
     @StateObject private var budgetStore = BudgetStore()
+    
+    private var periodMultiplier: Double {
+        switch selectedPeriod {
+        case .annual: return 12
+        case .monthly: return 1
+        case .perPaycheck: return 1 / payPeriod.multiplier
+        }
+    }
     
     var body: some View {
         VStack(spacing: 0) {
             if budgetStore.configurations.isEmpty {
-                // Empty State
-                VStack(spacing: 20) {
-                    Spacer()
-                    
-                    Text("Let's build a budget that works for you")
-                        .font(.system(size: 17))
-                        .foregroundColor(Theme.secondaryLabel)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                    
-                    Button(action: {
-                        withAnimation {
-                            showBudgetBuilder = true
-                        }
-                    }) {
-                        Text("Start Building Your Budget")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(Theme.tint)
-                            .cornerRadius(12)
-                    }
-                    .padding(.horizontal, 16)
-                    
-                    Spacer()
-                }
+                // Empty State (unchanged)
+                emptyStateView
             } else {
                 ScrollView {
                     VStack(spacing: 24) {
-                        // Monthly Summary at Top
+                        // Period Selector
+                        HStack(spacing: 0) {
+                            ForEach(IncomePeriod.allCases, id: \.self) { period in
+                                Button(action: {
+                                    withAnimation { selectedPeriod = period }
+                                }) {
+                                    Text(period.rawValue)
+                                        .font(.system(size: 17))
+                                        .foregroundColor(selectedPeriod == period ? .black : .white)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 36)
+                                        .background(selectedPeriod == period ? Color.white : Color.clear)
+                                }
+                            }
+                        }
+                        .background(Theme.surfaceBackground)
+                        .cornerRadius(8)
+                        .padding(.horizontal)
+                        
+                        // Monthly Summary
                         VStack(alignment: .leading, spacing: 16) {
                             Text("MONTHLY SUMMARY")
                                 .font(.system(size: 13, weight: .bold))
@@ -68,34 +71,34 @@ struct BudgetView: View {
                                 .cornerRadius(4)
                             
                             VStack(spacing: 12) {
-                                // Income first
+                                // Income row
                                 budgetSummaryRow(
-                                    title: "Monthly Income",
-                                    amount: monthlyIncome
+                                    title: "\(selectedPeriod == .monthly ? "Monthly" : selectedPeriod == .annual ? "Annual" : "Per Paycheck") Income",
+                                    amount: monthlyIncome * periodMultiplier
                                 )
                                 
                                 Divider().background(Theme.separator)
                                 
                                 budgetSummaryRow(
                                     title: "Debt Payments",
-                                    amount: budgetStore.totalDebtPayments
+                                    amount: budgetStore.totalDebtPayments * periodMultiplier
                                 )
                                 
                                 budgetSummaryRow(
                                     title: "Monthly Expenses",
-                                    amount: budgetStore.totalMonthlyExpenses
+                                    amount: budgetStore.totalMonthlyExpenses * periodMultiplier
                                 )
                                 
                                 budgetSummaryRow(
                                     title: "Monthly Savings",
-                                    amount: budgetStore.totalMonthlySavings
+                                    amount: budgetStore.totalMonthlySavings * periodMultiplier
                                 )
                                 
                                 Divider().background(Theme.separator)
                                 
                                 budgetSummaryRow(
                                     title: "Remaining",
-                                    amount: monthlyIncome - budgetStore.totalMonthlyBudget,
+                                    amount: (monthlyIncome - budgetStore.totalMonthlyBudget) * periodMultiplier,
                                     isTotal: true
                                 )
                             }
@@ -104,26 +107,23 @@ struct BudgetView: View {
                             .cornerRadius(12)
                         }
                         .padding(.horizontal)
-                        .padding(.top)
                         
-                        // Categories Sections
+                        // Categories
                         let debtCategories = budgetStore.debtCategories()
                         let expenseCategories = budgetStore.expenseCategories()
                         let savingsCategories = budgetStore.savingsCategories()
                         
-                        // Debt Categories
+                        // Category sections with adjusted amounts
                         if !debtCategories.isEmpty {
                             categorySection(title: "Debt", configurations: debtCategories)
                                 .padding(.horizontal)
                         }
                         
-                        // Expense Categories
                         if !expenseCategories.isEmpty {
                             categorySection(title: "Monthly Expenses", configurations: expenseCategories)
                                 .padding(.horizontal)
                         }
                         
-                        // Savings Categories
                         if !savingsCategories.isEmpty {
                             categorySection(title: "Savings Goals", configurations: savingsCategories)
                                 .padding(.horizontal)
@@ -142,6 +142,7 @@ struct BudgetView: View {
         }
     }
     
+    // Modified category section to show period-adjusted amounts
     private func categorySection(title: String, configurations: [BudgetStore.CategoryConfiguration]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title.uppercased())
@@ -161,16 +162,9 @@ struct BudgetView: View {
                             .font(.system(size: 17))
                             .foregroundColor(.white)
                         
-                        switch config.displayType {
-                        case .monthly:
-                            Text("\(formatCurrency(config.amount))/mo")
-                                .font(.system(size: 13))
-                                .foregroundColor(Theme.secondaryLabel)
-                        case .total:
-                            Text("\(formatCurrency(config.amount)) total")
-                                .font(.system(size: 13))
-                                .foregroundColor(Theme.secondaryLabel)
-                        }
+                        Text("\(formatCurrency(config.amount * periodMultiplier))/\(periodSuffix)")
+                            .font(.system(size: 13))
+                            .foregroundColor(Theme.secondaryLabel)
                     }
                     Spacer()
                 }
@@ -179,6 +173,37 @@ struct BudgetView: View {
                 .cornerRadius(12)
             }
         }
+    }
+    
+    private var periodSuffix: String {
+            switch selectedPeriod {
+            case .monthly: return "mo"
+            case .annual: return "yr"
+            case .perPaycheck: return "check"
+            }
+        }
+        
+        private var emptyStateView: some View {
+            VStack(spacing: 20) {
+                Spacer()
+                Text("Let's build a budget that works for you")
+                    .font(.system(size: 17))
+                    .foregroundColor(Theme.secondaryLabel)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+                
+                Button(action: { showBudgetBuilder = true }) {
+                    Text("Start Building Your Budget")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(Theme.tint)
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal, 16)
+                Spacer()
+            }
     }
     
     private func budgetSummaryRow(title: String, amount: Double, isTotal: Bool = false) -> some View {
