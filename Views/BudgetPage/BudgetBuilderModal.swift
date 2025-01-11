@@ -643,7 +643,9 @@ struct ExpenseConfigurationView: View {
     let totalCategories: Int
     let currentIndex: Int
     @Binding var amount: Double?
-    @State private var inputMode: ExpenseInputMode = .recommended
+    
+    // Using Optional for inputMode to represent no selection
+    @State private var inputMode: ExpenseInputMode?
     @State private var customAmount: String = ""
     
     enum ExpenseInputMode {
@@ -657,17 +659,15 @@ struct ExpenseConfigurationView: View {
     
     var body: some View {
         VStack(spacing: 24) {
-            // Title Section
-            VStack(spacing: 8) {
-                HStack(spacing: 8) {
-                    Text(category.emoji)
-                        .font(.title)
-                    Text(category.name)
-                        .font(.title)
-                        .foregroundColor(.white)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+            // Category Header
+            HStack(spacing: 8) {
+                Text(category.emoji)
+                    .font(.title)
+                Text(category.name)
+                    .font(.title)
+                    .foregroundColor(.white)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             
             // Options Section
             VStack(spacing: 16) {
@@ -685,7 +685,7 @@ struct ExpenseConfigurationView: View {
                                 }
                             }
                         
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading) {
                             Text("\(formatCurrency(recommendedAmount))/month")
                                 .font(.system(size: 17))
                                 .foregroundColor(.white)
@@ -703,7 +703,7 @@ struct ExpenseConfigurationView: View {
                     .cornerRadius(12)
                 }
                 
-                // Custom Amount Section
+                // Custom Amount Option
                 VStack(spacing: 0) {
                     Button(action: { selectMode(.custom) }) {
                         HStack(spacing: 12) {
@@ -737,7 +737,7 @@ struct ExpenseConfigurationView: View {
                                     .keyboardType(.decimalPad)
                                     .foregroundColor(.white)
                                     .placeholder(when: customAmount.isEmpty) {
-                                        Text("e.g. 2000")
+                                        Text("Enter amount")
                                             .foregroundColor(Theme.secondaryLabel)
                                     }
                                     .onChange(of: customAmount) { newValue in
@@ -774,28 +774,20 @@ struct ExpenseConfigurationView: View {
             
             Spacer()
             
-            // Navigation Hint
-            if currentIndex < totalCategories - 1 {
-                Text("Continue to set up your next expense")
-                    .font(.system(size: 15))
-                    .foregroundColor(Theme.secondaryLabel)
-            } else {
-                Text("Almost done! One final review after this.")
-                    .font(.system(size: 15))
-                    .foregroundColor(Theme.secondaryLabel)
-            }
+            Text("Almost done! One final review after this.")
+                .font(.system(size: 15))
+                .foregroundColor(Theme.secondaryLabel)
+                .multilineTextAlignment(.center)
         }
     }
     
     private func selectMode(_ mode: ExpenseInputMode) {
         withAnimation {
-            inputMode = mode
-            if mode == .recommended {
+            // Only update if selecting a different mode
+            if inputMode != mode {
+                inputMode = mode
                 customAmount = ""
-                amount = recommendedAmount
-            } else {
-                customAmount = ""
-                amount = nil
+                amount = mode == .recommended ? recommendedAmount : nil
             }
         }
     }
