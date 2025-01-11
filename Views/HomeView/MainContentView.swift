@@ -21,7 +21,6 @@ struct MainContentView: View {
             // Main Content
             VStack(spacing: 0) {
                 TabHeaderView(selectedTab: $selectedTab)
-                    .ignoresSafeArea(edges: .top)
                 
                 ScrollView {
                     LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {

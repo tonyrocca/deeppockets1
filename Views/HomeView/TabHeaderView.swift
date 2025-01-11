@@ -5,9 +5,6 @@ struct TabHeaderView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            Color.black
-                .frame(height: UIApplication.shared.windows.first?.safeAreaInsets.top ?? 0)
-            
             HStack(spacing: 0) {
                 TabButton(
                     title: "Affordability",
@@ -21,7 +18,7 @@ struct TabHeaderView: View {
                     action: { selectedTab = 1 }
                 )
             }
-            .frame(height: 40)
+            .frame(height: 44)
             .background(Theme.darkBackground)
         }
     }
