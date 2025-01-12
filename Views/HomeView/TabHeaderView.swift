@@ -19,8 +19,13 @@ struct TabHeaderView: View {
                 )
             }
             .frame(height: 44)
-            .background(Theme.darkBackground)
+            
+            // Add small padding below the buttons
+            Color.clear
+                .frame(height: 20)
+            
         }
+        .background(Theme.darkBackground)
     }
 }
 
