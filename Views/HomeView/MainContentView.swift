@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainContentView: View {
     @StateObject private var model: AffordabilityModel
+    @StateObject private var budgetModel: BudgetModel
     @State private var selectedTab = 0
     @State private var showActionMenu = false
     @State private var showAffordabilityCalculator = false
@@ -13,6 +14,7 @@ struct MainContentView: View {
         let model = AffordabilityModel()
         model.monthlyIncome = monthlyIncome
         _model = StateObject(wrappedValue: model)
+        _budgetModel = StateObject(wrappedValue: BudgetModel(monthlyIncome: monthlyIncome))
         self.payPeriod = payPeriod
     }
     
@@ -23,11 +25,11 @@ struct MainContentView: View {
                 TabHeaderView(selectedTab: $selectedTab)
                 
                 ScrollView {
-                                    LazyVStack(spacing: 0) {  // Removed pinnedViews parameter
-                                        mainSection
-                                    }
-                                }
-                                .scrollIndicators(.hidden)
+                    LazyVStack(spacing: 0) {
+                        mainSection
+                    }
+                }
+                .scrollIndicators(.hidden)
             }
             .blur(radius: showActionMenu ? 3 : 0)
             
@@ -45,9 +47,11 @@ struct MainContentView: View {
         if selectedTab == 0 {
             Section(header: affordabilityHeader) {
                 AffordabilityView(model: model)
+                    .environmentObject(budgetModel)
             }
         } else {
             BudgetView(monthlyIncome: model.monthlyIncome, payPeriod: payPeriod)
+                .environmentObject(budgetModel)
         }
     }
     
@@ -68,6 +72,7 @@ struct MainContentView: View {
                 isPresented: $showAffordabilityCalculator,
                 monthlyIncome: model.monthlyIncome
             )
+            .environmentObject(budgetModel)
             .zIndex(2)
         }
         
@@ -76,6 +81,7 @@ struct MainContentView: View {
                 isPresented: $showSavingsCalculator,
                 monthlyIncome: model.monthlyIncome
             )
+            .environmentObject(budgetModel)
             .zIndex(2)
         }
         
@@ -84,6 +90,7 @@ struct MainContentView: View {
                 isPresented: $showDebtCalculator,
                 monthlyIncome: model.monthlyIncome
             )
+            .environmentObject(budgetModel)
             .zIndex(2)
         }
     }

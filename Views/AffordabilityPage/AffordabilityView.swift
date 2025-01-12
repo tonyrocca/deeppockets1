@@ -136,7 +136,10 @@ struct CategoryRowView: View {
     let displayType: AmountDisplayType
     @State private var showDetails = false
     @State private var localAssumptions: [CategoryAssumption]
+    @State private var showingAddedToBudget = false
+    @State private var showAddToBudgetConfirmation = false
     let onAssumptionsChanged: (String, [CategoryAssumption]) -> Void
+    @EnvironmentObject private var budgetModel: BudgetModel
     
     init(category: BudgetCategory, amount: Double, displayType: AmountDisplayType, onAssumptionsChanged: @escaping (String, [CategoryAssumption]) -> Void) {
         self.category = category
@@ -152,6 +155,10 @@ struct CategoryRowView: View {
         formatter.maximumFractionDigits = 0
         let formattedAmount = formatter.string(from: NSNumber(value: amount)) ?? "$0"
         return formattedAmount + (displayType == .monthly ? "/mo" : " total")
+    }
+    
+    private var isInBudget: Bool {
+        budgetModel.budgetItems.contains { $0.id == category.id && $0.isActive }
     }
     
     var body: some View {
@@ -226,11 +233,106 @@ struct CategoryRowView: View {
                             }
                         }
                     }
+                    
+                    // Add to Budget Button
+                    if !isInBudget {
+                        Button(action: { showAddToBudgetConfirmation = true }) {
+                            HStack {
+                                Text("Add to Budget")
+                                    .font(.system(size: 15, weight: .medium))
+                                Spacer()
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 15))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.vertical, 12)
+                            .padding(.horizontal, 16)
+                            .frame(maxWidth: .infinity)
+                            .background(Theme.surfaceBackground)
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
+                        }
+                    } else {
+                        HStack {
+                            Text("Added to Budget")
+                            Spacer()
+                            Image(systemName: "checkmark.circle.fill")
+                        }
+                        .font(.system(size: 15))
+                        .foregroundColor(Theme.tint)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 16)
+                        .frame(maxWidth: .infinity)
+                        .background(Theme.surfaceBackground)
+                        .cornerRadius(8)
+                    }
+                    
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
                 .background(Theme.elevatedBackground)
             }
+        }
+        .overlay(
+            Group {
+                if showingAddedToBudget {
+                    VStack {
+                        Text("Added to Budget")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 16)
+                            .background(Theme.tint)
+                            .cornerRadius(8)
+                    }
+                    .transition(.scale.combined(with: .opacity))
+                    .animation(.easeInOut, value: showingAddedToBudget)
+                }
+            }
+        )
+        .overlay {
+            if showAddToBudgetConfirmation {
+                addToBudgetConfirmation
+            }
+        }
+    }
+    
+    private func addToBudget() {
+            // Calculate the recommended monthly amount
+            let monthlyAllocation = displayType == .monthly ? amount : amount / 12
+            
+            // First activate the category
+            budgetModel.toggleCategory(id: category.id)
+            
+            // Then set its allocation
+            budgetModel.updateAllocation(for: category.id, amount: monthlyAllocation)
+            
+            // Show feedback
+            withAnimation {
+                showingAddedToBudget = true
+                showAddToBudgetConfirmation = false
+            }
+            
+            // Hide feedback after delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                withAnimation {
+                    showingAddedToBudget = false
+                }
+            }
+        }
+    
+    private func determinePriority(for category: BudgetCategory) -> BudgetCategoryPriority {
+        switch category.id {
+        case "house", "rent", "groceries", "home_utilities", "medical", "emergency_savings":
+            return .essential
+        case "car", "public_transportation", "investments",
+             "credit_cards", "student_loans", "personal_loans", "car_loan":
+            return .important
+        default:
+            return .discretionary
         }
     }
     
@@ -239,6 +341,72 @@ struct CategoryRowView: View {
         formatter.numberStyle = .currency
         formatter.maximumFractionDigits = 0
         return formatter.string(from: NSNumber(value: value)) ?? "$0"
+    }
+}
+
+extension CategoryRowView {
+    var addToBudgetConfirmation: some View {
+        ZStack {
+            Color.black.opacity(0.5)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 24) {
+                // Header
+                VStack(spacing: 8) {
+                    Text("Add to Budget")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.white)
+                    Text("Would you like to add \(category.name) to your budget with the recommended amount?")
+                        .font(.system(size: 17))
+                        .foregroundColor(Theme.secondaryLabel)
+                        .multilineTextAlignment(.center)
+                }
+                
+                // Amount Display
+                VStack(spacing: 4) {
+                    Text("Recommended Monthly Amount")
+                        .font(.system(size: 15))
+                        .foregroundColor(Theme.secondaryLabel)
+                    Text(formatCurrency(displayType == .monthly ? amount : amount / 12))
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.white)
+                }
+                
+                // Buttons
+                VStack(spacing: 12) {
+                    Button(action: {
+                        addToBudget()
+                        showAddToBudgetConfirmation = false
+                    }) {
+                        Text("Yes, Add to Budget")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(Theme.tint)
+                            .cornerRadius(12)
+                    }
+                    
+                    Button(action: { showAddToBudgetConfirmation = false }) {
+                        Text("Cancel")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(Theme.surfaceBackground)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
+                    }
+                }
+            }
+            .padding(24)
+            .background(Theme.background)
+            .cornerRadius(20)
+            .padding(.horizontal, 20)
+        }
     }
 }
 
