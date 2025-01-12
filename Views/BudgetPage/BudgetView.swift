@@ -37,7 +37,61 @@ struct BudgetView: View {
     var body: some View {
         VStack(spacing: 0) {
             if budgetModel.budgetItems.isEmpty {
-                emptyStateView
+                VStack(spacing: 20) {
+                    Spacer()
+                    
+                    Text("Let's build a budget that works for you")
+                        .font(.system(size: 17))
+                        .foregroundColor(Theme.secondaryLabel)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                    
+                    VStack(spacing: 12) {
+                        // Recommended option
+                        Button(action: { showBudgetBuilder = true }) {
+                            VStack(spacing: 8) {
+                                Text("Build on your own")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundColor(.white)
+                                
+                                Text("Recommended")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(Theme.tint)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 4)
+                                    .background(Theme.tint.opacity(0.15))
+                                    .cornerRadius(4)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 80)
+                            .background(Theme.surfaceBackground)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Theme.tint, lineWidth: 1)
+                            )
+                        }
+                        
+                        // Automated option (disabled for now)
+                        Button(action: {}) {
+                            VStack(spacing: 4) {
+                                Text("Build for me")
+                                    .font(.system(size: 17, weight: .medium))
+                                    .foregroundColor(.white)
+                                Text("Based on your income")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(Theme.secondaryLabel)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 80)
+                            .background(Theme.surfaceBackground)
+                            .cornerRadius(12)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    
+                    Spacer()
+                }
             } else {
                 ScrollView {
                     VStack(spacing: 24) {
@@ -80,7 +134,7 @@ struct BudgetView: View {
             )
         }
     }
-    
+
     private func categorySection(title: String, items: [BudgetItem]) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {

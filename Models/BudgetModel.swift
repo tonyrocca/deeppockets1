@@ -50,35 +50,35 @@ struct BudgetItem: Identifiable {
 
 class BudgetModel: ObservableObject {
     @Published var monthlyIncome: Double
-    @Published var budgetItems: [BudgetItem] = []
+    @Published var budgetItems: [BudgetItem] = []  // Start with empty array
     @Published var unusedAmount: Double = 0
     private let store = BudgetCategoryStore.shared
     
     init(monthlyIncome: Double) {
         self.monthlyIncome = monthlyIncome
-        setupInitialBudget()
+        calculateUnusedAmount()  // Just calculate unused amount, don't setup items
     }
     
-    private func setupInitialBudget() {
-        // Convert store categories to budget items with default allocations
-        budgetItems = store.categories.map { category in
-            let type: BudgetCategoryType = shouldBeSavingsCategory(category) ? .savings : .expense
-            let priority = determinePriority(for: category)
-            let recommendedAmount = monthlyIncome * category.allocationPercentage
+    // Move setupInitialBudget to be called explicitly when needed
+        func setupInitialBudget() {
+            budgetItems = store.categories.map { category in
+                let type: BudgetCategoryType = shouldBeSavingsCategory(category) ? .savings : .expense
+                let priority = determinePriority(for: category)
+                let recommendedAmount = monthlyIncome * category.allocationPercentage
+                
+                return BudgetItem(
+                    id: category.id,
+                    category: category,
+                    allocatedAmount: recommendedAmount,
+                    spentAmount: 0,
+                    type: type,
+                    priority: priority,
+                    isActive: false
+                )
+            }
             
-            return BudgetItem(
-                id: category.id,
-                category: category,
-                allocatedAmount: recommendedAmount,
-                spentAmount: 0,
-                type: type,
-                priority: priority,
-                isActive: false  // Start with all categories inactive
-            )
+            calculateUnusedAmount()
         }
-        
-        calculateUnusedAmount()
-    }
     
     private func shouldBeSavingsCategory(_ category: BudgetCategory) -> Bool {
         let savingsCategories = ["emergency_savings", "investments", "college_savings", "vacation"]
