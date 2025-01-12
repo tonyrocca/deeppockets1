@@ -23,11 +23,11 @@ struct MainContentView: View {
                 TabHeaderView(selectedTab: $selectedTab)
                 
                 ScrollView {
-                    LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
-                        mainSection
-                    }
-                }
-                .scrollIndicators(.hidden)
+                                    LazyVStack(spacing: 0) {  // Removed pinnedViews parameter
+                                        mainSection
+                                    }
+                                }
+                                .scrollIndicators(.hidden)
             }
             .blur(radius: showActionMenu ? 3 : 0)
             
