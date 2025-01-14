@@ -2,7 +2,7 @@ import SwiftUI
 
 struct MainContentView: View {
     @StateObject private var model: AffordabilityModel
-    @StateObject private var budgetModel: BudgetModel
+    @StateObject private var budgetModel: BudgetModel  // Create as StateObject here
     @State private var selectedTab = 0
     @State private var showActionMenu = false
     @State private var showAffordabilityCalculator = false
@@ -11,12 +11,15 @@ struct MainContentView: View {
     let payPeriod: PayPeriod
     
     init(monthlyIncome: Double, payPeriod: PayPeriod) {
-        let model = AffordabilityModel()
-        model.monthlyIncome = monthlyIncome
-        _model = StateObject(wrappedValue: model)
-        _budgetModel = StateObject(wrappedValue: BudgetModel(monthlyIncome: monthlyIncome))
-        self.payPeriod = payPeriod
-    }
+            let model = AffordabilityModel()
+            model.monthlyIncome = monthlyIncome
+            _model = StateObject(wrappedValue: model)
+            
+            // Initialize BudgetModel with proper setup
+            let budgetModel = BudgetModel(monthlyIncome: monthlyIncome)
+            _budgetModel = StateObject(wrappedValue: budgetModel)
+            self.payPeriod = payPeriod
+        }
     
     var body: some View {
         ZStack {

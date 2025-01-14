@@ -38,8 +38,6 @@ struct BudgetView: View {
         VStack(spacing: 0) {
             if budgetModel.budgetItems.isEmpty {
                 VStack(spacing: 20) {
-                    Spacer()
-                    
                     Text("Let's build a budget that works for you")
                         .font(.system(size: 17))
                         .foregroundColor(Theme.secondaryLabel)
@@ -89,8 +87,6 @@ struct BudgetView: View {
                         }
                     }
                     .padding(.horizontal, 16)
-                    
-                    Spacer()
                 }
             } else {
                 ScrollView {
@@ -126,10 +122,15 @@ struct BudgetView: View {
                 }
             }
         }
-        .sheet(isPresented: $showBudgetBuilder) {
+        .sheet(isPresented: $showBudgetBuilder, onDismiss: {
+            // Setup the initial budget and calculate unused amount
+            budgetModel.setupInitialBudget()
+            budgetModel.calculateUnusedAmount()
+        }) {
             BudgetBuilderModal(
                 isPresented: $showBudgetBuilder,
                 budgetStore: budgetStore,
+                budgetModel: budgetModel,
                 monthlyIncome: monthlyIncome
             )
         }
