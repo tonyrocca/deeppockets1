@@ -60,12 +60,14 @@ class BudgetModel: ObservableObject {
     }
     
     // Move setupInitialBudget to be called explicitly when needed
-        func setupInitialBudget() {
-            budgetItems = store.categories.map { category in
+    func setupInitialBudget(selectedCategoryIds: Set<String>) {
+        budgetItems = store.categories
+            .filter { selectedCategoryIds.contains($0.id) }
+            .map { category in
                 let type: BudgetCategoryType = shouldBeSavingsCategory(category) ? .savings : .expense
                 let priority = determinePriority(for: category)
                 let recommendedAmount = monthlyIncome * category.allocationPercentage
-                
+
                 return BudgetItem(
                     id: category.id,
                     category: category,
@@ -73,12 +75,11 @@ class BudgetModel: ObservableObject {
                     spentAmount: 0,
                     type: type,
                     priority: priority,
-                    isActive: false
+                    isActive: true
                 )
             }
-            
-            calculateUnusedAmount()
-        }
+        calculateUnusedAmount()
+    }
     
     private func shouldBeSavingsCategory(_ category: BudgetCategory) -> Bool {
         let savingsCategories = ["emergency_savings", "investments", "college_savings", "vacation"]

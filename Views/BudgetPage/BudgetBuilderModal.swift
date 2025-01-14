@@ -307,21 +307,15 @@ struct BudgetBuilderModal: View {
                 
             case .savingsConfiguration(let category):
                 if let amount = temporaryAmounts[category.id] {
-                    // Update both stores
                     budgetStore.setCategory(category, amount: amount)
                     budgetModel.toggleCategory(id: category.id)
                     budgetModel.updateAllocation(for: category.id, amount: amount)
                     selectedCategories.remove(category.id)
-                    
-                    if let nextCategory = selectedCategories.compactMap({ id in
-                        savingsCategories.first(where: { $0.id == id })
-                    }).first {
-                        phase = .savingsConfiguration(nextCategory)
-                    } else {
-                        // This is the key part - make sure model is updated before dismissal
-                        budgetModel.setupInitialBudget()
-                        budgetModel.calculateUnusedAmount()
-                        isPresented = false  // This dismisses the modal
+
+                    if selectedCategories.isEmpty {
+                        // Pass selected category IDs and dismiss modal
+                        budgetModel.setupInitialBudget(selectedCategoryIds: selectedCategories)
+                        isPresented = false
                     }
                 }
             }

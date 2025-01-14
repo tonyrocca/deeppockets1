@@ -102,19 +102,19 @@ struct BudgetView: View {
                         // Category Sections
                         categorySection(
                             title: "DEBT",
-                            items: budgetModel.budgetItems.filter { $0.type == .expense && isDebtCategory($0.category.id) }
+                            items: budgetModel.budgetItems.filter { $0.isActive && $0.type == .expense && isDebtCategory($0.category.id) }
                         )
                         .padding(.horizontal)
-                        
+
                         categorySection(
                             title: "EXPENSES",
-                            items: budgetModel.budgetItems.filter { $0.type == .expense && !isDebtCategory($0.category.id) }
+                            items: budgetModel.budgetItems.filter { $0.isActive && $0.type == .expense && !isDebtCategory($0.category.id) }
                         )
                         .padding(.horizontal)
-                        
+
                         categorySection(
                             title: "SAVINGS",
-                            items: budgetModel.budgetItems.filter { $0.type == .savings }
+                            items: budgetModel.budgetItems.filter { $0.isActive && $0.type == .savings }
                         )
                         .padding(.horizontal)
                     }
@@ -124,7 +124,7 @@ struct BudgetView: View {
         }
         .sheet(isPresented: $showBudgetBuilder, onDismiss: {
             // Setup the initial budget and calculate unused amount
-            budgetModel.setupInitialBudget()
+            budgetModel.setupInitialBudget(selectedCategoryIds: Set(budgetStore.configurations.keys))
             budgetModel.calculateUnusedAmount()
         }) {
             BudgetBuilderModal(
