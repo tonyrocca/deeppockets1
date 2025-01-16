@@ -303,57 +303,76 @@ struct BudgetView: View {
     }
     
     private var emptyStateView: some View {
-        // Keeping original empty state view
-        VStack(spacing: 20) {
-            Text("Let's build a budget that works for you")
-                .font(.system(size: 17))
-                .foregroundColor(Theme.secondaryLabel)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-            
-            VStack(spacing: 12) {
-                Button(action: { showBudgetBuilder = true }) {
-                    VStack(spacing: 8) {
-                        Text("Build on your own")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.white)
-                        
-                        Text("Recommended")
-                            .font(.system(size: 13))
+            VStack(spacing: 20) {
+                Text("Let's build a budget that works for you")
+                    .font(.system(size: 17))
+                    .foregroundColor(Theme.secondaryLabel)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+                
+                VStack(spacing: 12) {
+                    // Manual Build Button
+                    Button(action: { showBudgetBuilder = true }) {
+                        VStack(spacing: 6) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Build on your own")
+                                        .font(.system(size: 17, weight: .semibold))
+                                    Text("Create your budget step by step")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(Theme.secondaryLabel)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(Theme.secondaryLabel)
+                            }
+                            
+                            HStack(spacing: 6) {
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 10))
+                                Text("Recommended")
+                                    .font(.system(size: 12))
+                            }
                             .foregroundColor(Theme.tint)
-                            .padding(.horizontal, 12)
+                            .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .background(Theme.tint.opacity(0.15))
-                            .cornerRadius(4)
+                            .cornerRadius(6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 80)
                     .background(Theme.surfaceBackground)
                     .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Theme.tint, lineWidth: 1)
-                    )
-                }
-                
-                Button(action: {}) {
-                    VStack(spacing: 4) {
-                        Text("Build for me")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundColor(.white)
-                        Text("Based on your income")
-                            .font(.system(size: 13))
-                            .foregroundColor(Theme.secondaryLabel)
+                    
+                    // Auto Build Button
+                    Button(action: {}) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Build for me")
+                                    .font(.system(size: 17, weight: .semibold))
+                                Text("Based on your income")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(Theme.secondaryLabel)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 14))
+                                .foregroundColor(Theme.secondaryLabel)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 16)
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 80)
                     .background(Theme.surfaceBackground)
                     .cornerRadius(12)
                 }
+                .padding(.horizontal, 16)
             }
-            .padding(.horizontal, 16)
         }
-    }
     
     private func summaryRow(title: String, amount: Double) -> some View {
         HStack {
