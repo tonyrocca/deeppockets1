@@ -18,6 +18,109 @@ enum IncomePeriod: String, CaseIterable {
     }
 }
 
+struct CategoryItemView: View {
+    let item: BudgetItem
+    let periodMultiplier: Double
+    @State private var isExpanded = false
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Category Row
+            Button(action: { withAnimation { isExpanded.toggle() }}) {
+                HStack(spacing: 12) {
+                    Text(item.category.emoji)
+                        .font(.title3)
+                    Text(item.category.name)
+                        .font(.system(size: 17))
+                        .foregroundColor(.white)
+                    Spacer()
+                    Text(formatCurrency(item.allocatedAmount * periodMultiplier))
+                        .font(.system(size: 17))
+                        .foregroundColor(Theme.secondaryLabel)
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Theme.surfaceBackground)
+            }
+            
+            // Expanded Details
+            if isExpanded {
+                VStack(spacing: 16) {
+                    // Allocation Section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("ALLOCATION OF INCOME")
+                            .sectionHeader()
+                        Text("\(Int(item.category.allocationPercentage * 100))%")
+                            .font(.system(size: 17))
+                            .foregroundColor(.white)
+                    }
+                    
+                    // Description Section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("DESCRIPTION")
+                            .sectionHeader()
+                        Text(item.category.description)
+                            .font(.system(size: 15))
+                            .foregroundColor(Theme.secondaryLabel)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    
+                    // Action Buttons
+                    HStack(spacing: 12) {
+                        Button(action: {}) {
+                            HStack {
+                                Image(systemName: "pencil")
+                                Text("Edit")
+                            }
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
+                            .background(Theme.surfaceBackground)
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
+                        }
+                        
+                        Button(action: {}) {
+                            HStack {
+                                Image(systemName: "trash")
+                                Text("Delete")
+                            }
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.red)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
+                            .background(Theme.surfaceBackground)
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                            )
+                        }
+                    }
+                }
+                .padding()
+                .background(Theme.elevatedBackground)
+            }
+            
+            if isExpanded {
+                Divider()
+                    .background(Theme.separator)
+            }
+        }
+    }
+    
+    private func formatCurrency(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: value)) ?? "$0"
+    }
+}
+
 struct BudgetView: View {
     let monthlyIncome: Double
     let payPeriod: PayPeriod
@@ -52,8 +155,9 @@ struct BudgetView: View {
                                         .frame(maxWidth: .infinity)
                                         .frame(height: 32)
                                         .background(
-                                            selectedPeriod == period ?
-                                            Theme.tint : Color.clear
+                                            selectedPeriod == period
+                                            ? Theme.tint
+                                            : Color.clear
                                         )
                                 }
                             }
@@ -192,21 +296,7 @@ struct BudgetView: View {
     private func categoryItems(items: [BudgetItem]) -> some View {
         VStack(spacing: 1) {
             ForEach(items) { item in
-                Button(action: {}) {
-                    HStack(spacing: 12) {
-                        Text(item.category.emoji)
-                            .font(.title3)
-                        Text(item.category.name)
-                            .font(.system(size: 17))
-                        Spacer()
-                        Text(formatCurrency(item.allocatedAmount * periodMultiplier))
-                            .font(.system(size: 17))
-                            .foregroundColor(Theme.secondaryLabel)
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Theme.surfaceBackground)
-                }
+                CategoryItemView(item: item, periodMultiplier: periodMultiplier)
             }
         }
         .cornerRadius(12)
@@ -287,20 +377,5 @@ struct BudgetView: View {
         formatter.maximumFractionDigits = 0
         return formatter.string(from: NSNumber(value: value)) ?? "$0"
     }
-    
-    private func calculateIncomePercentile() -> Int {
-        let annualIncome = monthlyIncome * 12
-        let percentiles: [(threshold: Double, percentile: Int)] = [
-            (650000, 1), (250000, 5), (180000, 10),
-            (120000, 20), (90000, 30), (70000, 40),
-            (50000, 50), (35000, 60), (25000, 70)
-        ]
-        
-        for (threshold, percentile) in percentiles {
-            if annualIncome >= threshold {
-                return percentile
-            }
-        }
-        return 80
-    }
 }
+
