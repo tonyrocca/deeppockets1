@@ -50,6 +50,7 @@ struct CategoryItemView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("ALLOCATION OF INCOME")
                             .sectionHeader()
+                            .frame(maxWidth: .infinity, alignment: .leading)  // Add this
                         Text("\(Int(item.category.allocationPercentage * 100))%")
                             .font(.system(size: 17))
                             .foregroundColor(.white)
@@ -59,10 +60,12 @@ struct CategoryItemView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("DESCRIPTION")
                             .sectionHeader()
+                            .frame(maxWidth: .infinity, alignment: .leading)  // Add this
                         Text(item.category.description)
                             .font(.system(size: 15))
                             .foregroundColor(Theme.secondaryLabel)
                             .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)  // Add this
                     }
                     
                     // Action Buttons

@@ -261,14 +261,14 @@ struct BudgetBuilderModal: View {
             }
 
         case .expenseSelection:
-            if let nextCategory = selectedCategories.compactMap({ id in
-                expenseCategories.first(where: { $0.id == id })
-            }).first {
-                temporaryAmounts[nextCategory.id] = nil  // Clear previous amounts to avoid preselection
-                phase = .expenseConfiguration(nextCategory)
-            } else {
-                phase = .savingsSelection
-            }
+                if let nextCategory = selectedCategories.compactMap({ id in
+                    expenseCategories.first(where: { $0.id == id })
+                }).first {
+                    temporaryAmounts[nextCategory.id] = nil  // Reset amount
+                    phase = .expenseConfiguration(nextCategory)
+                } else {
+                    phase = .savingsSelection
+                }
 
         case .expenseConfiguration(let category):
             if let amount = temporaryAmounts[category.id] {
@@ -289,14 +289,14 @@ struct BudgetBuilderModal: View {
             }
 
         case .savingsSelection:
-            if let nextCategory = selectedCategories.compactMap({ id in
-                savingsCategories.first(where: { $0.id == id })
-            }).first {
-                temporaryAmounts[nextCategory.id] = nil  // Clear savings data for fresh selection
-                phase = .savingsConfiguration(nextCategory)
-            } else {
-                isPresented = false
-            }
+                if let nextCategory = selectedCategories.compactMap({ id in
+                    savingsCategories.first(where: { $0.id == id })
+                }).first {
+                    temporaryAmounts[nextCategory.id] = nil  // Reset amount
+                    phase = .savingsConfiguration(nextCategory)
+                } else {
+                    isPresented = false
+                }
 
         case .savingsConfiguration(let category):
             if let amount = temporaryAmounts[category.id] {
