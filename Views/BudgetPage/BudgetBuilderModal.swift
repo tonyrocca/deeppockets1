@@ -46,7 +46,7 @@ struct BudgetBuilderModal: View {
     var body: some View {
         ZStack {
             // Background
-            Color.black.opacity(0.75)
+            Color.black.opacity(0.4)
                 .ignoresSafeArea()
             
             // Modal Content
@@ -237,7 +237,9 @@ struct BudgetBuilderModal: View {
             if let nextCategory = selectedCategories.compactMap({ id in
                 debtCategories.first(where: { $0.id == id })
             }).first {
-                debtInputData[nextCategory.id] = DebtInputData()  // Reset input data
+                // Clear completely for new category
+                debtInputData[nextCategory.id] = DebtInputData()
+                temporaryAmounts[nextCategory.id] = nil
                 phase = .debtConfiguration(nextCategory)
             } else {
                 phase = .expenseSelection
@@ -253,7 +255,10 @@ struct BudgetBuilderModal: View {
                 if let nextCategory = selectedCategories.compactMap({ id in
                     debtCategories.first(where: { $0.id == id })
                 }).first {
-                    debtInputData[nextCategory.id] = DebtInputData()  // Reset input data for each category
+                    // IMPORTANT: Complete reset for next category
+                    debtInputData.removeAll()  // Clear all previous data
+                    debtInputData[nextCategory.id] = DebtInputData()  // Fresh start
+                    temporaryAmounts.removeAll()  // Clear any temporary amounts
                     phase = .debtConfiguration(nextCategory)
                 } else {
                     phase = .expenseSelection
@@ -264,7 +269,8 @@ struct BudgetBuilderModal: View {
                 if let nextCategory = selectedCategories.compactMap({ id in
                     expenseCategories.first(where: { $0.id == id })
                 }).first {
-                    temporaryAmounts[nextCategory.id] = nil  // Reset amount
+                    // Reset both amount and any previous selection state
+                    temporaryAmounts[nextCategory.id] = nil
                     phase = .expenseConfiguration(nextCategory)
                 } else {
                     phase = .savingsSelection
@@ -292,7 +298,8 @@ struct BudgetBuilderModal: View {
                 if let nextCategory = selectedCategories.compactMap({ id in
                     savingsCategories.first(where: { $0.id == id })
                 }).first {
-                    temporaryAmounts[nextCategory.id] = nil  // Reset amount
+                    // Reset both amount and any previous selection state
+                    temporaryAmounts[nextCategory.id] = nil
                     phase = .savingsConfiguration(nextCategory)
                 } else {
                     isPresented = false
@@ -419,7 +426,15 @@ struct DebtConfigurationView: View {
     let category: BudgetCategory
     let monthlyIncome: Double
     @Binding var inputData: DebtInputData
-    @State private var inputMode: DebtInputMode? = nil  // No preselection
+    @State private var inputMode: DebtInputMode? = nil  // Keep as private state
+    
+    init(category: BudgetCategory, monthlyIncome: Double, inputData: Binding<DebtInputData>) {
+            self.category = category
+            self.monthlyIncome = monthlyIncome
+            self._inputData = inputData
+            // Force reset of input mode
+            self._inputMode = State(initialValue: nil)
+        }
 
     enum DebtInputMode {
         case recommended
@@ -431,118 +446,124 @@ struct DebtConfigurationView: View {
     }
     
     var body: some View {
-        VStack(spacing: 24) {
-            // Header
-            HStack(spacing: 8) {
-                Text(category.emoji)
-                    .font(.title)
-                Text(category.name)
-                    .font(.title)
-                    .foregroundColor(.white)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            
-            // Options Section
-            VStack(spacing: 16) {
-                // Recommended Amount Option
-                Button(action: { selectMode(.recommended) }) {
-                    HStack(spacing: 12) {
-                        Circle()
-                            .stroke(Theme.secondaryLabel, lineWidth: 2)
-                            .frame(width: 24, height: 24)
-                            .overlay {
-                                if inputMode == .recommended {
-                                    Circle()
-                                        .fill(Theme.tint)
-                                        .frame(width: 16, height: 16)
-                                }
-                            }
-                        
-                        VStack(alignment: .leading) {
-                            Text("\(formatCurrency(recommendedAmount))/month")
-                                .font(.system(size: 17))
-                                .foregroundColor(.white)
-                            
-                            Text("(\(Int(category.allocationPercentage * 100))% of income)")
-                                .font(.system(size: 15))
-                                .foregroundColor(Theme.secondaryLabel)
-                        }
-                        
-                        Spacer()
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Theme.surfaceBackground)
-                    .cornerRadius(12)
-                }
-                
-                // Custom Payment Section
-                VStack(spacing: 0) {
-                    Button(action: { selectMode(.custom) }) {
-                        HStack(spacing: 12) {
-                            Circle()
-                                .stroke(Theme.secondaryLabel, lineWidth: 2)
-                                .frame(width: 24, height: 24)
-                                .overlay {
-                                    if inputMode == .custom {
-                                        Circle()
-                                            .fill(Theme.tint)
-                                            .frame(width: 16, height: 16)
-                                    }
-                                }
-                            
-                            Text("Custom debt setup")
-                                .font(.system(size: 17))
-                                .foregroundColor(.white)
-                            
-                            Spacer()
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                    }
-                    
-                    if inputMode == .custom {
-                        VStack(spacing: 16) {
-                            // Debt Amount Input
-                            debtInputField(title: "Total Debt Amount", text: $inputData.debtAmount, placeholder: "Enter amount")
-                            
-                            // Interest Rate Input
-                            debtInputField(title: "Interest Rate", text: $inputData.interestRate, placeholder: "Enter rate", suffix: "%")
-                            
-                            // Minimum Payment Input
-                            debtInputField(title: "Minimum Payment", text: $inputData.minimumPayment, placeholder: "Enter amount", prefix: "$")
-                        }
-                        .padding()
-                    }
-                }
-                .background(Theme.surfaceBackground)
-                .cornerRadius(12)
-                
-                // Payoff Plan Summary (if applicable)
-                if let plan = inputData.payoffPlan {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Payoff Plan Summary")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.white)
-                        
-                        payoffSummaryRow("Monthly Payment", formatCurrency(plan.monthlyPayment))
-                        payoffSummaryRow("Total Interest", formatCurrency(plan.totalInterest))
-                        payoffSummaryRow("Total Cost", formatCurrency(plan.totalCost))
-                        payoffSummaryRow("Payoff Date", formatDate(plan.payoffDate))
-                    }
-                    .padding()
-                    .background(Theme.surfaceBackground)
-                    .cornerRadius(12)
-                }
-            }
-            
-            Spacer()
-            
-            Text("Almost done! One final review after this.")
-                .font(.system(size: 15))
-                .foregroundColor(Theme.secondaryLabel)
-                .multilineTextAlignment(.center)
-        }
+       VStack(spacing: 24) {
+           // Header
+           HStack(spacing: 8) {
+               Text(category.emoji)
+                   .font(.title)
+               Text(category.name)
+                   .font(.title)
+                   .foregroundColor(.white)
+           }
+           .frame(maxWidth: .infinity, alignment: .leading)
+           
+           // Options Section
+           VStack(spacing: 16) {
+               // Recommended Amount Option
+               Button(action: { selectMode(.recommended) }) {
+                   HStack(spacing: 12) {
+                       Circle()
+                           .stroke(Theme.secondaryLabel, lineWidth: 2)
+                           .frame(width: 24, height: 24)
+                           .overlay {
+                               if inputMode == .recommended {
+                                   Circle()
+                                       .fill(Theme.tint)
+                                       .frame(width: 16, height: 16)
+                               }
+                           }
+                       
+                       VStack(alignment: .leading) {
+                           Text("\(formatCurrency(recommendedAmount))/month")
+                               .font(.system(size: 17))
+                               .foregroundColor(.white)
+                           
+                           Text("(\(Int(category.allocationPercentage * 100))% of income)")
+                               .font(.system(size: 15))
+                               .foregroundColor(Theme.secondaryLabel)
+                       }
+                       
+                       Spacer()
+                   }
+                   .padding()
+                   .frame(maxWidth: .infinity)
+                   .background(Theme.surfaceBackground)
+                   .cornerRadius(12)
+               }
+               
+               // Custom Payment Section
+               VStack(spacing: 0) {
+                   Button(action: { selectMode(.custom) }) {
+                       HStack(spacing: 12) {
+                           Circle()
+                               .stroke(Theme.secondaryLabel, lineWidth: 2)
+                               .frame(width: 24, height: 24)
+                               .overlay {
+                                   if inputMode == .custom {
+                                       Circle()
+                                           .fill(Theme.tint)
+                                           .frame(width: 16, height: 16)
+                                   }
+                               }
+                           
+                           Text("Custom debt setup")
+                               .font(.system(size: 17))
+                               .foregroundColor(.white)
+                           
+                           Spacer()
+                       }
+                       .padding()
+                       .frame(maxWidth: .infinity)
+                   }
+                   
+                   if inputMode == .custom {
+                       VStack(spacing: 16) {
+                           // Debt Amount Input
+                           debtInputField(title: "Total Debt Amount", text: $inputData.debtAmount, placeholder: "Enter amount")
+                           
+                           // Interest Rate Input
+                           debtInputField(title: "Interest Rate", text: $inputData.interestRate, placeholder: "Enter rate", suffix: "%")
+                           
+                           // Minimum Payment Input
+                           debtInputField(title: "Minimum Payment", text: $inputData.minimumPayment, placeholder: "Enter amount", prefix: "$")
+                       }
+                       .padding()
+                   }
+               }
+               .background(Theme.surfaceBackground)
+               .cornerRadius(12)
+               
+               // Payoff Plan Summary (if applicable)
+               if let plan = inputData.payoffPlan {
+                   VStack(alignment: .leading, spacing: 12) {
+                       Text("Payoff Plan Summary")
+                           .font(.system(size: 17, weight: .semibold))
+                           .foregroundColor(.white)
+                       
+                       payoffSummaryRow("Monthly Payment", formatCurrency(plan.monthlyPayment))
+                       payoffSummaryRow("Total Interest", formatCurrency(plan.totalInterest))
+                       payoffSummaryRow("Total Cost", formatCurrency(plan.totalCost))
+                       payoffSummaryRow("Payoff Date", formatDate(plan.payoffDate))
+                   }
+                   .padding()
+                   .background(Theme.surfaceBackground)
+                   .cornerRadius(12)
+               }
+           }
+           
+           Spacer()
+           
+           Text("Almost done! One final review after this.")
+               .font(.system(size: 15))
+               .foregroundColor(Theme.secondaryLabel)
+               .multilineTextAlignment(.center)
+       }
+       .onAppear {
+           // Force reset input mode when view appears
+           inputMode = nil
+           // Reset input data
+           inputData = DebtInputData()
+       }
     }
     
     private func debtInputField(title: String, text: Binding<String>, placeholder: String, prefix: String = "", suffix: String = "") -> some View {
@@ -690,10 +711,18 @@ struct ExpenseConfigurationView: View {
     let totalCategories: Int
     let currentIndex: Int
     @Binding var amount: Double?
-    
-    // Using Optional for inputMode to represent no selection
-    @State private var inputMode: ExpenseInputMode? = nil  // No preselection
+    @State private var inputMode: ExpenseInputMode? = nil  // Keep as private state
     @State private var customAmount: String = ""
+    
+    init(category: BudgetCategory, monthlyIncome: Double, totalCategories: Int, currentIndex: Int, amount: Binding<Double?>) {
+            self.category = category
+            self.monthlyIncome = monthlyIncome
+            self.totalCategories = totalCategories
+            self.currentIndex = currentIndex
+            self._amount = amount
+            self._inputMode = State(initialValue: nil)  // Force nil on creation
+            self._customAmount = State(initialValue: "")
+        }
     
     enum ExpenseInputMode {
         case recommended
@@ -851,9 +880,18 @@ struct SavingsConfigurationView: View {
     let category: BudgetCategory
     let monthlyIncome: Double
     @Binding var amount: Double?
-    @State private var inputMode: SavingsInputMode? = nil  // No preselection
+    @State private var inputMode: SavingsInputMode? = nil
     @State private var targetAmount: String = ""
-    @State private var targetDate = Date().addingTimeInterval(365 * 24 * 60 * 60)
+    @State private var targetDate = Date().addingTimeInterval(365 * 24 * 60 * 60) // Initial value of 1 year from now
+    
+    init(category: BudgetCategory, monthlyIncome: Double, amount: Binding<Double?>) {
+            self.category = category
+            self.monthlyIncome = monthlyIncome
+            self._amount = amount
+            self._inputMode = State(initialValue: nil)  // Force nil on creation
+            self._targetAmount = State(initialValue: "")
+            self._targetDate = State(initialValue: Date().addingTimeInterval(365 * 24 * 60 * 60))
+        }
     
     enum SavingsInputMode {
         case recommended

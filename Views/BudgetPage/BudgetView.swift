@@ -50,7 +50,6 @@ struct CategoryItemView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("ALLOCATION OF INCOME")
                             .sectionHeader()
-                            .frame(maxWidth: .infinity, alignment: .leading)  // Add this
                         Text("\(Int(item.category.allocationPercentage * 100))%")
                             .font(.system(size: 17))
                             .foregroundColor(.white)
@@ -60,12 +59,10 @@ struct CategoryItemView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("DESCRIPTION")
                             .sectionHeader()
-                            .frame(maxWidth: .infinity, alignment: .leading)  // Add this
                         Text(item.category.description)
                             .font(.system(size: 15))
                             .foregroundColor(Theme.secondaryLabel)
                             .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity, alignment: .leading)  // Add this
                     }
                     
                     // Action Buttons
@@ -306,58 +303,22 @@ struct BudgetView: View {
     }
     
     private var emptyStateView: some View {
-            VStack(spacing: 20) {
-                Text("Let's build a budget that works for you")
-                    .font(.system(size: 17))
-                    .foregroundColor(Theme.secondaryLabel)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-                
-                VStack(spacing: 12) {
-                    // Manual Build Button
-                    Button(action: { showBudgetBuilder = true }) {
-                        VStack(spacing: 6) {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Build on your own")
-                                        .font(.system(size: 17, weight: .semibold))
-                                    Text("Create your budget step by step")
-                                        .font(.system(size: 13))
-                                        .foregroundColor(Theme.secondaryLabel)
-                                }
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(Theme.secondaryLabel)
-                            }
-                            
-                            HStack(spacing: 6) {
-                                Image(systemName: "star.fill")
-                                    .font(.system(size: 10))
-                                Text("Recommended")
-                                    .font(.system(size: 12))
-                            }
-                            .foregroundColor(Theme.tint)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Theme.tint.opacity(0.15))
-                            .cornerRadius(6)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                    }
-                    .background(Theme.surfaceBackground)
-                    .cornerRadius(12)
-                    
-                    // Auto Build Button
-                    Button(action: {}) {
+        VStack(spacing: 20) {
+            Text("Let's build a budget that works for you")
+                .font(.system(size: 17))
+                .foregroundColor(Theme.secondaryLabel)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            
+            VStack(spacing: 12) {
+                // Manual Build Button
+                Button(action: { showBudgetBuilder = true }) {
+                    VStack(spacing: 6) {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("Build for me")
+                                Text("Build on your own")
                                     .font(.system(size: 17, weight: .semibold))
-                                Text("Based on your income")
+                                Text("Create your budget step by step")
                                     .font(.system(size: 13))
                                     .foregroundColor(Theme.secondaryLabel)
                             }
@@ -366,16 +327,64 @@ struct BudgetView: View {
                                 .font(.system(size: 14))
                                 .foregroundColor(Theme.secondaryLabel)
                         }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 16)
+                        
+                        HStack(spacing: 6) {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 10))
+                            Text("Recommended")
+                                .font(.system(size: 12))
+                        }
+                        .foregroundColor(Theme.tint)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Theme.tint.opacity(0.15))
+                        .cornerRadius(6)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .background(Theme.surfaceBackground)
-                    .cornerRadius(12)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
-                .padding(.horizontal, 16)
+                .background(Theme.surfaceBackground)
+                .cornerRadius(12)
+                .buttonStyle(PressableButtonStyle())
+                
+                // Auto Build Button
+                Button(action: {}) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Build for me")
+                                .font(.system(size: 17, weight: .semibold))
+                            Text("Based on your income")
+                                .font(.system(size: 13))
+                                .foregroundColor(Theme.secondaryLabel)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14))
+                            .foregroundColor(Theme.secondaryLabel)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 16)
+                }
+                .background(Theme.surfaceBackground)
+                .cornerRadius(12)
+                .buttonStyle(PressableButtonStyle())
             }
+            .padding(.horizontal, 16)
         }
+    }
+
+    // Add this custom button style
+    struct PressableButtonStyle: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .opacity(configuration.isPressed ? 0.8 : 1.0)
+                .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+                .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+        }
+    }
     
     private func summaryRow(title: String, amount: Double) -> some View {
         HStack {
