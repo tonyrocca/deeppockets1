@@ -32,6 +32,8 @@ enum BudgetBuilderPhase {
     }
 }
 
+import SwiftUI
+
 struct BudgetBuilderModal: View {
     @Binding var isPresented: Bool
     @ObservedObject var budgetStore: BudgetStore
@@ -46,7 +48,8 @@ struct BudgetBuilderModal: View {
     var body: some View {
         ZStack {
             // Background
-            Color.black.opacity(0.4)
+            Color.black
+                .opacity(1)     // Fully opaque black background
                 .ignoresSafeArea()
             
             // Modal Content
@@ -116,8 +119,7 @@ struct BudgetBuilderModal: View {
                                                 set: { debtInputData[category.id] = $0 }
                                             )
                                         )
-                                        .id(category.id)   // <- Force a fresh view for each category
-
+                                        .id(category.id)   // Force a fresh view for each category
                                         
                                     case .expenseSelection:
                                         CategorySelectionView(
@@ -135,7 +137,6 @@ struct BudgetBuilderModal: View {
                                             amount: binding(for: category)
                                         )
                                         .id(category.id)  // Force a fresh view
-
                                         
                                     case .savingsSelection:
                                         CategorySelectionView(
@@ -151,13 +152,13 @@ struct BudgetBuilderModal: View {
                                             amount: binding(for: category)
                                         )
                                         .id(category.id)  // Force a fresh view
-
                                     }
                                 }
                             )
                             
                             // Spacer to ensure content scrolls above button
-                            Color.clear.frame(height: 100)
+                            Color.clear
+                                .frame(height: 100)
                         }
                         .padding(.horizontal, 20)
                     }
@@ -178,6 +179,7 @@ struct BudgetBuilderModal: View {
         }
     }
     
+    // MARK: - Next Button & Logic
     private var nextButton: some View {
         Button(action: handleNext) {
             Text(nextButtonTitle)
@@ -207,7 +209,8 @@ struct BudgetBuilderModal: View {
         case .debtSelection, .expenseSelection, .savingsSelection:
             return true  // Can always skip or move to next phase
         case .debtConfiguration(let category):
-            return debtInputData[category.id]?.payoffPlan != nil || debtInputData[category.id]?.debtAmount != ""
+            return debtInputData[category.id]?.payoffPlan != nil
+                || debtInputData[category.id]?.debtAmount != ""
         case .expenseConfiguration(let category),
              .savingsConfiguration(let category):
             return temporaryAmounts[category.id] != nil  // Ensure an amount is set before enabling "Continue"
@@ -216,24 +219,23 @@ struct BudgetBuilderModal: View {
     
     private var isInitialPhase: Bool {
         switch phase {
-        case .debtSelection: return true
-        default: return false
+        case .debtSelection:
+            return true
+        default:
+            return false
         }
-    }
-    
-    private func binding(for category: BudgetCategory) -> Binding<Double?> {
-        Binding(
-            get: { temporaryAmounts[category.id] },
-            set: { temporaryAmounts[category.id] = $0 }
-        )
     }
     
     private func navigateBack() {
         switch phase {
-        case .debtConfiguration: phase = .debtSelection
-        case .expenseConfiguration: phase = .expenseSelection
-        case .savingsConfiguration: phase = .savingsSelection
-        default: break
+        case .debtConfiguration:
+            phase = .debtSelection
+        case .expenseConfiguration:
+            phase = .expenseSelection
+        case .savingsConfiguration:
+            phase = .savingsSelection
+        default:
+            break
         }
     }
     
@@ -250,14 +252,15 @@ struct BudgetBuilderModal: View {
             } else {
                 phase = .expenseSelection
             }
-
+            
         case .debtConfiguration(let category):
-            if let inputData = debtInputData[category.id], let amount = inputData.payoffPlan?.monthlyPayment {
+            if let inputData = debtInputData[category.id],
+               let amount = inputData.payoffPlan?.monthlyPayment {
                 budgetStore.setCategory(category, amount: amount)
                 budgetModel.toggleCategory(id: category.id)
                 budgetModel.updateAllocation(for: category.id, amount: amount)
                 selectedCategories.remove(category.id)
-
+                
                 if let nextCategory = selectedCategories.compactMap({ id in
                     debtCategories.first(where: { $0.id == id })
                 }).first {
@@ -270,25 +273,25 @@ struct BudgetBuilderModal: View {
                     phase = .expenseSelection
                 }
             }
-
+            
         case .expenseSelection:
-                if let nextCategory = selectedCategories.compactMap({ id in
-                    expenseCategories.first(where: { $0.id == id })
-                }).first {
-                    // Reset both amount and any previous selection state
-                    temporaryAmounts[nextCategory.id] = nil
-                    phase = .expenseConfiguration(nextCategory)
-                } else {
-                    phase = .savingsSelection
-                }
-
+            if let nextCategory = selectedCategories.compactMap({ id in
+                expenseCategories.first(where: { $0.id == id })
+            }).first {
+                // Reset both amount and any previous selection state
+                temporaryAmounts[nextCategory.id] = nil
+                phase = .expenseConfiguration(nextCategory)
+            } else {
+                phase = .savingsSelection
+            }
+            
         case .expenseConfiguration(let category):
             if let amount = temporaryAmounts[category.id] {
                 budgetStore.setCategory(category, amount: amount)
                 budgetModel.toggleCategory(id: category.id)
                 budgetModel.updateAllocation(for: category.id, amount: amount)
                 selectedCategories.remove(category.id)
-
+                
                 if let nextCategory = selectedCategories.compactMap({ id in
                     expenseCategories.first(where: { $0.id == id })
                 }).first {
@@ -299,25 +302,25 @@ struct BudgetBuilderModal: View {
                     phase = .savingsSelection
                 }
             }
-
+            
         case .savingsSelection:
-                if let nextCategory = selectedCategories.compactMap({ id in
-                    savingsCategories.first(where: { $0.id == id })
-                }).first {
-                    // Reset both amount and any previous selection state
-                    temporaryAmounts[nextCategory.id] = nil
-                    phase = .savingsConfiguration(nextCategory)
-                } else {
-                    isPresented = false
-                }
-
+            if let nextCategory = selectedCategories.compactMap({ id in
+                savingsCategories.first(where: { $0.id == id })
+            }).first {
+                // Reset both amount and any previous selection state
+                temporaryAmounts[nextCategory.id] = nil
+                phase = .savingsConfiguration(nextCategory)
+            } else {
+                isPresented = false
+            }
+            
         case .savingsConfiguration(let category):
             if let amount = temporaryAmounts[category.id] {
                 budgetStore.setCategory(category, amount: amount)
                 budgetModel.toggleCategory(id: category.id)
                 budgetModel.updateAllocation(for: category.id, amount: amount)
                 selectedCategories.remove(category.id)
-
+                
                 if let nextCategory = selectedCategories.compactMap({ id in
                     savingsCategories.first(where: { $0.id == id })
                 }).first {
@@ -330,7 +333,9 @@ struct BudgetBuilderModal: View {
             }
         }
     }
-
+    
+    // MARK: - Category Filters and Helpers
+    
     private var debtCategories: [BudgetCategory] {
         BudgetCategoryStore.shared.categories.filter { isDebtCategory($0.id) }
     }
@@ -354,20 +359,26 @@ struct BudgetBuilderModal: View {
     }
     
     private func getTotalConfigurableExpenses() -> Int {
-        return selectedCategories.filter { id in
+        selectedCategories.filter { id in
             expenseCategories.contains(where: { $0.id == id })
         }.count
     }
-
+    
     private func getCurrentExpenseIndex(for category: BudgetCategory) -> Int {
-        let selectedExpenseIds = selectedCategories.filter { id in
-            expenseCategories.contains(where: { $0.id == id })
-        }.sorted() // Sort to maintain consistent order
+        let selectedExpenseIds = selectedCategories
+            .filter { id in
+                expenseCategories.contains(where: { $0.id == id })
+            }
+            .sorted() // Sort to maintain consistent order
         
-        if let index = selectedExpenseIds.firstIndex(of: category.id) {
-            return index
-        }
-        return 0
+        return selectedExpenseIds.firstIndex(of: category.id) ?? 0
+    }
+    
+    private func binding(for category: BudgetCategory) -> Binding<Double?> {
+        Binding(
+            get: { temporaryAmounts[category.id] },
+            set: { temporaryAmounts[category.id] = $0 }
+        )
     }
 }
 
