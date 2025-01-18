@@ -116,6 +116,8 @@ struct BudgetBuilderModal: View {
                                                 set: { debtInputData[category.id] = $0 }
                                             )
                                         )
+                                        .id(category.id)   // <- Force a fresh view for each category
+
                                         
                                     case .expenseSelection:
                                         CategorySelectionView(
@@ -132,6 +134,8 @@ struct BudgetBuilderModal: View {
                                             currentIndex: getCurrentExpenseIndex(for: category),
                                             amount: binding(for: category)
                                         )
+                                        .id(category.id)  // Force a fresh view
+
                                         
                                     case .savingsSelection:
                                         CategorySelectionView(
@@ -146,6 +150,8 @@ struct BudgetBuilderModal: View {
                                             monthlyIncome: monthlyIncome,
                                             amount: binding(for: category)
                                         )
+                                        .id(category.id)  // Force a fresh view
+
                                     }
                                 }
                             )
@@ -558,12 +564,15 @@ struct DebtConfigurationView: View {
                .foregroundColor(Theme.secondaryLabel)
                .multilineTextAlignment(.center)
        }
+        // ADD THIS onAppear:
        .onAppear {
-           // Force reset input mode when view appears
-           inputMode = nil
-           // Reset input data
-           inputData = DebtInputData()
-       }
+                   // Force blank data/radio each time
+                   inputMode = nil
+                   inputData.debtAmount = ""
+                   inputData.interestRate = ""
+                   inputData.minimumPayment = ""
+                   inputData.payoffPlan = nil
+               }
     }
     
     private func debtInputField(title: String, text: Binding<String>, placeholder: String, prefix: String = "", suffix: String = "") -> some View {
@@ -855,6 +864,13 @@ struct ExpenseConfigurationView: View {
                 .foregroundColor(Theme.secondaryLabel)
                 .multilineTextAlignment(.center)
         }
+        // ADD THIS onAppear:
+        .onAppear {
+                    // Force blank data/radio each time
+                    inputMode = nil
+                    customAmount = ""
+                    amount = nil
+                }
     }
     
     private func selectMode(_ mode: ExpenseInputMode) {
@@ -1057,6 +1073,13 @@ struct SavingsConfigurationView: View {
                 .foregroundColor(Theme.secondaryLabel)
                 .multilineTextAlignment(.center)
         }
+        // ADD THIS onAppear:
+        .onAppear {
+                    // Force blank data/radio each time
+                    inputMode = nil
+                    targetAmount = ""
+                    amount = nil
+                }
     }
     
     private func selectMode(_ mode: SavingsInputMode) {
