@@ -25,7 +25,7 @@ struct CategoryItemView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Category Row
+            // Category Row (always visible)
             Button(action: { withAnimation { isExpanded.toggle() }}) {
                 HStack(spacing: 12) {
                     Text(item.category.emoji)
@@ -45,7 +45,7 @@ struct CategoryItemView: View {
             
             // Expanded Details
             if isExpanded {
-                VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 16) {
                     // Allocation Section
                     VStack(alignment: .leading, spacing: 8) {
                         Text("ALLOCATION OF INCOME")
@@ -106,6 +106,7 @@ struct CategoryItemView: View {
                 .background(Theme.elevatedBackground)
             }
             
+            // Divider if expanded
             if isExpanded {
                 Divider()
                     .background(Theme.separator)
@@ -121,6 +122,7 @@ struct CategoryItemView: View {
     }
 }
 
+// MARK: - BudgetView
 struct BudgetView: View {
     let monthlyIncome: Double
     let payPeriod: PayPeriod
@@ -140,11 +142,13 @@ struct BudgetView: View {
     
     var body: some View {
         VStack(spacing: 0) {
+            // If no items at all, show empty state:
             if budgetModel.budgetItems.isEmpty {
                 emptyStateView
             } else {
                 ScrollView {
                     VStack(spacing: 24) {
+                        
                         // Period Selector
                         HStack(spacing: 0) {
                             ForEach(IncomePeriod.allCases, id: \.self) { period in
@@ -179,6 +183,7 @@ struct BudgetView: View {
                                     .foregroundColor(.white)
                             }
                             
+                            // Totals
                             let debtTotal = budgetModel.budgetItems
                                 .filter { $0.type == .expense && isDebtCategory($0.category.id) }
                                 .reduce(0) { $0 + $1.allocatedAmount }
@@ -216,7 +221,6 @@ struct BudgetView: View {
                                 if showDetailedSummary {
                                     VStack(spacing: 12) {
                                         Divider().background(Theme.separator)
-                                        
                                         summaryRow(title: "Debt", amount: debtTotal * periodMultiplier)
                                         summaryRow(title: "Expenses", amount: expenseTotal * periodMultiplier)
                                         summaryRow(title: "Savings", amount: savingsTotal * periodMultiplier)
@@ -232,23 +236,23 @@ struct BudgetView: View {
                         
                         // Categories List
                         VStack(spacing: 16) {
-                            // Debt Items
-                            if !budgetModel.budgetItems.filter({ $0.isActive && $0.type == .expense && isDebtCategory($0.category.id) }).isEmpty {
-                                categoryHeader(title: "DEBT")
-                                categoryItems(items: budgetModel.budgetItems.filter { $0.isActive && $0.type == .expense && isDebtCategory($0.category.id) })
+                            // 1. DEBT
+                            let debtItems = budgetModel.budgetItems.filter {
+                                $0.isActive && $0.type == .expense && isDebtCategory($0.category.id)
                             }
+                            categorySection(title: "DEBT", items: debtItems)
                             
-                            // Expense Items
-                            if !budgetModel.budgetItems.filter({ $0.isActive && $0.type == .expense && !isDebtCategory($0.category.id) }).isEmpty {
-                                categoryHeader(title: "EXPENSES")
-                                categoryItems(items: budgetModel.budgetItems.filter { $0.isActive && $0.type == .expense && !isDebtCategory($0.category.id) })
+                            // 2. EXPENSES
+                            let expenseItems = budgetModel.budgetItems.filter {
+                                $0.isActive && $0.type == .expense && !isDebtCategory($0.category.id)
                             }
+                            categorySection(title: "EXPENSES", items: expenseItems)
                             
-                            // Savings Items
-                            if !budgetModel.budgetItems.filter({ $0.isActive && $0.type == .savings }).isEmpty {
-                                categoryHeader(title: "SAVINGS")
-                                categoryItems(items: budgetModel.budgetItems.filter { $0.isActive && $0.type == .savings })
+                            // 3. SAVINGS
+                            let savingsItems = budgetModel.budgetItems.filter {
+                                $0.isActive && $0.type == .savings
                             }
+                            categorySection(title: "SAVINGS", items: savingsItems)
                         }
                         .padding(.horizontal)
                     }
@@ -258,6 +262,7 @@ struct BudgetView: View {
         }
         .background(Theme.background)
         .sheet(isPresented: $showBudgetBuilder, onDismiss: {
+            // Recompute any budget data after the modal closes
             budgetModel.setupInitialBudget(selectedCategoryIds: Set(budgetStore.configurations.keys))
             budgetModel.calculateUnusedAmount()
         }) {
@@ -270,6 +275,22 @@ struct BudgetView: View {
         }
     }
     
+    // Section for a category type (DEBT, EXPENSES, SAVINGS)
+    private func categorySection(title: String, items: [BudgetItem]) -> some View {
+        VStack(spacing: 8) {
+            categoryHeader(title: title)
+            if items.isEmpty {
+                Text("No categories in budget")
+                    .font(.system(size: 15))
+                    .foregroundColor(Theme.secondaryLabel)
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                categoryItems(items: items)
+            }
+        }
+    }
+    
     private func categoryHeader(title: String) -> some View {
         HStack {
             Text(title)
@@ -279,9 +300,9 @@ struct BudgetView: View {
                 .padding(.vertical, 4)
                 .background(Theme.tint.opacity(0.1))
                 .cornerRadius(4)
-            
             Spacer()
             
+            // Example "Add" button
             Button(action: {}) {
                 HStack(spacing: 4) {
                     Text("Add")
@@ -376,7 +397,6 @@ struct BudgetView: View {
         }
     }
 
-    // Add this custom button style
     struct PressableButtonStyle: ButtonStyle {
         func makeBody(configuration: Configuration) -> some View {
             configuration.label
@@ -409,4 +429,3 @@ struct BudgetView: View {
         return formatter.string(from: NSNumber(value: value)) ?? "$0"
     }
 }
-
