@@ -18,10 +18,13 @@ enum IncomePeriod: String, CaseIterable {
     }
 }
 
+// MARK: - CategoryItemView
 struct CategoryItemView: View {
     let item: BudgetItem
     let periodMultiplier: Double
     @State private var isExpanded = false
+    @State private var showDeleteConfirmation = false
+    @EnvironmentObject private var budgetModel: BudgetModel
     
     var body: some View {
         VStack(spacing: 0) {
@@ -65,9 +68,11 @@ struct CategoryItemView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     
-                    // Action Buttons
+                    // Updated Action Buttons
                     HStack(spacing: 12) {
-                        Button(action: {}) {
+                        Button(action: {
+                            // TODO: handle edit action
+                        }) {
                             HStack {
                                 Image(systemName: "pencil")
                                 Text("Edit")
@@ -84,7 +89,7 @@ struct CategoryItemView: View {
                             )
                         }
                         
-                        Button(action: {}) {
+                        Button(action: { showDeleteConfirmation = true }) {
                             HStack {
                                 Image(systemName: "trash")
                                 Text("Delete")
@@ -112,8 +117,69 @@ struct CategoryItemView: View {
                     .background(Theme.separator)
             }
         }
+        // Delete confirmation overlay
+        .overlay {
+            if showDeleteConfirmation {
+                deleteConfirmationOverlay
+            }
+        }
     }
     
+    private var deleteConfirmationOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.5)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 24) {
+                // Header
+                VStack(spacing: 8) {
+                    Text("Delete Category")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.white)
+                    Text("Are you sure you want to delete \(item.category.name) from your budget?")
+                        .font(.system(size: 17))
+                        .foregroundColor(Theme.secondaryLabel)
+                        .multilineTextAlignment(.center)
+                }
+                
+                // Buttons
+                VStack(spacing: 12) {
+                    Button(action: {
+                        budgetModel.deleteCategory(id: item.id)
+                        showDeleteConfirmation = false
+                    }) {
+                        Text("Yes, Delete")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(Color.red)
+                            .cornerRadius(12)
+                    }
+                    
+                    Button(action: { showDeleteConfirmation = false }) {
+                        Text("No, Keep It")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(Theme.surfaceBackground)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
+                    }
+                }
+            }
+            .padding(24)
+            .background(Theme.background)
+            .cornerRadius(20)
+            .padding(.horizontal, 20)
+        }
+    }
+    
+    // Helper
     private func formatCurrency(_ value: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
@@ -317,7 +383,9 @@ struct BudgetView: View {
     private func categoryItems(items: [BudgetItem]) -> some View {
         VStack(spacing: 1) {
             ForEach(items) { item in
+                // Now CategoryItemView uses our new overlay for deletion
                 CategoryItemView(item: item, periodMultiplier: periodMultiplier)
+                    .environmentObject(budgetModel)
             }
         }
         .cornerRadius(12)

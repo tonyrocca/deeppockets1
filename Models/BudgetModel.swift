@@ -50,16 +50,17 @@ struct BudgetItem: Identifiable {
 
 class BudgetModel: ObservableObject {
     @Published var monthlyIncome: Double
-    @Published var budgetItems: [BudgetItem] = []  // Start with empty array
+    @Published var budgetItems: [BudgetItem] = []
     @Published var unusedAmount: Double = 0
+    
     private let store = BudgetCategoryStore.shared
     
     init(monthlyIncome: Double) {
         self.monthlyIncome = monthlyIncome
-        calculateUnusedAmount()  // Just calculate unused amount, don't setup items
+        calculateUnusedAmount()
     }
     
-    // Move setupInitialBudget to be called explicitly when needed
+    // Called explicitly when you want to set up items from selected category IDs
     func setupInitialBudget(selectedCategoryIds: Set<String>) {
         budgetItems = store.categories
             .filter { selectedCategoryIds.contains($0.id) }
@@ -99,7 +100,9 @@ class BudgetModel: ObservableObject {
     }
     
     func calculateUnusedAmount() {
-        let totalAllocated = budgetItems.filter { $0.isActive }.reduce(0) { $0 + $1.allocatedAmount }
+        let totalAllocated = budgetItems
+            .filter { $0.isActive }
+            .reduce(0) { $0 + $1.allocatedAmount }
         unusedAmount = monthlyIncome - totalAllocated
     }
     
@@ -123,7 +126,8 @@ class BudgetModel: ObservableObject {
         }
     }
     
-    func addCustomCategory(name: String, emoji: String, allocation: Double, type: BudgetCategoryType, priority: BudgetCategoryPriority) {
+    func addCustomCategory(name: String, emoji: String, allocation: Double,
+                           type: BudgetCategoryType, priority: BudgetCategoryPriority) {
         let newCategory = BudgetCategory(
             id: "custom_\(UUID().uuidString)",
             name: name,
@@ -148,8 +152,39 @@ class BudgetModel: ObservableObject {
         calculateUnusedAmount()
     }
     
+    /// Deletes a category from the budget and updates related state
     func deleteCategory(id: String) {
-        budgetItems.removeAll(where: { $0.id == id && $0.category.id.hasPrefix("custom_") })
+        // Remove the category from budgetItems
+        budgetItems.removeAll(where: { $0.id == id })
+        
+        // Recalculate unused amount after deletion
         calculateUnusedAmount()
+        
+        // Notify observers of the change
+        objectWillChange.send()
+    }
+}
+
+// MARK: - Extension: Additional Methods
+extension BudgetModel {
+    /// Checks if a category can be deleted
+    func canDeleteCategory(id: String) -> Bool {
+        // Get the category if it exists
+        guard let item = budgetItems.first(where: { $0.id == id }) else {
+            return false
+        }
+        
+        // If it's a custom category, always allow deletion
+        if item.category.id.hasPrefix("custom_") {
+            return true
+        }
+        
+        // For standard categories, disallow if essential, else allow
+        switch item.priority {
+        case .essential:
+            return false
+        case .important, .discretionary:
+            return true
+        }
     }
 }
