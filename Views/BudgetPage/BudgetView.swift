@@ -541,8 +541,9 @@ struct BudgetView: View {
                 .padding(.horizontal, 32)
             
             VStack(spacing: 12) {
+                // Build on your own button
                 Button(action: { showBudgetBuilder = true }) {
-                    VStack(spacing: 6) {
+                    VStack(spacing: 12) {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Build on your own")
@@ -556,6 +557,7 @@ struct BudgetView: View {
                                 .font(.system(size: 14))
                                 .foregroundColor(Theme.secondaryLabel)
                         }
+                        
                         HStack(spacing: 6) {
                             Image(systemName: "star.fill")
                                 .font(.system(size: 10))
@@ -570,14 +572,14 @@ struct BudgetView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
+                    .padding(16)
+                    .background(Theme.surfaceBackground)
+                    .cornerRadius(12)
+                    .contentShape(Rectangle())
                 }
-                .background(Theme.surfaceBackground)
-                .cornerRadius(12)
                 .buttonStyle(PressableButtonStyle())
                 
-                // Auto Build Button
+                // Build for me button
                 Button(action: {}) {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
@@ -593,11 +595,11 @@ struct BudgetView: View {
                             .foregroundColor(Theme.secondaryLabel)
                     }
                     .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 16)
+                    .padding(16)
+                    .background(Theme.surfaceBackground)
+                    .cornerRadius(12)
+                    .contentShape(Rectangle())
                 }
-                .background(Theme.surfaceBackground)
-                .cornerRadius(12)
                 .buttonStyle(PressableButtonStyle())
             }
             .padding(.horizontal, 16)
