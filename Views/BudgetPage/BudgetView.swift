@@ -22,14 +22,27 @@ enum IncomePeriod: String, CaseIterable {
 struct CategoryItemView: View {
     let item: BudgetItem
     let periodMultiplier: Double
+    let selectedPeriod: IncomePeriod
+    let payPeriod: PayPeriod
+    
     @State private var isExpanded = false
     @State private var showDeleteConfirmation = false
+    
+    // States for editing allocation
+    @State private var showEditModal = false
+    @State private var editAmount: String = ""
+    
     @EnvironmentObject private var budgetModel: BudgetModel
+    
+    // Computed property for the “current displayed amount”
+    private var currentAmount: Double {
+        item.allocatedAmount * periodMultiplier
+    }
     
     var body: some View {
         VStack(spacing: 0) {
-            // Category Row (always visible)
-            Button(action: { withAnimation { isExpanded.toggle() }}) {
+            // Category Row
+            Button(action: { withAnimation { isExpanded.toggle() } }) {
                 HStack(spacing: 12) {
                     Text(item.category.emoji)
                         .font(.title3)
@@ -37,7 +50,7 @@ struct CategoryItemView: View {
                         .font(.system(size: 17))
                         .foregroundColor(.white)
                     Spacer()
-                    Text(formatCurrency(item.allocatedAmount * periodMultiplier))
+                    Text(formatCurrency(currentAmount))
                         .font(.system(size: 17))
                         .foregroundColor(Theme.secondaryLabel)
                 }
@@ -49,6 +62,7 @@ struct CategoryItemView: View {
             // Expanded Details
             if isExpanded {
                 VStack(alignment: .leading, spacing: 16) {
+                    
                     // Allocation Section
                     VStack(alignment: .leading, spacing: 8) {
                         Text("ALLOCATION OF INCOME")
@@ -68,10 +82,12 @@ struct CategoryItemView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     
-                    // Updated Action Buttons
+                    // Action Buttons
                     HStack(spacing: 12) {
                         Button(action: {
-                            // TODO: handle edit action
+                            // Prepare edit state
+                            editAmount = String(format: "%.0f", currentAmount)
+                            showEditModal = true
                         }) {
                             HStack {
                                 Image(systemName: "pencil")
@@ -117,14 +133,36 @@ struct CategoryItemView: View {
                     .background(Theme.separator)
             }
         }
-        // Delete confirmation overlay
+        // Overlays
         .overlay {
             if showDeleteConfirmation {
                 deleteConfirmationOverlay
             }
         }
+        .sheet(isPresented: $showEditModal) {
+            EditAmountModal(
+                isPresented: $showEditModal,
+                category: item.category,
+                currentAmount: currentAmount,
+                selectedPeriod: selectedPeriod,
+                payPeriod: payPeriod,
+                onSave: { newAmount in
+                    let monthlyAmount: Double
+                    switch selectedPeriod {
+                    case .annual:
+                        monthlyAmount = newAmount / 12
+                    case .monthly:
+                        monthlyAmount = newAmount
+                    case .perPaycheck:
+                        monthlyAmount = newAmount * payPeriod.multiplier
+                    }
+                    budgetModel.updateAllocation(for: item.id, amount: monthlyAmount)
+                }
+            )
+        }
     }
     
+    // MARK: - Delete Confirmation Overlay
     private var deleteConfirmationOverlay: some View {
         ZStack {
             Color.black.opacity(0.5)
@@ -179,7 +217,107 @@ struct CategoryItemView: View {
         }
     }
     
-    // Helper
+    // MARK: - Helper
+    private func formatCurrency(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: value)) ?? "$0"
+    }
+}
+
+struct EditAmountModal: View {
+    @Binding var isPresented: Bool
+    let category: BudgetCategory
+    let currentAmount: Double
+    let selectedPeriod: IncomePeriod
+    let payPeriod: PayPeriod
+    let onSave: (Double) -> Void
+    
+    @State private var editAmount: String = ""
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                // Current Amount Display
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Current Amount")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(.white)
+                    Text(formatCurrency(currentAmount))
+                        .font(.system(size: 17))
+                        .foregroundColor(Theme.secondaryLabel)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                // New Amount Input
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("New Amount")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(.white)
+                    
+                    HStack {
+                        Text("$")
+                            .foregroundColor(.white)
+                        TextField("", text: $editAmount)
+                            .keyboardType(.decimalPad)
+                            .foregroundColor(.white)
+                            .placeholder(when: editAmount.isEmpty) {
+                                Text("e.g. \(String(format: "%.0f", currentAmount))")
+                                    .foregroundColor(Color.white.opacity(0.6))
+                            }
+                        Group {
+                            switch selectedPeriod {
+                            case .annual:
+                                Text("/yr")
+                            case .monthly:
+                                Text("/mo")
+                            case .perPaycheck:
+                                Text("/paycheck")
+                            }
+                        }
+                        .foregroundColor(Color.white.opacity(0.6))
+                    }
+                    .padding(16)
+                    .background(Theme.surfaceBackground)
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Theme.separator, lineWidth: 1)
+                    )
+                }
+                
+                Spacer()
+            }
+            .padding()
+            .background(Theme.background)
+            .navigationTitle("Edit \(category.name)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        isPresented = false
+                    }
+                    .foregroundColor(.white)
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        if let newAmount = Double(editAmount) {
+                            onSave(newAmount)
+                        }
+                        isPresented = false
+                    }
+                    .disabled(editAmount.isEmpty)
+                    .foregroundColor(editAmount.isEmpty ? Color.white.opacity(0.6) : .white)
+                }
+            }
+            .onAppear {
+                editAmount = String(format: "%.0f", currentAmount)
+            }
+        }
+    }
+    
     private func formatCurrency(_ value: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
@@ -192,10 +330,12 @@ struct CategoryItemView: View {
 struct BudgetView: View {
     let monthlyIncome: Double
     let payPeriod: PayPeriod
+    
     @State private var selectedPeriod: IncomePeriod = .monthly
     @State private var showBudgetBuilder = false
     @State private var showDetailedSummary = false
     @StateObject private var budgetStore = BudgetStore()
+    
     @EnvironmentObject private var budgetModel: BudgetModel
     
     private var periodMultiplier: Double {
@@ -208,7 +348,6 @@ struct BudgetView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // If no items at all, show empty state:
             if budgetModel.budgetItems.isEmpty {
                 emptyStateView
             } else {
@@ -236,7 +375,7 @@ struct BudgetView: View {
                         .cornerRadius(8)
                         .padding(.horizontal)
                         
-                        // Budget Summary Card
+                        // Budget Summary
                         VStack(spacing: 16) {
                             // Income Section
                             HStack {
@@ -249,7 +388,7 @@ struct BudgetView: View {
                                     .foregroundColor(.white)
                             }
                             
-                            // Totals
+                            // Calculations
                             let debtTotal = budgetModel.budgetItems
                                 .filter { $0.type == .expense && isDebtCategory($0.category.id) }
                                 .reduce(0) { $0 + $1.allocatedAmount }
@@ -262,7 +401,7 @@ struct BudgetView: View {
                             let totalBudget = debtTotal + expenseTotal + savingsTotal
                             let remaining = monthlyIncome - totalBudget
                             
-                            // Budget Status Section
+                            // Surplus / Deficit
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
                                     Text(remaining >= 0 ? "Budget Surplus" : "Budget Deficit")
@@ -302,19 +441,19 @@ struct BudgetView: View {
                         
                         // Categories List
                         VStack(spacing: 16) {
-                            // 1. DEBT
+                            // Debt
                             let debtItems = budgetModel.budgetItems.filter {
                                 $0.isActive && $0.type == .expense && isDebtCategory($0.category.id)
                             }
                             categorySection(title: "DEBT", items: debtItems)
                             
-                            // 2. EXPENSES
+                            // Expenses
                             let expenseItems = budgetModel.budgetItems.filter {
                                 $0.isActive && $0.type == .expense && !isDebtCategory($0.category.id)
                             }
                             categorySection(title: "EXPENSES", items: expenseItems)
                             
-                            // 3. SAVINGS
+                            // Savings
                             let savingsItems = budgetModel.budgetItems.filter {
                                 $0.isActive && $0.type == .savings
                             }
@@ -328,7 +467,6 @@ struct BudgetView: View {
         }
         .background(Theme.background)
         .sheet(isPresented: $showBudgetBuilder, onDismiss: {
-            // Recompute any budget data after the modal closes
             budgetModel.setupInitialBudget(selectedCategoryIds: Set(budgetStore.configurations.keys))
             budgetModel.calculateUnusedAmount()
         }) {
@@ -341,7 +479,7 @@ struct BudgetView: View {
         }
     }
     
-    // Section for a category type (DEBT, EXPENSES, SAVINGS)
+    // MARK: - Helpers
     private func categorySection(title: String, items: [BudgetItem]) -> some View {
         VStack(spacing: 8) {
             categoryHeader(title: title)
@@ -368,7 +506,6 @@ struct BudgetView: View {
                 .cornerRadius(4)
             Spacer()
             
-            // Example "Add" button
             Button(action: {}) {
                 HStack(spacing: 4) {
                     Text("Add")
@@ -383,9 +520,13 @@ struct BudgetView: View {
     private func categoryItems(items: [BudgetItem]) -> some View {
         VStack(spacing: 1) {
             ForEach(items) { item in
-                // Now CategoryItemView uses our new overlay for deletion
-                CategoryItemView(item: item, periodMultiplier: periodMultiplier)
-                    .environmentObject(budgetModel)
+                CategoryItemView(
+                    item: item,
+                    periodMultiplier: periodMultiplier,
+                    selectedPeriod: selectedPeriod,
+                    payPeriod: payPeriod
+                )
+                .environmentObject(budgetModel)
             }
         }
         .cornerRadius(12)
@@ -400,7 +541,6 @@ struct BudgetView: View {
                 .padding(.horizontal, 32)
             
             VStack(spacing: 12) {
-                // Manual Build Button
                 Button(action: { showBudgetBuilder = true }) {
                     VStack(spacing: 6) {
                         HStack {
@@ -416,7 +556,6 @@ struct BudgetView: View {
                                 .font(.system(size: 14))
                                 .foregroundColor(Theme.secondaryLabel)
                         }
-                        
                         HStack(spacing: 6) {
                             Image(systemName: "star.fill")
                                 .font(.system(size: 10))
@@ -464,7 +603,7 @@ struct BudgetView: View {
             .padding(.horizontal, 16)
         }
     }
-
+    
     struct PressableButtonStyle: ButtonStyle {
         func makeBody(configuration: Configuration) -> some View {
             configuration.label
