@@ -541,9 +541,8 @@ struct BudgetView: View {
                 .padding(.horizontal, 32)
             
             VStack(spacing: 12) {
-                // Build on your own button
                 Button(action: { showBudgetBuilder = true }) {
-                    VStack(spacing: 12) {
+                    VStack(spacing: 6) {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Build on your own")
@@ -557,7 +556,6 @@ struct BudgetView: View {
                                 .font(.system(size: 14))
                                 .foregroundColor(Theme.secondaryLabel)
                         }
-                        
                         HStack(spacing: 6) {
                             Image(systemName: "star.fill")
                                 .font(.system(size: 10))
@@ -572,14 +570,14 @@ struct BudgetView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .foregroundColor(.white)
-                    .padding(16)
-                    .background(Theme.surfaceBackground)
-                    .cornerRadius(12)
-                    .contentShape(Rectangle())
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
+                .background(Theme.surfaceBackground)
+                .cornerRadius(12)
                 .buttonStyle(PressableButtonStyle())
                 
-                // Build for me button
+                // Auto Build Button
                 Button(action: {}) {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
@@ -595,11 +593,11 @@ struct BudgetView: View {
                             .foregroundColor(Theme.secondaryLabel)
                     }
                     .foregroundColor(.white)
-                    .padding(16)
-                    .background(Theme.surfaceBackground)
-                    .cornerRadius(12)
-                    .contentShape(Rectangle())
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 16)
                 }
+                .background(Theme.surfaceBackground)
+                .cornerRadius(12)
                 .buttonStyle(PressableButtonStyle())
             }
             .padding(.horizontal, 16)
