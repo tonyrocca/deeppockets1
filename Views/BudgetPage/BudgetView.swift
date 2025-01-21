@@ -353,7 +353,6 @@ struct BudgetView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 24) {
-                        
                         // Period Selector
                         HStack(spacing: 0) {
                             ForEach(IncomePeriod.allCases, id: \.self) { period in
@@ -376,18 +375,7 @@ struct BudgetView: View {
                         .padding(.horizontal)
                         
                         // Budget Summary
-                        VStack(spacing: 16) {
-                            // Income Section
-                            HStack {
-                                Text("\(selectedPeriod.rawValue) Income")
-                                    .font(.system(size: 17))
-                                    .foregroundColor(.white)
-                                Spacer()
-                                Text(formatCurrency(monthlyIncome * periodMultiplier))
-                                    .font(.system(size: 17, weight: .semibold))
-                                    .foregroundColor(.white)
-                            }
-                            
+                        VStack(spacing: 0) {
                             // Calculations
                             let debtTotal = budgetModel.budgetItems
                                 .filter { $0.type == .expense && isDebtCategory($0.category.id) }
@@ -401,40 +389,57 @@ struct BudgetView: View {
                             let totalBudget = debtTotal + expenseTotal + savingsTotal
                             let remaining = monthlyIncome - totalBudget
                             
-                            // Surplus / Deficit
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    Text(remaining >= 0 ? "Budget Surplus" : "Budget Deficit")
-                                        .font(.system(size: 15))
-                                        .foregroundColor(Theme.secondaryLabel)
-                                    Spacer()
-                                    Button(action: { withAnimation { showDetailedSummary.toggle() }}) {
-                                        HStack(spacing: 4) {
-                                            Text(showDetailedSummary ? "Hide" : "Show")
-                                            Image(systemName: "chevron.down")
-                                                .rotationEffect(.degrees(showDetailedSummary ? 180 : 0))
-                                        }
-                                        .font(.system(size: 15))
-                                        .foregroundColor(Theme.tint)
-                                    }
-                                }
-                                
+                            // Income Row
+                            HStack {
+                                Text("\(selectedPeriod.rawValue) Income")
+                                    .font(.system(size: 17))
+                                    .foregroundColor(Theme.secondaryLabel)
+                                Spacer()
+                                Text(formatCurrency(monthlyIncome * periodMultiplier))
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundColor(.white)
+                            }
+                            .padding(.bottom, 8)
+                            
+                            // Surplus/Deficit Row
+                            HStack {
+                                Text(remaining >= 0 ? "Budget Surplus" : "Budget Deficit")
+                                    .font(.system(size: 17))
+                                    .foregroundColor(Theme.secondaryLabel)
+                                Spacer()
                                 Text(formatCurrency(abs(remaining * periodMultiplier)))
-                                    .font(.system(size: 34, weight: .bold))
+                                    .font(.system(size: 20, weight: .semibold))
                                     .foregroundColor(remaining >= 0 ? Theme.tint : .red)
+                            }
+                            .padding(.bottom, 12)
+                            
+                            // Show/Hide Button
+                            Button(action: { withAnimation { showDetailedSummary.toggle() }}) {
+                                VStack(spacing: 4) {
+                                    Text("More")
+                                        .font(.system(size: 15))
+                                    Image(systemName: "chevron.down")
+                                        .font(.system(size: 12))
+                                        .rotationEffect(.degrees(showDetailedSummary ? 180 : 0))
+                                }
+                                .foregroundColor(Theme.tint)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.bottom, 8)
+                            
+                            if showDetailedSummary {
+                                Divider()
+                                    .background(Theme.separator)
+                                    .padding(.bottom, 16)
                                 
-                                if showDetailedSummary {
-                                    VStack(spacing: 12) {
-                                        Divider().background(Theme.separator)
-                                        summaryRow(title: "Debt", amount: debtTotal * periodMultiplier)
-                                        summaryRow(title: "Expenses", amount: expenseTotal * periodMultiplier)
-                                        summaryRow(title: "Savings", amount: savingsTotal * periodMultiplier)
-                                    }
-                                    .padding(.top, 8)
+                                VStack(spacing: 12) {
+                                    summaryRow(title: "Debt", amount: debtTotal * periodMultiplier)
+                                    summaryRow(title: "Expenses", amount: expenseTotal * periodMultiplier)
+                                    summaryRow(title: "Savings", amount: savingsTotal * periodMultiplier)
                                 }
                             }
                         }
-                        .padding()
+                        .padding(16)
                         .background(Theme.surfaceBackground)
                         .cornerRadius(16)
                         .padding(.horizontal)
