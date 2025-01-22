@@ -622,6 +622,7 @@ struct BudgetView: View {
                                 case .debtConfiguration(let category):
                                     if let inputData = debtInputData[category.id],
                                        let amount = inputData.payoffPlan?.monthlyPayment {
+                                        // Add these lines to properly add to budget
                                         budgetStore.setCategory(category, amount: amount)
                                         budgetModel.toggleCategory(id: category.id)
                                         budgetModel.updateAllocation(for: category.id, amount: amount)
@@ -634,6 +635,8 @@ struct BudgetView: View {
                                             debtInputData[nextCategory.id] = DebtInputData()
                                             selectedDebtPhase = .debtConfiguration(nextCategory)
                                         } else {
+                                            // Add this to ensure the budget is recalculated
+                                            budgetModel.calculateUnusedAmount()
                                             selectedDebtPhase = .debtSelection
                                             showingDebtSheet = false
                                         }
