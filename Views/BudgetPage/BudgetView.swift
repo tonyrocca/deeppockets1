@@ -339,6 +339,10 @@ struct BudgetView: View {
     @State private var showingExpenseSheet = false
     @State private var showingSavingsSheet = false
     @State private var selectedCategories: Set<String> = []
+    @State private var selectedDebtPhase: BudgetBuilderPhase = .debtSelection
+    @State private var selectedExpensePhase: BudgetBuilderPhase = .expenseSelection
+    @State private var selectedSavingsPhase: BudgetBuilderPhase = .savingsSelection
+    @State private var debtInputData: [String: DebtInputData] = [:]  // Add this line
     
     @EnvironmentObject private var budgetModel: BudgetModel
     
@@ -364,6 +368,25 @@ struct BudgetView: View {
         BudgetCategoryStore.shared.categories.filter { isSavingsCategory($0.id) }
     }
 
+    // Filtered category getters
+    private var availableDebtCategories: [BudgetCategory] {
+        debtCategories.filter { category in
+            !budgetModel.budgetItems.contains { $0.category.id == category.id }
+        }
+    }
+
+    private var availableExpenseCategories: [BudgetCategory] {
+        expenseCategories.filter { category in
+            !budgetModel.budgetItems.contains { $0.category.id == category.id }
+        }
+    }
+
+    private var availableSavingsCategories: [BudgetCategory] {
+        savingsCategories.filter { category in
+            !budgetModel.budgetItems.contains { $0.category.id == category.id }
+        }
+    }
+    
     private func isSavingsCategory(_ id: String) -> Bool {
         ["emergency_savings", "investments", "college_savings", "vacation"].contains(id)
     }
@@ -497,18 +520,31 @@ struct BudgetView: View {
         }
         .sheet(isPresented: $showingDebtSheet) {
             ZStack {
-                // Background
                 Color.black
                     .opacity(1)
                     .ignoresSafeArea()
                 
-                // Modal Content
                 GeometryReader { geometry in
                     VStack(spacing: 0) {
                         // Header
                         ZStack {
+                            if case .debtConfiguration = selectedDebtPhase {
+                                // Back Button
+                                HStack {
+                                    Button(action: { selectedDebtPhase = .debtSelection }) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "chevron.left")
+                                            Text("Back")
+                                        }
+                                        .font(.system(size: 17))
+                                        .foregroundColor(Theme.secondaryLabel)
+                                    }
+                                    Spacer()
+                                }
+                            }
+                            
                             // Title alignment
-                            Text("Add Debt")
+                            Text(selectedDebtPhase.title)
                                 .font(.system(size: 28, weight: .bold))
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
@@ -516,7 +552,10 @@ struct BudgetView: View {
                             // Close Button
                             HStack {
                                 Spacer()
-                                Button(action: { showingDebtSheet = false }) {
+                                Button(action: {
+                                    selectedDebtPhase = .debtSelection
+                                    showingDebtSheet = false
+                                }) {
                                     Image(systemName: "xmark.circle.fill")
                                         .font(.system(size: 24))
                                         .foregroundColor(Theme.secondaryLabel)
@@ -527,7 +566,7 @@ struct BudgetView: View {
                         .padding(.top, 20)
                         
                         // Description
-                        Text("Select any recurring debt payments")
+                        Text(selectedDebtPhase.description)
                             .font(.system(size: 17))
                             .foregroundColor(Theme.secondaryLabel)
                             .multilineTextAlignment(.center)
@@ -536,27 +575,75 @@ struct BudgetView: View {
                         // Content
                         ScrollView {
                             VStack(spacing: 32) {
-                                CategorySelectionView(
-                                    categories: debtCategories,
-                                    selectedCategories: $selectedCategories,
-                                    monthlyIncome: monthlyIncome
-                                )
-                                .padding(.top, 32)
+                                switch selectedDebtPhase {
+                                case .debtSelection:
+                                    CategorySelectionView(
+                                        categories: availableDebtCategories,
+                                        selectedCategories: $selectedCategories,
+                                        monthlyIncome: monthlyIncome
+                                    )
+                                    .padding(.top, 32)
+                                    
+                                case .debtConfiguration(let category):
+                                    DebtConfigurationView(
+                                        category: category,
+                                        monthlyIncome: monthlyIncome,
+                                        inputData: Binding(
+                                            get: { debtInputData[category.id] ?? DebtInputData() },
+                                            set: { debtInputData[category.id] = $0 }
+                                        )
+                                    )
+                                    .id(category.id)
+                                    
+                                default:
+                                    EmptyView()
+                                }
                                 
-                                // Spacer to ensure content scrolls above button
                                 Color.clear.frame(height: 100)
                             }
                             .padding(.horizontal, 20)
                         }
                         
-                        // Add Button
+                        // Next/Add Button
                         VStack {
                             Spacer()
                             Button(action: {
-                                addSelectedCategoriesToBudget()
-                                showingDebtSheet = false
+                                switch selectedDebtPhase {
+                                case .debtSelection:
+                                    if let nextCategory = selectedCategories.compactMap({ id in
+                                        availableDebtCategories.first(where: { $0.id == id })
+                                    }).first {
+                                        debtInputData[nextCategory.id] = DebtInputData()
+                                        selectedDebtPhase = .debtConfiguration(nextCategory)
+                                    } else {
+                                        showingDebtSheet = false
+                                    }
+                                    
+                                case .debtConfiguration(let category):
+                                    if let inputData = debtInputData[category.id],
+                                       let amount = inputData.payoffPlan?.monthlyPayment {
+                                        budgetStore.setCategory(category, amount: amount)
+                                        budgetModel.toggleCategory(id: category.id)
+                                        budgetModel.updateAllocation(for: category.id, amount: amount)
+                                        selectedCategories.remove(category.id)
+                                        
+                                        if let nextCategory = selectedCategories.compactMap({ id in
+                                            availableDebtCategories.first(where: { $0.id == id })
+                                        }).first {
+                                            debtInputData.removeAll()
+                                            debtInputData[nextCategory.id] = DebtInputData()
+                                            selectedDebtPhase = .debtConfiguration(nextCategory)
+                                        } else {
+                                            selectedDebtPhase = .debtSelection
+                                            showingDebtSheet = false
+                                        }
+                                    }
+                                    
+                                default:
+                                    break
+                                }
                             }) {
-                                Text(selectedCategories.isEmpty ? "Skip" : "Add Selected")
+                                Text(getButtonTitle(for: selectedDebtPhase))
                                     .font(.system(size: 17, weight: .semibold))
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
@@ -731,6 +818,15 @@ struct BudgetView: View {
                     .padding()
                 }
             }
+        }
+    }
+    
+    private func getButtonTitle(for phase: BudgetBuilderPhase) -> String {
+        switch phase {
+        case .debtSelection, .expenseSelection, .savingsSelection:
+            return selectedCategories.isEmpty ? "Skip" : "Next"
+        case .debtConfiguration, .expenseConfiguration, .savingsConfiguration:
+            return "Continue"
         }
     }
     
