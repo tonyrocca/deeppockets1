@@ -413,23 +413,6 @@ struct BudgetView: View {
                                 }
                                 .padding(.bottom, 6)
                                 
-                                // Show/Hide Button
-                                HStack {
-                                    Spacer()
-                                    Button(action: { withAnimation { showDetailedSummary.toggle() }}) {
-                                        HStack(spacing: 4) {
-                                            Text("More")
-                                                .font(.system(size: 15))
-                                                .foregroundColor(.white)
-                                            Image(systemName: "chevron.down")
-                                                .font(.system(size: 12))
-                                                .foregroundColor(.white)
-                                                .rotationEffect(.degrees(showDetailedSummary ? 180 : 0))
-                                        }
-                                    }
-                                }
-                                .padding(.bottom, 2)
-                                
                                 if showDetailedSummary {
                                     Divider()
                                         .background(Theme.separator)
@@ -446,6 +429,11 @@ struct BudgetView: View {
                             .background(Theme.surfaceBackground)
                             .cornerRadius(16)
                             .padding(.horizontal)
+                            .onTapGesture {
+                                withAnimation {
+                                    showDetailedSummary.toggle()
+                                }
+                            }
                             
                             // Categories List
                             VStack(spacing: 16) {
