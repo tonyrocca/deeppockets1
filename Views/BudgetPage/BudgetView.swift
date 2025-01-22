@@ -496,21 +496,241 @@ struct BudgetView: View {
             )
         }
         .sheet(isPresented: $showingDebtSheet) {
-            NavigationView {
-                CategorySelectionView(
-                    categories: debtCategories,
-                    selectedCategories: $selectedCategories,
-                    monthlyIncome: monthlyIncome
-                )
-                // ... rest of debt sheet content
+            ZStack {
+                // Background
+                Color.black
+                    .opacity(1)
+                    .ignoresSafeArea()
+                
+                // Modal Content
+                GeometryReader { geometry in
+                    VStack(spacing: 0) {
+                        // Header
+                        ZStack {
+                            // Title alignment
+                            Text("Add Debt")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                            
+                            // Close Button
+                            HStack {
+                                Spacer()
+                                Button(action: { showingDebtSheet = false }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 24))
+                                        .foregroundColor(Theme.secondaryLabel)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 20)
+                        
+                        // Description
+                        Text("Select any recurring debt payments")
+                            .font(.system(size: 17))
+                            .foregroundColor(Theme.secondaryLabel)
+                            .multilineTextAlignment(.center)
+                            .padding(.top, 8)
+                        
+                        // Content
+                        ScrollView {
+                            VStack(spacing: 32) {
+                                CategorySelectionView(
+                                    categories: debtCategories,
+                                    selectedCategories: $selectedCategories,
+                                    monthlyIncome: monthlyIncome
+                                )
+                                .padding(.top, 32)
+                                
+                                // Spacer to ensure content scrolls above button
+                                Color.clear.frame(height: 100)
+                            }
+                            .padding(.horizontal, 20)
+                        }
+                        
+                        // Add Button
+                        VStack {
+                            Spacer()
+                            Button(action: {
+                                addSelectedCategoriesToBudget()
+                                showingDebtSheet = false
+                            }) {
+                                Text(selectedCategories.isEmpty ? "Skip" : "Add Selected")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 56)
+                                    .background(Theme.tint)
+                                    .cornerRadius(12)
+                            }
+                            .padding(.horizontal, 36)
+                            .padding(.bottom, geometry.safeAreaInsets.bottom + 36)
+                        }
+                    }
+                    .background(Theme.background)
+                    .cornerRadius(20)
+                    .padding()
+                }
             }
-            .background(Theme.background)
         }
         .sheet(isPresented: $showingExpenseSheet) {
-            // Expense sheet content
+            ZStack {
+                // Background
+                Color.black
+                    .opacity(1)
+                    .ignoresSafeArea()
+                
+                // Modal Content
+                GeometryReader { geometry in
+                    VStack(spacing: 0) {
+                        // Header
+                        ZStack {
+                            // Title alignment
+                            Text("Add Expense")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                            
+                            // Close Button
+                            HStack {
+                                Spacer()
+                                Button(action: { showingExpenseSheet = false }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 24))
+                                        .foregroundColor(Theme.secondaryLabel)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 20)
+                        
+                        // Description
+                        Text("Choose your regular monthly expenses")
+                            .font(.system(size: 17))
+                            .foregroundColor(Theme.secondaryLabel)
+                            .multilineTextAlignment(.center)
+                            .padding(.top, 8)
+                        
+                        // Content
+                        ScrollView {
+                            VStack(spacing: 32) {
+                                CategorySelectionView(
+                                    categories: expenseCategories,
+                                    selectedCategories: $selectedCategories,
+                                    monthlyIncome: monthlyIncome
+                                )
+                                .padding(.top, 32)
+                                
+                                // Spacer to ensure content scrolls above button
+                                Color.clear.frame(height: 100)
+                            }
+                            .padding(.horizontal, 20)
+                        }
+                        
+                        // Add Button
+                        VStack {
+                            Spacer()
+                            Button(action: {
+                                addSelectedCategoriesToBudget()
+                                showingExpenseSheet = false
+                            }) {
+                                Text(selectedCategories.isEmpty ? "Skip" : "Add Selected")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 56)
+                                    .background(Theme.tint)
+                                    .cornerRadius(12)
+                            }
+                            .padding(.horizontal, 36)
+                            .padding(.bottom, geometry.safeAreaInsets.bottom + 36)
+                        }
+                    }
+                    .background(Theme.background)
+                    .cornerRadius(20)
+                    .padding()
+                }
+            }
         }
         .sheet(isPresented: $showingSavingsSheet) {
-            // Savings sheet content
+            ZStack {
+                // Background
+                Color.black
+                    .opacity(1)
+                    .ignoresSafeArea()
+                
+                // Modal Content
+                GeometryReader { geometry in
+                    VStack(spacing: 0) {
+                        // Header
+                        ZStack {
+                            // Title alignment
+                            Text("Add Savings")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                            
+                            // Close Button
+                            HStack {
+                                Spacer()
+                                Button(action: { showingSavingsSheet = false }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 24))
+                                        .foregroundColor(Theme.secondaryLabel)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 20)
+                        
+                        // Description
+                        Text("Set up your savings goals")
+                            .font(.system(size: 17))
+                            .foregroundColor(Theme.secondaryLabel)
+                            .multilineTextAlignment(.center)
+                            .padding(.top, 8)
+                        
+                        // Content
+                        ScrollView {
+                            VStack(spacing: 32) {
+                                CategorySelectionView(
+                                    categories: savingsCategories,
+                                    selectedCategories: $selectedCategories,
+                                    monthlyIncome: monthlyIncome
+                                )
+                                .padding(.top, 32)
+                                
+                                // Spacer to ensure content scrolls above button
+                                Color.clear.frame(height: 100)
+                            }
+                            .padding(.horizontal, 20)
+                        }
+                        
+                        // Add Button
+                        VStack {
+                            Spacer()
+                            Button(action: {
+                                addSelectedCategoriesToBudget()
+                                showingSavingsSheet = false
+                            }) {
+                                Text(selectedCategories.isEmpty ? "Skip" : "Add Selected")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 56)
+                                    .background(Theme.tint)
+                                    .cornerRadius(12)
+                            }
+                            .padding(.horizontal, 36)
+                            .padding(.bottom, geometry.safeAreaInsets.bottom + 36)
+                        }
+                    }
+                    .background(Theme.background)
+                    .cornerRadius(20)
+                    .padding()
+                }
+            }
         }
     }
     
