@@ -622,10 +622,24 @@ struct BudgetView: View {
                                 case .debtConfiguration(let category):
                                     if let inputData = debtInputData[category.id],
                                        let amount = inputData.payoffPlan?.monthlyPayment {
-                                        // Add these lines to properly add to budget
+                                        // Create the budget item
+                                        let newItem = BudgetItem(
+                                            id: category.id,
+                                            category: category,
+                                            allocatedAmount: amount,
+                                            spentAmount: 0,
+                                            type: .expense,
+                                            priority: .important,
+                                            isActive: true
+                                        )
+                                        
+                                        // Add to budget model if not already present
+                                        if !budgetModel.budgetItems.contains(where: { $0.id == category.id }) {
+                                            budgetModel.budgetItems.append(newItem)
+                                        }
+                                        
+                                        // Update BudgetStore
                                         budgetStore.setCategory(category, amount: amount)
-                                        budgetModel.toggleCategory(id: category.id)
-                                        budgetModel.updateAllocation(for: category.id, amount: amount)
                                         selectedCategories.remove(category.id)
                                         
                                         if let nextCategory = selectedCategories.compactMap({ id in
@@ -635,7 +649,6 @@ struct BudgetView: View {
                                             debtInputData[nextCategory.id] = DebtInputData()
                                             selectedDebtPhase = .debtConfiguration(nextCategory)
                                         } else {
-                                            // Add this to ensure the budget is recalculated
                                             budgetModel.calculateUnusedAmount()
                                             selectedDebtPhase = .debtSelection
                                             showingDebtSheet = false
@@ -837,13 +850,46 @@ struct BudgetView: View {
         for categoryId in selectedCategories {
             if let category = BudgetCategoryStore.shared.categories.first(where: { $0.id == categoryId }) {
                 let recommendedAmount = monthlyIncome * category.allocationPercentage
+                
+                // Update BudgetStore
                 budgetStore.setCategory(category, amount: recommendedAmount)
-                budgetModel.toggleCategory(id: category.id)
-                budgetModel.updateAllocation(for: category.id, amount: recommendedAmount)
+                
+                // Update BudgetModel
+                let type: BudgetCategoryType = isSavingsCategory(category.id) ? .savings : .expense
+                let priority = determinePriority(for: category)
+                
+                let newItem = BudgetItem(
+                    id: category.id,
+                    category: category,
+                    allocatedAmount: recommendedAmount,
+                    spentAmount: 0,
+                    type: type,
+                    priority: priority,
+                    isActive: true
+                )
+                
+                // Add to budgetItems if not already present
+                if !budgetModel.budgetItems.contains(where: { $0.id == category.id }) {
+                    budgetModel.budgetItems.append(newItem)
+                }
             }
         }
+        
+        // Recalculate unused amount
         budgetModel.calculateUnusedAmount()
         selectedCategories.removeAll()
+    }
+
+    private func determinePriority(for category: BudgetCategory) -> BudgetCategoryPriority {
+        switch category.id {
+        case "house", "rent", "groceries", "home_utilities", "medical", "emergency_savings":
+            return .essential
+        case "car", "public_transportation", "investments",
+             "credit_cards", "student_loans", "personal_loans", "car_loan":
+            return .important
+        default:
+            return .discretionary
+        }
     }
     
     // MARK: - Helpers
