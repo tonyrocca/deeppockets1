@@ -342,7 +342,8 @@ struct BudgetView: View {
     @State private var selectedDebtPhase: BudgetBuilderPhase = .debtSelection
     @State private var selectedExpensePhase: BudgetBuilderPhase = .expenseSelection
     @State private var selectedSavingsPhase: BudgetBuilderPhase = .savingsSelection
-    @State private var debtInputData: [String: DebtInputData] = [:]  // Add this line
+    @State private var debtInputData: [String: DebtInputData] = [:]
+    @State private var temporaryAmounts: [String: Double] = [:]
     
     @EnvironmentObject private var budgetModel: BudgetModel
     
@@ -384,6 +385,40 @@ struct BudgetView: View {
     private var availableSavingsCategories: [BudgetCategory] {
         savingsCategories.filter { category in
             !budgetModel.budgetItems.contains { $0.category.id == category.id }
+        }
+    }
+    
+    private func getTotalConfigurableExpenses() -> Int {
+        selectedCategories.filter { id in
+            expenseCategories.contains(where: { $0.id == id })
+        }.count
+    }
+
+    private func getCurrentExpenseIndex(for category: BudgetCategory) -> Int {
+        let selectedExpenseIds = selectedCategories
+            .filter { id in
+                expenseCategories.contains(where: { $0.id == id })
+            }
+            .sorted()
+        
+        return selectedExpenseIds.firstIndex(of: category.id) ?? 0
+    }
+
+    private func binding(for category: BudgetCategory) -> Binding<Double?> {
+        Binding(
+            get: { temporaryAmounts[category.id] },
+            set: { temporaryAmounts[category.id] = $0 }
+        )
+    }
+
+    private func getButtonTitle(for phase: BudgetBuilderPhase) -> String {
+        switch phase {
+        case .expenseSelection:
+            return selectedCategories.isEmpty ? "Skip" : "Next"
+        case .expenseConfiguration:
+            return "Continue"
+        default:
+            return ""
         }
     }
     
@@ -687,8 +722,23 @@ struct BudgetView: View {
                     VStack(spacing: 0) {
                         // Header
                         ZStack {
+                            if case .expenseConfiguration = selectedExpensePhase {
+                                // Back Button
+                                HStack {
+                                    Button(action: { selectedExpensePhase = .expenseSelection }) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "chevron.left")
+                                            Text("Back")
+                                        }
+                                        .font(.system(size: 17))
+                                        .foregroundColor(Theme.secondaryLabel)
+                                    }
+                                    Spacer()
+                                }
+                            }
+                            
                             // Title alignment
-                            Text("Add Expense")
+                            Text(selectedExpensePhase.title)
                                 .font(.system(size: 28, weight: .bold))
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
@@ -697,7 +747,7 @@ struct BudgetView: View {
                             HStack {
                                 Spacer()
                                 Button(action: {
-                                    selectedCategories.removeAll()
+                                    selectedExpensePhase = .expenseSelection
                                     showingExpenseSheet = false
                                 }) {
                                     Image(systemName: "xmark.circle.fill")
@@ -710,7 +760,7 @@ struct BudgetView: View {
                         .padding(.top, 20)
                         
                         // Description
-                        Text("Choose your regular monthly expenses")
+                        Text(selectedExpensePhase.description)
                             .font(.system(size: 17))
                             .foregroundColor(Theme.secondaryLabel)
                             .multilineTextAlignment(.center)
@@ -719,31 +769,56 @@ struct BudgetView: View {
                         // Content
                         ScrollView {
                             VStack(spacing: 32) {
-                                CategorySelectionView(
-                                    categories: availableExpenseCategories,
-                                    selectedCategories: $selectedCategories,
-                                    monthlyIncome: monthlyIncome
-                                )
-                                .padding(.top, 32)
+                                switch selectedExpensePhase {
+                                case .expenseSelection:
+                                    CategorySelectionView(
+                                        categories: availableExpenseCategories,
+                                        selectedCategories: $selectedCategories,
+                                        monthlyIncome: monthlyIncome
+                                    )
+                                    .padding(.top, 32)
+                                    
+                                case .expenseConfiguration(let category):
+                                    ExpenseConfigurationView(
+                                        category: category,
+                                        monthlyIncome: monthlyIncome,
+                                        totalCategories: getTotalConfigurableExpenses(),
+                                        currentIndex: getCurrentExpenseIndex(for: category),
+                                        amount: binding(for: category)
+                                    )
+                                    .id(category.id)
+                                    
+                                default:
+                                    EmptyView()
+                                }
                                 
                                 Color.clear.frame(height: 100)
                             }
                             .padding(.horizontal, 20)
                         }
                         
-                        // Add Button
+                        // Next/Add Button
                         VStack {
                             Spacer()
                             Button(action: {
-                                for categoryId in selectedCategories {
-                                    if let category = expenseCategories.first(where: { $0.id == categoryId }) {
-                                        let recommendedAmount = monthlyIncome * category.allocationPercentage
-                                        
+                                switch selectedExpensePhase {
+                                case .expenseSelection:
+                                    if let nextCategory = selectedCategories.compactMap({ id in
+                                        expenseCategories.first(where: { $0.id == id })
+                                    }).first {
+                                        temporaryAmounts[nextCategory.id] = nil
+                                        selectedExpensePhase = .expenseConfiguration(nextCategory)
+                                    } else {
+                                        showingExpenseSheet = false
+                                    }
+                                    
+                                case .expenseConfiguration(let category):
+                                    if let amount = temporaryAmounts[category.id] {
                                         // Create the budget item
                                         let newItem = BudgetItem(
                                             id: category.id,
                                             category: category,
-                                            allocatedAmount: recommendedAmount,
+                                            allocatedAmount: amount,
                                             spentAmount: 0,
                                             type: .expense,
                                             priority: determinePriority(for: category),
@@ -756,16 +831,25 @@ struct BudgetView: View {
                                         }
                                         
                                         // Update BudgetStore
-                                        budgetStore.setCategory(category, amount: recommendedAmount)
+                                        budgetStore.setCategory(category, amount: amount)
+                                        selectedCategories.remove(category.id)
+                                        
+                                        if let nextCategory = selectedCategories.compactMap({ id in
+                                            expenseCategories.first(where: { $0.id == id })
+                                        }).first {
+                                            temporaryAmounts[nextCategory.id] = nil
+                                            selectedExpensePhase = .expenseConfiguration(nextCategory)
+                                        } else {
+                                            budgetModel.calculateUnusedAmount()
+                                            selectedExpensePhase = .expenseSelection
+                                            showingExpenseSheet = false
+                                        }
                                     }
+                                default:
+                                    break
                                 }
-                                
-                                // Recalculate and cleanup
-                                budgetModel.calculateUnusedAmount()
-                                selectedCategories.removeAll()
-                                showingExpenseSheet = false
                             }) {
-                                Text(selectedCategories.isEmpty ? "Skip" : "Add Selected")
+                                Text(getButtonTitle(for: selectedExpensePhase))
                                     .font(.system(size: 17, weight: .semibold))
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
@@ -888,15 +972,6 @@ struct BudgetView: View {
                     .padding()
                 }
             }
-        }
-    }
-    
-    private func getButtonTitle(for phase: BudgetBuilderPhase) -> String {
-        switch phase {
-        case .debtSelection, .expenseSelection, .savingsSelection:
-            return selectedCategories.isEmpty ? "Skip" : "Next"
-        case .debtConfiguration, .expenseConfiguration, .savingsConfiguration:
-            return "Continue"
         }
     }
     
