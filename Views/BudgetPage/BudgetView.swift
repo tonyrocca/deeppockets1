@@ -679,12 +679,10 @@ struct BudgetView: View {
         }
         .sheet(isPresented: $showingExpenseSheet) {
             ZStack {
-                // Background
                 Color.black
                     .opacity(1)
                     .ignoresSafeArea()
                 
-                // Modal Content
                 GeometryReader { geometry in
                     VStack(spacing: 0) {
                         // Header
@@ -698,7 +696,10 @@ struct BudgetView: View {
                             // Close Button
                             HStack {
                                 Spacer()
-                                Button(action: { showingExpenseSheet = false }) {
+                                Button(action: {
+                                    selectedCategories.removeAll()
+                                    showingExpenseSheet = false
+                                }) {
                                     Image(systemName: "xmark.circle.fill")
                                         .font(.system(size: 24))
                                         .foregroundColor(Theme.secondaryLabel)
@@ -719,13 +720,12 @@ struct BudgetView: View {
                         ScrollView {
                             VStack(spacing: 32) {
                                 CategorySelectionView(
-                                    categories: expenseCategories,
+                                    categories: availableExpenseCategories,
                                     selectedCategories: $selectedCategories,
                                     monthlyIncome: monthlyIncome
                                 )
                                 .padding(.top, 32)
                                 
-                                // Spacer to ensure content scrolls above button
                                 Color.clear.frame(height: 100)
                             }
                             .padding(.horizontal, 20)
@@ -735,7 +735,34 @@ struct BudgetView: View {
                         VStack {
                             Spacer()
                             Button(action: {
-                                addSelectedCategoriesToBudget()
+                                for categoryId in selectedCategories {
+                                    if let category = expenseCategories.first(where: { $0.id == categoryId }) {
+                                        let recommendedAmount = monthlyIncome * category.allocationPercentage
+                                        
+                                        // Create the budget item
+                                        let newItem = BudgetItem(
+                                            id: category.id,
+                                            category: category,
+                                            allocatedAmount: recommendedAmount,
+                                            spentAmount: 0,
+                                            type: .expense,
+                                            priority: determinePriority(for: category),
+                                            isActive: true
+                                        )
+                                        
+                                        // Add to budget model if not already present
+                                        if !budgetModel.budgetItems.contains(where: { $0.id == category.id }) {
+                                            budgetModel.budgetItems.append(newItem)
+                                        }
+                                        
+                                        // Update BudgetStore
+                                        budgetStore.setCategory(category, amount: recommendedAmount)
+                                    }
+                                }
+                                
+                                // Recalculate and cleanup
+                                budgetModel.calculateUnusedAmount()
+                                selectedCategories.removeAll()
                                 showingExpenseSheet = false
                             }) {
                                 Text(selectedCategories.isEmpty ? "Skip" : "Add Selected")
@@ -758,12 +785,10 @@ struct BudgetView: View {
         }
         .sheet(isPresented: $showingSavingsSheet) {
             ZStack {
-                // Background
                 Color.black
                     .opacity(1)
                     .ignoresSafeArea()
                 
-                // Modal Content
                 GeometryReader { geometry in
                     VStack(spacing: 0) {
                         // Header
@@ -777,7 +802,10 @@ struct BudgetView: View {
                             // Close Button
                             HStack {
                                 Spacer()
-                                Button(action: { showingSavingsSheet = false }) {
+                                Button(action: {
+                                    selectedCategories.removeAll()
+                                    showingSavingsSheet = false
+                                }) {
                                     Image(systemName: "xmark.circle.fill")
                                         .font(.system(size: 24))
                                         .foregroundColor(Theme.secondaryLabel)
@@ -798,13 +826,12 @@ struct BudgetView: View {
                         ScrollView {
                             VStack(spacing: 32) {
                                 CategorySelectionView(
-                                    categories: savingsCategories,
+                                    categories: availableSavingsCategories,
                                     selectedCategories: $selectedCategories,
                                     monthlyIncome: monthlyIncome
                                 )
                                 .padding(.top, 32)
                                 
-                                // Spacer to ensure content scrolls above button
                                 Color.clear.frame(height: 100)
                             }
                             .padding(.horizontal, 20)
@@ -814,7 +841,34 @@ struct BudgetView: View {
                         VStack {
                             Spacer()
                             Button(action: {
-                                addSelectedCategoriesToBudget()
+                                for categoryId in selectedCategories {
+                                    if let category = savingsCategories.first(where: { $0.id == categoryId }) {
+                                        let recommendedAmount = monthlyIncome * category.allocationPercentage
+                                        
+                                        // Create the budget item
+                                        let newItem = BudgetItem(
+                                            id: category.id,
+                                            category: category,
+                                            allocatedAmount: recommendedAmount,
+                                            spentAmount: 0,
+                                            type: .savings,  // Note: This is different from debt/expense
+                                            priority: determinePriority(for: category),
+                                            isActive: true
+                                        )
+                                        
+                                        // Add to budget model if not already present
+                                        if !budgetModel.budgetItems.contains(where: { $0.id == category.id }) {
+                                            budgetModel.budgetItems.append(newItem)
+                                        }
+                                        
+                                        // Update BudgetStore
+                                        budgetStore.setCategory(category, amount: recommendedAmount)
+                                    }
+                                }
+                                
+                                // Recalculate and cleanup
+                                budgetModel.calculateUnusedAmount()
+                                selectedCategories.removeAll()
                                 showingSavingsSheet = false
                             }) {
                                 Text(selectedCategories.isEmpty ? "Skip" : "Add Selected")
