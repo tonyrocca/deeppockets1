@@ -49,32 +49,32 @@ class BudgetCategoryStore: ObservableObject {
             // ----------------------------------------------------------------
             BudgetCategory(
                 id: "house",
-                name: "House Price",
-                emoji: "🏠",
-                description: "Maximum home price you can afford based on your income and mortgage rates.",
-                allocationPercentage: 0.28,
-                displayType: .total,
-                assumptions: [
-                    CategoryAssumption(
-                        title: "Down Payment",
-                        value: "20",
-                        inputType: .percentageSlider(step: 1),
-                        description: "Higher down payment means lower monthly payments and better loan terms"
-                    ),
-                    CategoryAssumption(
-                        title: "Interest Rate",
-                        value: "6.5",
-                        inputType: .percentageSlider(step: 0.25),
-                        description: "Current mortgage rates in your area may vary"
-                    ),
-                    CategoryAssumption(
-                        title: "Loan Term",
-                        value: "30",
-                        inputType: .yearSlider(min: 15, max: 30),
-                        description: "Longer terms mean lower monthly payments but more interest paid overall"
-                    )
-                ]
-            ),
+                    name: "Home Purchase",
+                    emoji: "🏠",
+                    description: "Total home price you can afford, including all ownership costs like property taxes and insurance.",
+                    allocationPercentage: 0.28,
+                    displayType: .total,
+                    assumptions: [
+                        CategoryAssumption(
+                            title: "Down Payment",
+                            value: "20",
+                            inputType: .percentageSlider(step: 1),
+                            description: "Higher down payment reduces monthly costs and may get better rates"
+                        ),
+                        CategoryAssumption(
+                            title: "Interest Rate",
+                            value: "7.0",
+                            inputType: .percentageSlider(step: 0.25),
+                            description: "Current average 30-year fixed mortgage rates"
+                        ),
+                        CategoryAssumption(
+                            title: "Property Tax Rate",
+                            value: "1.1",
+                            inputType: .percentageSlider(step: 0.1),
+                            description: "Annual property tax as percentage of home value"
+                        )
+                    ]
+                ),
             BudgetCategory(
                 id: "car",
                 name: "Car",
@@ -112,11 +112,23 @@ class BudgetCategoryStore: ObservableObject {
                 displayType: .total,
                 assumptions: [
                     CategoryAssumption(
-                        title: "Months Coverage",
-                        value: "6",
-                        inputType: .percentageSlider(step: 1), // Changed from .yearSlider to .percentageSlider
-                        description: "Industry standard is 3-6 months, more if job is unstable"
-                    )
+                            title: "Months Coverage",
+                            value: "6",
+                            inputType: .percentageSlider(step: 1),
+                            description: "Industry standard is 3-6 months, more if job is unstable"
+                        ),
+                        CategoryAssumption(
+                            title: "Risk Level",
+                            value: "Medium",
+                            inputType: .textField,
+                            description: "Low: Stable job/income, Medium: Average stability, High: Variable income"
+                        ),
+                        CategoryAssumption(
+                            title: "Dependents",
+                            value: "0",
+                            inputType: .percentageSlider(step: 1),
+                            description: "Number of people depending on your income"
+                        )
                 ]
             ),
             BudgetCategory(
@@ -185,13 +197,13 @@ class BudgetCategoryStore: ObservableObject {
             // ----------------------------------------------------------------
             BudgetCategory(
                 id: "groceries",
-                name: "Groceries",
-                emoji: "🛒",
-                description: "Monthly food and household staples budget.",
-                allocationPercentage: 0.10,
-                displayType: .monthly,
-                assumptions: []
-            ),
+                    name: "Groceries & Essentials",
+                    emoji: "🛒",
+                    description: "Monthly food, household essentials, and personal care items.",
+                    allocationPercentage: 0.12, // Increased to reflect current costs
+                    displayType: .monthly,
+                    assumptions: []
+                ),
             BudgetCategory(
                 id: "eating_out",
                 name: "Quick Bites",
@@ -202,14 +214,14 @@ class BudgetCategoryStore: ObservableObject {
                 assumptions: []
             ),
             BudgetCategory(
-                id: "public_transportation",
-                name: "Transit",
-                emoji: "🚆",
-                description: "Buses, trains, ride-shares, etc.",
-                allocationPercentage: 0.05,
-                displayType: .monthly,
-                assumptions: []
-            ),
+                id: "public_transport",
+                   name: "Public Transit",
+                   emoji: "🚇",
+                   description: "Public transportation passes, ride-sharing services, and occasional taxi use.",
+                   allocationPercentage: 0.05,
+                   displayType: .monthly,
+                   assumptions: []
+               ),
             BudgetCategory(
                 id: "pet",
                 name: "Pet Care",
@@ -229,11 +241,11 @@ class BudgetCategoryStore: ObservableObject {
                 assumptions: []
             ),
             BudgetCategory(
-                id: "clothes",
-                name: "Clothing",
+                id: "clothing",
+                name: "Clothing & Accessories",
                 emoji: "👕",
-                description: "Clothes, accessories, and shoes.",
-                allocationPercentage: 0.03,
+                description: "Personal clothing, shoes, and essential accessories for work and daily life.",
+                allocationPercentage: 0.04, // Adjusted for realistic spending
                 displayType: .monthly,
                 assumptions: []
             ),
@@ -265,11 +277,38 @@ class BudgetCategoryStore: ObservableObject {
                 assumptions: []
             ),
             BudgetCategory(
-                id: "home_utilities",
-                name: "Utilities",
-                emoji: "💡",
-                description: "Electricity, water, gas, internet, phone.",
-                allocationPercentage: 0.08,
+                id: "personal_care",
+                name: "Personal Care",
+                emoji: "✨",
+                description: "Haircuts, personal hygiene products, and basic cosmetics.",
+                allocationPercentage: 0.03,
+                displayType: .monthly,
+                assumptions: []
+            ),
+            BudgetCategory(
+                id: "utilities",
+                    name: "Utilities & Services",
+                    emoji: "💡",
+                    description: "All home utilities: electricity, water, gas, internet, phone, streaming services.",
+                    allocationPercentage: 0.08,
+                    displayType: .monthly,
+                    assumptions: []
+                ),
+            BudgetCategory(
+                id: "hobbies",
+                name: "Hobbies & Recreation",
+                emoji: "🎨",
+                description: "Supplies and equipment for personal interests and recreational activities.",
+                allocationPercentage: 0.02,
+                displayType: .monthly,
+                assumptions: []
+            ),
+            BudgetCategory(
+                id: "phone",
+                name: "Phone Plan & Device",
+                emoji: "📱",
+                description: "Monthly phone plan, device payments, and accessories.",
+                allocationPercentage: 0.03,
                 displayType: .monthly,
                 assumptions: []
             ),
@@ -287,14 +326,14 @@ class BudgetCategoryStore: ObservableObject {
             // NEW COMMONLY-MISSED CATEGORIES (assumptions = [])
             // ----------------------------------------------------------------
             BudgetCategory(
-                id: "medical",
-                name: "Medical/Healthcare",
-                emoji: "🏥",
-                description: "Doctor visits, prescriptions, copays, etc.",
-                allocationPercentage: 0.03,
-                displayType: .monthly,
-                assumptions: []
-            ),
+                id: "healthcare",
+                    name: "Healthcare",
+                    emoji: "🏥",
+                    description: "Insurance premiums, medications, routine care, and anticipated medical expenses.",
+                    allocationPercentage: 0.06, // Increased to better reflect real costs
+                    displayType: .monthly,
+                    assumptions: []
+                ),
             BudgetCategory(
                 id: "credit_cards",
                 name: "Credit Cards",
@@ -328,6 +367,15 @@ class BudgetCategoryStore: ObservableObject {
                 emoji: "🚗",
                 description: "Monthly car loan payments.",
                 allocationPercentage: 0.05,
+                displayType: .monthly,
+                assumptions: []
+            ),
+            BudgetCategory(
+                id: "car_expenses",
+                name: "Car Expenses",
+                emoji: "🚗",
+                description: "Fuel, insurance, maintenance, and parking for vehicle owners.",
+                allocationPercentage: 0.10,
                 displayType: .monthly,
                 assumptions: []
             ),
