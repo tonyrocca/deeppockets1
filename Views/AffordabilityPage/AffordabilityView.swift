@@ -13,67 +13,83 @@ struct AffordabilityView: View {
     }
     
     var body: some View {
-        VStack(spacing: 12) {
-            // Search Bar
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(Theme.secondaryLabel)
-                TextField("Search categories", text: $searchText)
-                    .font(.system(size: 17))
-                    .foregroundColor(Theme.label)
-                    .placeholder(when: searchText.isEmpty) {
-                        Text("Search categories")
-                            .foregroundColor(Theme.label.opacity(0.6))
-                    }
-                
-                if !searchText.isEmpty {
-                    Button(action: { searchText = "" }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(Theme.secondaryLabel)
-                    }
-                }
-            }
-            .padding(12)
-            .background(Theme.elevatedBackground)
-            .cornerRadius(12)
-            .padding(.horizontal, 16)
-            .padding(.top, 4)
-            
-            // Categories List
-            VStack(spacing: 0) {
-                if filteredCategories.isEmpty {
-                    Text("No matching categories found")
-                        .font(.system(size: 15))
-                        .foregroundColor(Theme.secondaryLabel)
-                        .padding(.vertical, 20)
-                } else {
-                    ForEach(filteredCategories) { category in
-                        CategoryRowView(
-                            category: category,
-                            amount: model.calculateAffordableAmount(for: category),
-                            displayType: category.displayType,
-                            onAssumptionsChanged: model.updateAssumptions
-                        )
-                        
-                        if category.id != filteredCategories.last?.id {
-                            Divider()
-                                .background(Theme.separator)
-                                .padding(.horizontal, 20)
+        ScrollView {
+            LazyVStack(spacing: 12, pinnedViews: [.sectionHeaders]) {
+                Section {
+                    // Categories List
+                    VStack(spacing: 0) {
+                        if filteredCategories.isEmpty {
+                            Text("No matching categories found")
+                                .font(.system(size: 15))
+                                .foregroundColor(Theme.secondaryLabel)
+                                .padding(.vertical, 20)
+                        } else {
+                            ForEach(filteredCategories) { category in
+                                CategoryRowView(
+                                    category: category,
+                                    amount: model.calculateAffordableAmount(for: category),
+                                    displayType: category.displayType,
+                                    onAssumptionsChanged: model.updateAssumptions
+                                )
+                                
+                                if category.id != filteredCategories.last?.id {
+                                    Divider()
+                                        .background(Theme.separator)
+                                        .padding(.horizontal, 20)
+                                }
+                            }
                         }
                     }
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Theme.surfaceBackground)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Theme.separator, lineWidth: 1)
+                    )
+                    .padding(.horizontal, 16)
+                } header: {
+                    VStack(spacing: 0) {
+                        Rectangle()
+                            .fill(Theme.background)
+                            .frame(height: 1)
+                            .ignoresSafeArea()
+                        
+                        searchBar
+                            .background(Theme.background)
+                    }
                 }
             }
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Theme.surfaceBackground)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Theme.separator, lineWidth: 1)
-            )
-            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
         }
-        .padding(.bottom, 16)
+        .background(Theme.background)
+    }
+    
+    private var searchBar: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(Theme.secondaryLabel)
+            TextField("Search categories", text: $searchText)
+                .font(.system(size: 17))
+                .foregroundColor(Theme.label)
+                .placeholder(when: searchText.isEmpty) {
+                    Text("Search categories")
+                        .foregroundColor(Theme.label.opacity(0.6))
+                }
+            
+            if !searchText.isEmpty {
+                Button(action: { searchText = "" }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(Theme.secondaryLabel)
+                }
+            }
+        }
+        .padding(12)
+        .background(Theme.elevatedBackground)
+        .cornerRadius(12)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
 }
 
@@ -301,28 +317,28 @@ struct CategoryRowView: View {
     }
     
     private func addToBudget() {
-            // Calculate the recommended monthly amount
-            let monthlyAllocation = displayType == .monthly ? amount : amount / 12
-            
-            // First activate the category
-            budgetModel.toggleCategory(id: category.id)
-            
-            // Then set its allocation
-            budgetModel.updateAllocation(for: category.id, amount: monthlyAllocation)
-            
-            // Show feedback
+        // Calculate the recommended monthly amount
+        let monthlyAllocation = displayType == .monthly ? amount : amount / 12
+        
+        // First activate the category
+        budgetModel.toggleCategory(id: category.id)
+        
+        // Then set its allocation
+        budgetModel.updateAllocation(for: category.id, amount: monthlyAllocation)
+        
+        // Show feedback
+        withAnimation {
+            showingAddedToBudget = true
+            showAddToBudgetConfirmation = false
+        }
+        
+        // Hide feedback after delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             withAnimation {
-                showingAddedToBudget = true
-                showAddToBudgetConfirmation = false
-            }
-            
-            // Hide feedback after delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                withAnimation {
-                    showingAddedToBudget = false
-                }
+                showingAddedToBudget = false
             }
         }
+    }
     
     private func determinePriority(for category: BudgetCategory) -> BudgetCategoryPriority {
         switch category.id {

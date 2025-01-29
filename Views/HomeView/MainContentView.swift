@@ -2,31 +2,37 @@ import SwiftUI
 
 struct MainContentView: View {
     @StateObject private var model: AffordabilityModel
-    @StateObject private var budgetModel: BudgetModel  // Create as StateObject here
+    @StateObject private var budgetModel: BudgetModel
     @State private var selectedTab = 0
     @State private var showActionMenu = false
     @State private var showAffordabilityCalculator = false
     @State private var showSavingsCalculator = false
     @State private var showDebtCalculator = false
+    @Environment(\.dismiss) private var dismiss
     let payPeriod: PayPeriod
     
     init(monthlyIncome: Double, payPeriod: PayPeriod) {
-            let model = AffordabilityModel()
-            model.monthlyIncome = monthlyIncome
-            _model = StateObject(wrappedValue: model)
-            
-            // Initialize BudgetModel with proper setup
-            let budgetModel = BudgetModel(monthlyIncome: monthlyIncome)
-            _budgetModel = StateObject(wrappedValue: budgetModel)
-            self.payPeriod = payPeriod
-        }
+        let model = AffordabilityModel()
+        model.monthlyIncome = monthlyIncome
+        _model = StateObject(wrappedValue: model)
+        
+        let budgetModel = BudgetModel(monthlyIncome: monthlyIncome)
+        _budgetModel = StateObject(wrappedValue: budgetModel)
+        self.payPeriod = payPeriod
+    }
     
     var body: some View {
         ZStack {
             // Main Content
             VStack(spacing: 0) {
+                // Custom Navigation Bar
+                customNavigationBar
+                    .padding(.top, 8)
+                
+                // Tab Header
                 TabHeaderView(selectedTab: $selectedTab)
                 
+                // Main Scrollable Content
                 ScrollView {
                     LazyVStack(spacing: 0) {
                         mainSection
@@ -42,6 +48,35 @@ struct MainContentView: View {
         .background(Theme.background)
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
+    }
+    
+    // MARK: - Navigation Bar
+    private var customNavigationBar: some View {
+        HStack {
+            // Back Button
+            Button(action: { dismiss() }) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(.white)
+            }
+            
+            Spacer()
+            
+            // Profile Button
+            Button(action: {
+                // Profile action placeholder
+            }) {
+                Circle()
+                    .fill(Theme.surfaceBackground)
+                    .frame(width: 36, height: 36)
+                    .overlay(
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(Theme.secondaryLabel)
+                    )
+            }
+        }
+        .padding(.horizontal, 16)
     }
     
     // MARK: - Content Views
@@ -130,4 +165,12 @@ struct MainContentView: View {
             }
         }
     }
+}
+
+// MARK: - Preview
+#Preview {
+    NavigationStack {
+        MainContentView(monthlyIncome: 5000, payPeriod: .monthly)
+    }
+    .preferredColorScheme(.dark)
 }

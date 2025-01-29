@@ -4,7 +4,10 @@ import SwiftUI
 struct DeepPocketsApp: App {
     var body: some Scene {
         WindowGroup {
-            SalaryInputView()
+            NavigationStack {
+                WelcomeView()
+            }
+            .preferredColorScheme(.dark)
         }
     }
 }

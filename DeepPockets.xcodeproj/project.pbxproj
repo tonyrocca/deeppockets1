@@ -48,8 +48,8 @@
 				HomeView/MainContentView.swift,
 				HomeView/SavingsCalculator.swift,
 				HomeView/TabHeaderView.swift,
-				HomeView/TempView.swift,
 				Onboarding/SalaryInputView.swift,
+				Onboarding/WelcomeView.swift,
 			);
 			target = 7737C11A2D095E2F002A0CAB /* DeepPocketsUITests */;
 		};
@@ -75,6 +75,13 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Theme.swift,
+			);
+			target = 7737C11A2D095E2F002A0CAB /* DeepPocketsUITests */;
+		};
+		7737C20A2D4A0055002A0CAB /* Exceptions for "Authentication" folder in "DeepPocketsUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				UserModel.swift,
 			);
 			target = 7737C11A2D095E2F002A0CAB /* DeepPocketsUITests */;
 		};
@@ -128,6 +135,14 @@
 			path = Theme;
 			sourceTree = "<group>";
 		};
+		7737C2062D4A0046002A0CAB /* Authentication */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7737C20A2D4A0055002A0CAB /* Exceptions for "Authentication" folder in "DeepPocketsUITests" target */,
+			);
+			path = Authentication;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -158,6 +173,7 @@
 		7737C0F32D095E2E002A0CAB = {
 			isa = PBXGroup;
 			children = (
+				7737C2062D4A0046002A0CAB /* Authentication */,
 				7737C1502D095F97002A0CAB /* Theme */,
 				7737C1352D095E8D002A0CAB /* Views */,
 				7737C1332D095E85002A0CAB /* Stores */,
@@ -201,6 +217,7 @@
 				7737C1332D095E85002A0CAB /* Stores */,
 				7737C1352D095E8D002A0CAB /* Views */,
 				7737C1502D095F97002A0CAB /* Theme */,
+				7737C2062D4A0046002A0CAB /* Authentication */,
 			);
 			name = DeepPockets;
 			packageProductDependencies = (
