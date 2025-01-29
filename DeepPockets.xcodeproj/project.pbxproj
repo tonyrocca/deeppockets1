@@ -48,7 +48,9 @@
 				HomeView/MainContentView.swift,
 				HomeView/SavingsCalculator.swift,
 				HomeView/TabHeaderView.swift,
+				Onboarding/LoginView.swift,
 				Onboarding/SalaryInputView.swift,
+				Onboarding/SignUpView.swift,
 				Onboarding/WelcomeView.swift,
 			);
 			target = 7737C11A2D095E2F002A0CAB /* DeepPocketsUITests */;

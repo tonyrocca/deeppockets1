@@ -1,6 +1,6 @@
 import Foundation
 
-public enum PayPeriod: String, CaseIterable {
+public enum PayPeriod: String, CaseIterable, Codable {
     case weekly = "Weekly"
     case biweekly = "Bi-weekly"
     case semimonthly = "Semi-monthly"

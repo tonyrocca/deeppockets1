@@ -1,7 +1,10 @@
 import SwiftUI
 
 struct WelcomeView: View {
+    @StateObject private var userModel = UserModel()
     @State private var showSalaryInput = false
+    @State private var showSignUp = false
+    @State private var showLogin = false
     
     var body: some View {
         NavigationStack {
@@ -51,7 +54,7 @@ struct WelcomeView: View {
                     // Action Buttons
                     VStack(spacing: 12) {
                         Button(action: {
-                            // Login action placeholder
+                            showLogin = true
                         }) {
                             Text("Log In")
                                 .font(.system(size: 17, weight: .semibold))
@@ -67,7 +70,7 @@ struct WelcomeView: View {
                         }
                         
                         Button(action: {
-                            // Sign up action placeholder
+                            showSignUp = true
                         }) {
                             Text("Sign Up")
                                 .font(.system(size: 17, weight: .semibold))
@@ -93,6 +96,20 @@ struct WelcomeView: View {
             }
             .navigationDestination(isPresented: $showSalaryInput) {
                 SalaryInputView()
+                    .environmentObject(userModel)
+            }
+        }
+        .sheet(isPresented: $showSignUp) {
+            SignUpView()
+                .environmentObject(userModel)
+        }
+        .sheet(isPresented: $showLogin) {
+            LoginView()
+                .environmentObject(userModel)
+        }
+        .onChange(of: userModel.isAuthenticated) { isAuthenticated in
+            if isAuthenticated {
+                showSalaryInput = true
             }
         }
     }
