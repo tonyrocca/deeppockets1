@@ -7,15 +7,17 @@ struct ActionButtonMenu: View {
     let onDebtTap: () -> Void
     @Binding var isShowing: Bool
     
+    @State private var menuOffset: CGFloat = 100
+    
     var body: some View {
         ZStack {
             // Dimmed background
             if isShowing {
                 Color.black
-                    .opacity(0.4)  // Slightly reduced opacity
+                    .opacity(0.4)
                     .ignoresSafeArea()
                     .onTapGesture {
-                        withAnimation {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                             isShowing = false
                             onClose()
                         }
@@ -28,59 +30,109 @@ struct ActionButtonMenu: View {
                 
                 if isShowing {
                     // Menu Container
-                    VStack(spacing: 8) {  // Reduced spacing between buttons
-                        menuButton(title: "Can I afford this?", action: onAffordabilityTap)
-                        menuButton(title: "Calculate debt payoff", action: onDebtTap)
-                        menuButton(title: "Create savings goal", action: onSavingsTap)
+                    VStack(spacing: 12) {
+                        menuButton(
+                            title: "What can I afford?",
+                            icon: "cart.fill",
+                            description: "Check if that purchase fits your budget",
+                            action: onAffordabilityTap
+                        )
+                        
+                        menuButton(
+                            title: "Can I manage this debt?",
+                            icon: "creditcard.fill",
+                            description: "Calculate your debt payments",
+                            action: onDebtTap
+                        )
+                        
+                        menuButton(
+                            title: "How can I save for this?",
+                            icon: "banknote.fill",
+                            description: "Plan your savings strategy",
+                            action: onSavingsTap
+                        )
                     }
+                    .offset(y: menuOffset)
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 8)  // Add some space before FAB
+                    .padding(.bottom, 8)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .onAppear {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                            menuOffset = 0
+                        }
+                    }
                 }
                 
-                // Close/FAB Button
+                // Pill-shaped FAB Button
                 Button(action: {
-                    withAnimation(.spring()) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         isShowing.toggle()
                         if !isShowing {
                             onClose()
                         }
                     }
                 }) {
-                    Image(systemName: isShowing ? "xmark" : "plus")
-                        .font(.system(size: 22, weight: .semibold))  // Slightly smaller icon
-                        .foregroundColor(.white)
-                        .frame(width: 56, height: 56)
-                        .background(Theme.tint)
-                        .clipShape(Circle())
-                        .shadow(color: Theme.tint.opacity(0.2), radius: 8, x: 0, y: 4)  // Subtle shadow
+                    HStack(spacing: 6) {
+                        Image(systemName: "lightbulb.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("Ask me")
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Theme.tint)
+                    .clipShape(Capsule())
+                    .shadow(color: Theme.tint.opacity(0.3), radius: 8, x: 0, y: 4)
                 }
-                .rotationEffect(Angle(degrees: isShowing ? 45 : 0))  // Changed rotation
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
+                .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
     }
     
-    // Helper function for consistent button styling
-    private func menuButton(title: String, action: @escaping () -> Void) -> some View {
+    private func menuButton(title: String, icon: String, description: String, action: @escaping () -> Void) -> some View {
         Button(action: {
             withAnimation {
                 isShowing = false
                 action()
             }
         }) {
-            Text(title)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundColor(.white)
-                .frame(height: 50)  // Slightly reduced height
-                .frame(maxWidth: .infinity)
-                .background(Theme.surfaceBackground.opacity(0.8))  // Semi-transparent background
-                .cornerRadius(25)  // Rounded corners
-                .overlay(
-                    RoundedRectangle(cornerRadius: 25)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)  // Subtle border
-                )
+            HStack(spacing: 16) {
+                Circle()
+                    .fill(Theme.tint.opacity(0.2))
+                    .frame(width: 40, height: 40)
+                    .overlay(
+                        Image(systemName: icon)
+                            .font(.system(size: 16))
+                            .foregroundColor(Theme.tint)
+                    )
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 17, weight: .semibold))
+                    Text(description)
+                        .font(.system(size: 13))
+                        .foregroundColor(Theme.secondaryLabel)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14))
+                    .foregroundColor(Theme.secondaryLabel)
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity)
+            .background(Theme.surfaceBackground.opacity(0.95))
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+            )
         }
     }
 }
