@@ -53,9 +53,10 @@ struct WelcomeView: View {
                     
                     // Action Buttons
                     VStack(spacing: 12) {
-                        Button(action: {
-                            showLogin = true
-                        }) {
+                        NavigationLink(isActive: $showLogin) {
+                            LoginView()
+                                .environmentObject(userModel)
+                        } label: {
                             Text("Log In")
                                 .font(.system(size: 17, weight: .semibold))
                                 .foregroundColor(.white)
@@ -69,9 +70,10 @@ struct WelcomeView: View {
                                 )
                         }
                         
-                        Button(action: {
-                            showSignUp = true
-                        }) {
+                        NavigationLink(isActive: $showSignUp) {
+                            SignUpView()
+                                .environmentObject(userModel)
+                        } label: {
                             Text("Sign Up")
                                 .font(.system(size: 17, weight: .semibold))
                                 .foregroundColor(.white)
@@ -81,9 +83,10 @@ struct WelcomeView: View {
                                 .cornerRadius(12)
                         }
                         
-                        Button(action: {
-                            showSalaryInput = true
-                        }) {
+                        NavigationLink(isActive: $showSalaryInput) {
+                            SalaryInputView()
+                                .environmentObject(userModel)
+                        } label: {
                             Text("Skip for now")
                                 .font(.system(size: 17))
                                 .foregroundColor(Theme.secondaryLabel)
@@ -94,18 +97,6 @@ struct WelcomeView: View {
                     .padding(.bottom, 34)
                 }
             }
-            .navigationDestination(isPresented: $showSalaryInput) {
-                SalaryInputView()
-                    .environmentObject(userModel)
-            }
-        }
-        .sheet(isPresented: $showSignUp) {
-            SignUpView()
-                .environmentObject(userModel)
-        }
-        .sheet(isPresented: $showLogin) {
-            LoginView()
-                .environmentObject(userModel)
         }
         .onChange(of: userModel.isAuthenticated) { isAuthenticated in
             if isAuthenticated {

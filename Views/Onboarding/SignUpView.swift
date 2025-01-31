@@ -1,152 +1,291 @@
 import SwiftUI
 
+// MARK: - Phone Number Formatter
+struct PhoneNumberFormatter {
+    static func format(_ number: String) -> String {
+        let cleaned = number.filter { $0.isNumber }
+        var result = ""
+        
+        for (index, char) in cleaned.enumerated() {
+            if index == 0 {
+                result.append("(")
+            }
+            if index == 3 {
+                result.append(") ")
+            }
+            if index == 6 {
+                result.append("-")
+            }
+            if index < 10 {
+                result.append(char)
+            }
+        }
+        return result
+    }
+    
+    static func unformat(_ number: String) -> String {
+        return number.filter { $0.isNumber }
+    }
+    
+    static func isValid(_ number: String) -> Bool {
+        let cleaned = number.filter { $0.isNumber }
+        return cleaned.count == 10
+    }
+}
+
+// MARK: - Password Validator
+struct PasswordValidator {
+    static func validate(_ password: String) -> [PasswordRequirement: Bool] {
+        return [
+            .length: password.count >= 8,
+            .uppercase: password.contains { $0.isUppercase },
+            .lowercase: password.contains { $0.isLowercase },
+            .number: password.contains { $0.isNumber }
+        ]
+    }
+}
+
+enum PasswordRequirement: CaseIterable {
+    case length
+    case uppercase
+    case lowercase
+    case number
+    
+    var description: String {
+        switch self {
+        case .length: return "At least 8 characters"
+        case .uppercase: return "One uppercase letter"
+        case .lowercase: return "One lowercase letter"
+        case .number: return "One number"
+        }
+    }
+}
+
+// MARK: - Sign Up Views
 struct SignUpView: View {
-    @StateObject private var userModel = UserModel()
-    @State private var phoneNumber = ""
-    @State private var password = ""
-    @State private var confirmPassword = ""
-    @State private var showAlert = false
-    @State private var alertMessage = ""
-    @State private var navigateToSalary = false
     @Environment(\.dismiss) private var dismiss
+    @State private var phoneNumber = ""
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                Theme.background
-                    .ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 0) {
+                // Back Button
+                Button(action: { dismiss() }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
                 
-                VStack(spacing: 24) {
-                    // Navigation Bar
-                    HStack {
-                        Button(action: { dismiss() }) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 20, weight: .medium))
-                                .foregroundColor(.white)
-                        }
-                        Spacer()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
+                // Main Content
+                VStack(alignment: .leading, spacing: 24) {
+                    // Title and Description
+                    Text("Phone Number")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.white)
                     
-                    // Title
-                    VStack(spacing: 8) {
-                        Text("Create Account")
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(.white)
-                        Text("Set up your account to save your preferences")
+                    Text("We'll use this to keep your account secure")
+                        .font(.system(size: 17))
+                        .foregroundColor(Theme.secondaryLabel)
+                    
+                    // Country Selector
+                    HStack {
+                        Text("Country/Region")
                             .font(.system(size: 17))
                             .foregroundColor(Theme.secondaryLabel)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.top, 20)
-                    
-                    // Form Fields
-                    VStack(spacing: 16) {
-                        // Phone Number Field
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Phone Number")
-                                .font(.system(size: 17, weight: .medium))
-                                .foregroundColor(.white)
-                            
-                            TextField("", text: $phoneNumber)
-                                .keyboardType(.numberPad)
-                                .font(.system(size: 17))
-                                .foregroundColor(.white)
-                                .placeholder(when: phoneNumber.isEmpty) {
-                                    Text("Enter 10-digit phone number")
-                                        .foregroundColor(Theme.secondaryLabel)
-                                }
-                                .padding()
-                                .background(Theme.surfaceBackground)
-                                .cornerRadius(12)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Theme.separator, lineWidth: 1)
-                                )
-                        }
-                        
-                        // Password Field
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Password")
-                                .font(.system(size: 17, weight: .medium))
-                                .foregroundColor(.white)
-                            
-                            SecureField("", text: $password)
-                                .font(.system(size: 17))
-                                .foregroundColor(.white)
-                                .placeholder(when: password.isEmpty) {
-                                    Text("Enter password")
-                                        .foregroundColor(Theme.secondaryLabel)
-                                }
-                                .padding()
-                                .background(Theme.surfaceBackground)
-                                .cornerRadius(12)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Theme.separator, lineWidth: 1)
-                                )
-                        }
-                        
-                        // Confirm Password Field
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Confirm Password")
-                                .font(.system(size: 17, weight: .medium))
-                                .foregroundColor(.white)
-                            
-                            SecureField("", text: $confirmPassword)
-                                .font(.system(size: 17))
-                                .foregroundColor(.white)
-                                .placeholder(when: confirmPassword.isEmpty) {
-                                    Text("Confirm password")
-                                        .foregroundColor(Theme.secondaryLabel)
-                                }
-                                .padding()
-                                .background(Theme.surfaceBackground)
-                                .cornerRadius(12)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Theme.separator, lineWidth: 1)
-                                )
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    
-                    // Password Requirements
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Password must contain:")
-                            .font(.system(size: 15))
-                            .foregroundColor(Theme.secondaryLabel)
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            requirementText("At least 8 characters")
-                            requirementText("One uppercase letter")
-                            requirementText("One lowercase letter")
-                            requirementText("One number")
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    Spacer()
-                    
-                    // Sign Up Button
-                    Button(action: signUp) {
-                        Text("Create Account")
-                            .font(.system(size: 17, weight: .semibold))
+                        Spacer()
+                        Text("United States (+1)")
+                            .font(.system(size: 17))
                             .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(Theme.tint)
-                            .cornerRadius(12)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 12))
+                            .foregroundColor(Theme.secondaryLabel)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
+                    .padding()
+                    .background(Theme.surfaceBackground)
+                    .cornerRadius(12)
+                    
+                    // Phone Input
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Phone number")
+                            .font(.system(size: 17))
+                            .foregroundColor(Theme.secondaryLabel)
+                            
+                        TextField("", text: Binding(
+                            get: { PhoneNumberFormatter.format(phoneNumber) },
+                            set: { phoneNumber = PhoneNumberFormatter.unformat($0) }
+                        ))
+                        .keyboardType(.numberPad)
+                        .font(.system(size: 17))
+                        .foregroundColor(.white)
+                        .placeholder(when: phoneNumber.isEmpty) {
+                            Text("e.g. (555) 555-5555")
+                                .foregroundColor(Theme.secondaryLabel)
+                        }
+                        .padding()
+                        .background(Theme.surfaceBackground)
+                        .cornerRadius(12)
+                    }
                 }
+                .padding(.horizontal)
+                .padding(.top, 24)
+                
+                Spacer()
+                
+                // Next Button
+                NavigationLink {
+                    CreatePasswordView(phoneNumber: phoneNumber)
+                } label: {
+                    Text("Next")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(Theme.tint)
+                        .cornerRadius(12)
+                }
+                .disabled(!PhoneNumberFormatter.isValid(phoneNumber))
+                .opacity(PhoneNumberFormatter.isValid(phoneNumber) ? 1 : 0.6)
+                .padding(.horizontal)
+                .padding(.bottom, 16)
             }
-            .navigationDestination(isPresented: $navigateToSalary) {
-                SalaryInputView()
+            .navigationBarHidden(true)
+            .background(Theme.background)
+        }
+    }
+}
+
+struct CreatePasswordView: View {
+    let phoneNumber: String
+    @StateObject private var userModel = UserModel()
+    @Environment(\.dismiss) private var dismiss
+    @State private var password = ""
+    @State private var confirmPassword = ""
+    @State private var showPassword = false
+    @State private var showConfirmPassword = false
+    @State private var navigateToSalary = false
+    @State private var showAlert = false
+    @State private var alertMessage = ""
+    
+    private var requirements: [PasswordRequirement: Bool] {
+        PasswordValidator.validate(password)
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Back Button
+            Button(action: { dismiss() }) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(.white)
             }
+            .padding(.horizontal)
+            .padding(.top, 8)
+            
+            // Title and Description
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Create Password")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(.white)
+                
+                Text("Choose a strong password for your account")
+                    .font(.system(size: 17))
+                    .foregroundColor(Theme.secondaryLabel)
+            }
+            .padding(.horizontal)
+            .padding(.top, 24)
+            
+            // Progress Bar (green)
+            Rectangle()
+                .fill(Theme.tint)
+                .frame(height: 2)
+                .padding(.top, 24)
+            
+            // Password Fields
+            VStack(spacing: 16) {
+                // New Password
+                HStack {
+                    Group {
+                        if showPassword {
+                            TextField("Password", text: $password)
+                        } else {
+                            SecureField("Password", text: $password)
+                        }
+                    }
+                    .font(.system(size: 17))
+                    .foregroundColor(.white)
+                    
+                    Button(action: { showPassword.toggle() }) {
+                        Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
+                            .foregroundColor(Theme.secondaryLabel)
+                    }
+                }
+                .padding()
+                .background(Theme.surfaceBackground)
+                .cornerRadius(12)
+                
+                // Confirm Password
+                HStack {
+                    Group {
+                        if showConfirmPassword {
+                            TextField("Confirm password", text: $confirmPassword)
+                        } else {
+                            SecureField("Confirm password", text: $confirmPassword)
+                        }
+                    }
+                    .font(.system(size: 17))
+                    .foregroundColor(.white)
+                    
+                    Button(action: { showConfirmPassword.toggle() }) {
+                        Image(systemName: showConfirmPassword ? "eye.slash.fill" : "eye.fill")
+                            .foregroundColor(Theme.secondaryLabel)
+                    }
+                }
+                .padding()
+                .background(Theme.surfaceBackground)
+                .cornerRadius(12)
+                
+                // Requirements
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Password requirements:")
+                        .font(.system(size: 17))
+                        .foregroundColor(Theme.secondaryLabel)
+                    
+                    ForEach(PasswordRequirement.allCases, id: \.self) { requirement in
+                        HStack(spacing: 8) {
+                            Image(systemName: requirements[requirement] ?? false ? "checkmark.circle.fill" : "circle")
+                                .foregroundColor(requirements[requirement] ?? false ? Theme.tint : Theme.secondaryLabel)
+                            Text(requirement.description)
+                                .font(.system(size: 17))
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
+                .padding(.top, 8)
+            }
+            .padding(.horizontal)
+            .padding(.top, 24)
+            
+            Spacer()
+            
+            // Complete Button
+            Button(action: validateAndComplete) {
+                Text("Complete")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .background(Theme.tint)
+                    .cornerRadius(12)
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 16)
+        }
+        .navigationBarHidden(true)
+        .background(Theme.background)
+        .navigationDestination(isPresented: $navigateToSalary) {
+            SalaryInputView()
         }
         .alert("Error", isPresented: $showAlert) {
             Button("OK", role: .cancel) { }
@@ -155,34 +294,26 @@ struct SignUpView: View {
         }
     }
     
-    private func requirementText(_ text: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "circle.fill")
-                .font(.system(size: 4))
-            Text(text)
-        }
-        .foregroundColor(Theme.secondaryLabel)
-        .font(.system(size: 15))
-    }
-    
-    private func signUp() {
+    private func validateAndComplete() {
         guard password == confirmPassword else {
             alertMessage = "Passwords do not match"
             showAlert = true
             return
         }
         
+        let requirements = PasswordValidator.validate(password)
+        guard requirements.values.allSatisfy({ $0 }) else {
+            alertMessage = "Please ensure your password meets all requirements"
+            showAlert = true
+            return
+        }
+        
         do {
-            try userModel.signUp(phoneNumber: phoneNumber, password: password)
+            try userModel.signUp(phoneNumber: PhoneNumberFormatter.unformat(phoneNumber), password: password)
             navigateToSalary = true
         } catch {
             alertMessage = error.localizedDescription
             showAlert = true
         }
     }
-}
-
-#Preview {
-    SignUpView()
-        .preferredColorScheme(.dark)
 }
