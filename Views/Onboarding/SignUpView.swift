@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Phone Number Formatter
 struct PhoneNumberFormatter {
     static func format(_ number: String) -> String {
-        let cleaned = number.filter { $0.isNumber }
+        let cleaned = number.filter { $0.isNumber }.prefix(10)
         var result = ""
         
         for (index, char) in cleaned.enumerated() {
@@ -16,15 +16,13 @@ struct PhoneNumberFormatter {
             if index == 6 {
                 result.append("-")
             }
-            if index < 10 {
-                result.append(char)
-            }
+            result.append(char)
         }
         return result
     }
     
     static func unformat(_ number: String) -> String {
-        return number.filter { $0.isNumber }
+        String(number.filter { $0.isNumber }.prefix(10))
     }
     
     static func isValid(_ number: String) -> Bool {
@@ -114,7 +112,12 @@ struct SignUpView: View {
                             
                         TextField("", text: Binding(
                             get: { PhoneNumberFormatter.format(phoneNumber) },
-                            set: { phoneNumber = PhoneNumberFormatter.unformat($0) }
+                            set: { newValue in
+                                let filtered = newValue.filter { $0.isNumber }
+                                if filtered.count <= 10 {
+                                    phoneNumber = PhoneNumberFormatter.unformat(newValue)
+                                }
+                            }
                         ))
                         .keyboardType(.numberPad)
                         .font(.system(size: 17))
@@ -203,7 +206,7 @@ struct CreatePasswordView: View {
                 .padding(.top, 24)
             
             // Password Fields
-            VStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 16) {
                 // New Password
                 HStack {
                     Group {
@@ -251,18 +254,23 @@ struct CreatePasswordView: View {
                     Text("Password requirements:")
                         .font(.system(size: 17))
                         .foregroundColor(Theme.secondaryLabel)
+                        .padding(.leading, 4)
                     
-                    ForEach(PasswordRequirement.allCases, id: \.self) { requirement in
-                        HStack(spacing: 8) {
-                            Image(systemName: requirements[requirement] ?? false ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor(requirements[requirement] ?? false ? Theme.tint : Theme.secondaryLabel)
-                            Text(requirement.description)
-                                .font(.system(size: 17))
-                                .foregroundColor(.white)
+                    VStack(alignment: .leading, spacing: 12) {
+                        ForEach(PasswordRequirement.allCases, id: \.self) { requirement in
+                            HStack(spacing: 12) {
+                                Image(systemName: requirements[requirement] ?? false ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(requirements[requirement] ?? false ? Theme.tint : Theme.secondaryLabel)
+                                    .frame(width: 20)
+                                Text(requirement.description)
+                                    .font(.system(size: 17))
+                                    .foregroundColor(.white)
+                                Spacer()
+                            }
+                            .padding(.leading, 4)
                         }
                     }
                 }
-                .padding(.top, 8)
             }
             .padding(.horizontal)
             .padding(.top, 24)
