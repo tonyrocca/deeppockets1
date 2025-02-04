@@ -94,7 +94,7 @@ struct MainContentView: View {
     }
     
     private var affordabilityHeader: some View {
-        StickyIncomeHeader(monthlyIncome: model.monthlyIncome)
+        StickyIncomeHeader(monthlyIncome: model.monthlyIncome, payPeriod: payPeriod)
             .background(Theme.background)
     }
     

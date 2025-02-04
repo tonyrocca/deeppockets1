@@ -2,6 +2,8 @@ import SwiftUI
 
 struct StickyIncomeHeader: View {
    let monthlyIncome: Double
+   let payPeriod: PayPeriod  // Add PayPeriod parameter
+   
    private let incomePercentiles: [(threshold: Double, percentile: Int)] = [
        (650000, 1),
        (250000, 5),
@@ -18,28 +20,51 @@ struct StickyIncomeHeader: View {
        monthlyIncome * 12
    }
    
-   private var incomePercentile: Int {
-       for (threshold, percentile) in incomePercentiles {
-           if annualIncome >= threshold {
-               return percentile
-           }
+   private var displayedAmount: Double {
+       switch selectedPeriod {
+       case .annual:
+           return annualIncome
+       case .monthly:
+           return monthlyIncome
+       case .perPaycheck:
+           return monthlyIncome / payPeriod.multiplier
        }
-       return 80 // Default if below all thresholds
    }
+   
+   @State private var selectedPeriod: IncomePeriod = .annual
    
    var body: some View {
        VStack(spacing: 0) {
-           // Main Income Section
            VStack(spacing: 12) {
-               // Income Row
+               // Period Selector
+               HStack(spacing: 0) {
+                   ForEach(IncomePeriod.allCases, id: \.self) { period in
+                       Button(action: { withAnimation { selectedPeriod = period }}) {
+                           Text(period.rawValue)
+                               .font(.system(size: 15))
+                               .foregroundColor(selectedPeriod == period ? .white : Theme.secondaryLabel)
+                               .frame(maxWidth: .infinity)
+                               .frame(height: 32)
+                               .background(
+                                   selectedPeriod == period
+                                   ? Theme.tint
+                                   : Color.clear
+                               )
+                       }
+                   }
+               }
+               .background(Theme.surfaceBackground)
+               .cornerRadius(8)
+               
+               // Income Display
                HStack(alignment: .center) {
-                   Text("Your Annual Income")
+                   Text("Your \(selectedPeriod.rawValue) Income")
                        .font(.system(size: 17))
                        .foregroundColor(Theme.label)
                    
                    Spacer()
                    
-                   Text(formatCurrency(annualIncome))
+                   Text(formatCurrency(displayedAmount))
                        .font(.system(size: 28, weight: .bold))
                        .foregroundColor(Theme.label)
                }
@@ -82,6 +107,15 @@ struct StickyIncomeHeader: View {
            .padding(.vertical, 16)
        }
        .background(Theme.background)
+   }
+   
+   private var incomePercentile: Int {
+       for (threshold, percentile) in incomePercentiles {
+           if annualIncome >= threshold {
+               return percentile
+           }
+       }
+       return 80 // Default if below all thresholds
    }
    
    private func formatCurrency(_ value: Double) -> String {
