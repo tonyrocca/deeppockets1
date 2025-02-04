@@ -4,6 +4,7 @@ struct AffordabilityView: View {
     @ObservedObject var model: AffordabilityModel
     @StateObject private var store = BudgetCategoryStore.shared
     @State private var searchText = ""
+    @State private var pinnedCategories: Set<String> = [] // Track pinned category IDs
     
     private var filteredCategories: [BudgetCategory] {
         guard !searchText.isEmpty else { return store.categories }
@@ -12,11 +13,63 @@ struct AffordabilityView: View {
         }
     }
     
+    private var pinnedCategoryList: [BudgetCategory] {
+        store.categories.filter { pinnedCategories.contains($0.id) }
+    }
+    
+    private var unpinnedCategories: [BudgetCategory] {
+        filteredCategories.filter { !pinnedCategories.contains($0.id) }
+    }
+    
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 12, pinnedViews: [.sectionHeaders]) {
                 Section {
-                    // Categories List
+                    // Pinned Categories Section (only shows if there are pinned categories)
+                    if !pinnedCategories.isEmpty {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("PINNED")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(Theme.tint)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Theme.mutedGreen.opacity(0.2))
+                                .cornerRadius(4)
+                                .padding(.horizontal, 20)
+                                .padding(.top, 16)
+                            
+                            VStack(spacing: 0) {
+                                ForEach(pinnedCategoryList) { category in
+                                    CategoryRowView(
+                                        category: category,
+                                        amount: model.calculateAffordableAmount(for: category),
+                                        displayType: category.displayType,
+                                        isPinned: true,
+                                        onAssumptionsChanged: model.updateAssumptions,
+                                        onPinChanged: { id, shouldPin in
+                                            if shouldPin {
+                                                pinnedCategories.insert(id)
+                                            } else {
+                                                pinnedCategories.remove(id)
+                                            }
+                                        }
+                                    )
+                                    
+                                    if category.id != pinnedCategoryList.last?.id {
+                                        Divider()
+                                            .background(Theme.separator)
+                                            .padding(.horizontal, 20)
+                                    }
+                                }
+                            }
+                            
+                            Divider()
+                                .background(Theme.separator)
+                                .padding(.horizontal, 20)
+                        }
+                    }
+                    
+                    // Main Categories List
                     VStack(spacing: 0) {
                         if filteredCategories.isEmpty {
                             Text("No matching categories found")
@@ -24,15 +77,23 @@ struct AffordabilityView: View {
                                 .foregroundColor(Theme.secondaryLabel)
                                 .padding(.vertical, 20)
                         } else {
-                            ForEach(filteredCategories) { category in
+                            ForEach(unpinnedCategories) { category in
                                 CategoryRowView(
                                     category: category,
                                     amount: model.calculateAffordableAmount(for: category),
                                     displayType: category.displayType,
-                                    onAssumptionsChanged: model.updateAssumptions
+                                    isPinned: false,
+                                    onAssumptionsChanged: model.updateAssumptions,
+                                    onPinChanged: { id, shouldPin in
+                                        if shouldPin {
+                                            pinnedCategories.insert(id)
+                                        } else {
+                                            pinnedCategories.remove(id)
+                                        }
+                                    }
                                 )
                                 
-                                if category.id != filteredCategories.last?.id {
+                                if category.id != unpinnedCategories.last?.id {
                                     Divider()
                                         .background(Theme.separator)
                                         .padding(.horizontal, 20)
@@ -150,19 +211,32 @@ struct CategoryRowView: View {
     let category: BudgetCategory
     let amount: Double
     let displayType: AmountDisplayType
+    let isPinned: Bool
     @State private var showDetails = false
     @State private var localAssumptions: [CategoryAssumption]
     @State private var showingAddedToBudget = false
     @State private var showAddToBudgetConfirmation = false
     let onAssumptionsChanged: (String, [CategoryAssumption]) -> Void
+    let onPinChanged: (String, Bool) -> Void
     @EnvironmentObject private var budgetModel: BudgetModel
     
-    init(category: BudgetCategory, amount: Double, displayType: AmountDisplayType, onAssumptionsChanged: @escaping (String, [CategoryAssumption]) -> Void) {
+    init(category: BudgetCategory,
+         amount: Double,
+         displayType: AmountDisplayType,
+         isPinned: Bool,
+         onAssumptionsChanged: @escaping (String, [CategoryAssumption]) -> Void,
+         onPinChanged: @escaping (String, Bool) -> Void) {
         self.category = category
         self.amount = amount
         self.displayType = displayType
+        self.isPinned = isPinned
         self._localAssumptions = State(initialValue: category.assumptions)
         self.onAssumptionsChanged = onAssumptionsChanged
+        self.onPinChanged = onPinChanged
+    }
+    
+    private var isInBudget: Bool {
+        budgetModel.budgetItems.contains { $0.id == category.id && $0.isActive }
     }
     
     var displayAmount: String {
@@ -171,10 +245,6 @@ struct CategoryRowView: View {
         formatter.maximumFractionDigits = 0
         let formattedAmount = formatter.string(from: NSNumber(value: amount)) ?? "$0"
         return formattedAmount + (displayType == .monthly ? "/mo" : " total")
-    }
-    
-    private var isInBudget: Bool {
-        budgetModel.budgetItems.contains { $0.id == category.id && $0.isActive }
     }
     
     var body: some View {
@@ -250,19 +320,19 @@ struct CategoryRowView: View {
                         }
                     }
                     
-                    // Add to Budget Button
-                    if !isInBudget {
-                        Button(action: { showAddToBudgetConfirmation = true }) {
+                    // Action Buttons Row
+                    HStack(spacing: 12) {
+                        // Pin/Unpin Button
+                        Button(action: {
+                            onPinChanged(category.id, !isPinned)
+                        }) {
                             HStack {
-                                Text("Add to Budget")
-                                    .font(.system(size: 15, weight: .medium))
-                                Spacer()
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.system(size: 15))
+                                Image(systemName: isPinned ? "pin.slash.fill" : "pin.fill")
+                                Text(isPinned ? "Unpin" : "Pin")
                             }
+                            .font(.system(size: 15, weight: .medium))
                             .foregroundColor(.white)
                             .padding(.vertical, 12)
-                            .padding(.horizontal, 16)
                             .frame(maxWidth: .infinity)
                             .background(Theme.surfaceBackground)
                             .cornerRadius(8)
@@ -271,19 +341,38 @@ struct CategoryRowView: View {
                                     .stroke(Color.white.opacity(0.2), lineWidth: 1)
                             )
                         }
-                    } else {
-                        HStack {
-                            Text("Added to Budget")
-                            Spacer()
-                            Image(systemName: "checkmark.circle.fill")
+                        
+                        // Add to Budget Button
+                        if !isInBudget {
+                            Button(action: { showAddToBudgetConfirmation = true }) {
+                                HStack {
+                                    Text("Add to Budget")
+                                        .font(.system(size: 15, weight: .medium))
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.system(size: 15))
+                                }
+                                .foregroundColor(.white)
+                                .padding(.vertical, 12)
+                                .frame(maxWidth: .infinity)
+                                .background(Theme.surfaceBackground)
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                )
+                            }
+                        } else {
+                            HStack {
+                                Text("Added to Budget")
+                                Image(systemName: "checkmark.circle.fill")
+                            }
+                            .font(.system(size: 15))
+                            .foregroundColor(Theme.tint)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
+                            .background(Theme.surfaceBackground)
+                            .cornerRadius(8)
                         }
-                        .font(.system(size: 15))
-                        .foregroundColor(Theme.tint)
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 16)
-                        .frame(maxWidth: .infinity)
-                        .background(Theme.surfaceBackground)
-                        .cornerRadius(8)
                     }
                     
                 }
@@ -337,18 +426,6 @@ struct CategoryRowView: View {
             withAnimation {
                 showingAddedToBudget = false
             }
-        }
-    }
-    
-    private func determinePriority(for category: BudgetCategory) -> BudgetCategoryPriority {
-        switch category.id {
-        case "house", "rent", "groceries", "home_utilities", "medical", "emergency_savings":
-            return .essential
-        case "car", "public_transportation", "investments",
-             "credit_cards", "student_loans", "personal_loans", "car_loan":
-            return .important
-        default:
-            return .discretionary
         }
     }
     
