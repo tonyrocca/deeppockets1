@@ -46,6 +46,7 @@
 				HomeView/AffordabilityCalculator.swift,
 				HomeView/DebtCalculator.swift,
 				HomeView/MainContentView.swift,
+				HomeView/ProfileView.swift,
 				HomeView/SavingsCalculator.swift,
 				HomeView/TabHeaderView.swift,
 				Onboarding/LoginView.swift,

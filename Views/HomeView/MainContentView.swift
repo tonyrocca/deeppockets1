@@ -3,13 +3,15 @@ import SwiftUI
 struct MainContentView: View {
     @StateObject private var model: AffordabilityModel
     @StateObject private var budgetModel: BudgetModel
+    @StateObject private var userModel = UserModel() // Add this line
     @State private var selectedTab = 0
     @State private var showActionMenu = false
     @State private var showAffordabilityCalculator = false
     @State private var showSavingsCalculator = false
     @State private var showDebtCalculator = false
+    @State private var showProfile = false
     @Environment(\.dismiss) private var dismiss
-    let payPeriod: PayPeriod
+    @State private var payPeriod: PayPeriod
     
     init(monthlyIncome: Double, payPeriod: PayPeriod) {
         let model = AffordabilityModel()
@@ -18,7 +20,7 @@ struct MainContentView: View {
         
         let budgetModel = BudgetModel(monthlyIncome: monthlyIncome)
         _budgetModel = StateObject(wrappedValue: budgetModel)
-        self.payPeriod = payPeriod
+        _payPeriod = State(initialValue: payPeriod)
     }
     
     var body: some View {
@@ -48,6 +50,13 @@ struct MainContentView: View {
         .background(Theme.background)
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
+        .sheet(isPresented: $showProfile) {
+            ProfileView(
+                monthlyIncome: $model.monthlyIncome,
+                payPeriod: $payPeriod
+            )
+            .environmentObject(userModel) // Make sure userModel is passed here
+        }
     }
     
     // MARK: - Navigation Bar
@@ -63,9 +72,7 @@ struct MainContentView: View {
             Spacer()
             
             // Profile Button
-            Button(action: {
-                // Profile action placeholder
-            }) {
+            Button(action: { showProfile = true }) {
                 Circle()
                     .fill(Theme.surfaceBackground)
                     .frame(width: 36, height: 36)

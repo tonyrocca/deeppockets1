@@ -22,7 +22,7 @@ struct TabHeaderView: View {
             
             // Add small padding below the buttons
             Color.clear
-                .frame(height: 20)
+                .frame(height: 12)
             
         }
         .background(Theme.darkBackground)
