@@ -22,9 +22,9 @@ struct AffordabilityView: View {
     }
     
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 12, pinnedViews: [.sectionHeaders]) {
-                Section {
+        ZStack(alignment: .top) {
+            ScrollView {
+                LazyVStack(spacing: 12) {
                     // Pinned Categories Section (only shows if there are pinned categories)
                     if !pinnedCategories.isEmpty {
                         VStack(alignment: .leading, spacing: 16) {
@@ -114,21 +114,16 @@ struct AffordabilityView: View {
                             .stroke(Theme.separator, lineWidth: 1)
                     )
                     .padding(.horizontal, 16)
-                } header: {
-                    VStack(spacing: 0) {
-                        Rectangle()
-                            .fill(Theme.background)
-                            .frame(height: 1)
-                            .ignoresSafeArea()
-                        
-                        searchBar
-                            .background(Theme.background)
-                    }
                 }
+                .padding(.top, 70) // leave space for the pinned search bar
+                .padding(.bottom, 16)
             }
-            .padding(.bottom, 16)
+            .background(Theme.background)
+            
+            // The search bar is rendered on top and remains sticky.
+            searchBar
+                .zIndex(1)
         }
-        .background(Theme.background)
     }
     
     private var searchBar: some View {
