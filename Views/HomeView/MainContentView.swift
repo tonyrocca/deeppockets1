@@ -62,13 +62,6 @@ struct MainContentView: View {
     // MARK: - Navigation Bar
     private var customNavigationBar: some View {
         HStack {
-            // Back Button
-            Button(action: { dismiss() }) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(.white)
-            }
-            
             Spacer()
             
             // Profile Button
