@@ -47,10 +47,12 @@ struct AffordabilityView: View {
                                         isPinned: true,
                                         onAssumptionsChanged: model.updateAssumptions,
                                         onPinChanged: { id, shouldPin in
-                                            if shouldPin {
-                                                pinnedCategories.insert(id)
-                                            } else {
-                                                pinnedCategories.remove(id)
+                                            withAnimation(.easeInOut) {
+                                                if shouldPin {
+                                                    pinnedCategories.insert(id)
+                                                } else {
+                                                    pinnedCategories.remove(id)
+                                                }
                                             }
                                         }
                                     )
@@ -85,10 +87,12 @@ struct AffordabilityView: View {
                                     isPinned: false,
                                     onAssumptionsChanged: model.updateAssumptions,
                                     onPinChanged: { id, shouldPin in
-                                        if shouldPin {
-                                            pinnedCategories.insert(id)
-                                        } else {
-                                            pinnedCategories.remove(id)
+                                        withAnimation(.easeInOut) {
+                                            if shouldPin {
+                                                pinnedCategories.insert(id)
+                                            } else {
+                                                pinnedCategories.remove(id)
+                                            }
                                         }
                                     }
                                 )
@@ -381,6 +385,8 @@ struct CategoryRowView: View {
                 .background(Theme.elevatedBackground)
             }
         }
+        .background(isPinned ? Theme.mutedGreen.opacity(0.1) : Color.clear)
+        .animation(.easeInOut, value: isPinned)
         .overlay(
             Group {
                 if showingAddedToBudget {
