@@ -13,6 +13,9 @@ struct MainContentView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var payPeriod: PayPeriod
     
+    // This gesture state will track the ongoing drag offset for interactive swiping
+    @GestureState private var dragOffset: CGFloat = 0
+    
     init(monthlyIncome: Double, payPeriod: PayPeriod) {
         let model = AffordabilityModel()
         model.monthlyIncome = monthlyIncome
@@ -25,7 +28,6 @@ struct MainContentView: View {
     
     var body: some View {
         ZStack {
-            // Main Content
             VStack(spacing: 0) {
                 // Custom Navigation Bar
                 customNavigationBar
@@ -34,17 +36,55 @@ struct MainContentView: View {
                 // Tab Header
                 TabHeaderView(selectedTab: $selectedTab)
                 
-                // Main Scrollable Content
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        mainSection
+                // Main Content with Gesture Support
+                GeometryReader { geometry in
+                    HStack(spacing: 0) {
+                        // Page 1: Affordability
+                        ScrollView {
+                            LazyVStack(spacing: 0) {
+                                Section(header: affordabilityHeader) {
+                                    AffordabilityView(model: model)
+                                        .environmentObject(budgetModel)
+                                }
+                            }
+                        }
+                        .frame(width: geometry.size.width)
+                        
+                        // Page 2: Budget
+                        ScrollView {
+                            LazyVStack(spacing: 0) {
+                                BudgetView(monthlyIncome: model.monthlyIncome, payPeriod: payPeriod)
+                                    .environmentObject(budgetModel)
+                            }
+                        }
+                        .frame(width: geometry.size.width)
                     }
+                    // Calculate the offset from the selected tab plus the interactive drag offset.
+                    .offset(x: -CGFloat(selectedTab) * geometry.size.width + dragOffset)
+                    // Animate any change to selectedTab smoothly.
+                    .animation(.easeOut, value: selectedTab)
+                    .gesture(
+                        DragGesture()
+                            .updating($dragOffset) { value, state, _ in
+                                state = value.translation.width
+                            }
+                            .onEnded { value in
+                                let threshold: CGFloat = geometry.size.width * 0.3
+                                if value.translation.width < -threshold {
+                                    // Swipe left: move to the next tab if possible.
+                                    selectedTab = min(1, selectedTab + 1)
+                                } else if value.translation.width > threshold {
+                                    // Swipe right: move to the previous tab if possible.
+                                    selectedTab = max(0, selectedTab - 1)
+                                }
+                            }
+                    )
                 }
                 .scrollIndicators(.hidden)
             }
             .blur(radius: showActionMenu ? 3 : 0)
             
-            // Overlay Content
+            // Overlay Content (modals, action buttons, etc.)
             overlayContent
         }
         .background(Theme.background)
@@ -63,7 +103,6 @@ struct MainContentView: View {
     private var customNavigationBar: some View {
         HStack {
             Spacer()
-            
             // Profile Button
             Button(action: { showProfile = true }) {
                 Circle()
@@ -79,20 +118,7 @@ struct MainContentView: View {
         .padding(.horizontal, 16)
     }
     
-    // MARK: - Content Views
-    @ViewBuilder
-    private var mainSection: some View {
-        if selectedTab == 0 {
-            Section(header: affordabilityHeader) {
-                AffordabilityView(model: model)
-                    .environmentObject(budgetModel)
-            }
-        } else {
-            BudgetView(monthlyIncome: model.monthlyIncome, payPeriod: payPeriod)
-                .environmentObject(budgetModel)
-        }
-    }
-    
+    // MARK: - Affordability Header
     private var affordabilityHeader: some View {
         StickyIncomeHeader(monthlyIncome: model.monthlyIncome, payPeriod: payPeriod)
             .background(Theme.background)
