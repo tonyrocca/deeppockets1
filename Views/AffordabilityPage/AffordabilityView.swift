@@ -379,7 +379,7 @@ struct CategoryRowView: View {
                         if !isInBudget {
                             Button(action: { showAddToBudgetConfirmation = true }) {
                                 HStack {
-                                    Text("Add to Budget")
+                                    Text("Budget")
                                         .font(.system(size: 15, weight: .medium))
                                     Image(systemName: "plus.circle.fill")
                                         .font(.system(size: 15))

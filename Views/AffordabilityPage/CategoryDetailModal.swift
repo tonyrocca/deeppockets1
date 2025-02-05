@@ -1,5 +1,6 @@
 import SwiftUI
 
+// MARK: - CategoryDetailModal
 struct CategoryDetailModal: View {
     let category: BudgetCategory
     let amount: Double
@@ -36,7 +37,7 @@ struct CategoryDetailModal: View {
     
     var body: some View {
         ZStack {
-            // Semi-transparent background
+            // Semi-transparent background that dismisses the modal on tap.
             Color.black.opacity(0.5)
                 .ignoresSafeArea()
                 .onTapGesture {
@@ -137,7 +138,7 @@ struct CategoryDetailModal: View {
                     if !isInBudget {
                         Button(action: { showAddToBudgetConfirmation = true }) {
                             HStack {
-                                Text("Add to Budget")
+                                Text("Budget")
                                 Image(systemName: "plus.circle.fill")
                             }
                             .font(.system(size: 17, weight: .semibold))
@@ -307,5 +308,110 @@ struct CategoryDetailModal: View {
         formatter.numberStyle = .currency
         formatter.maximumFractionDigits = 0
         return formatter.string(from: NSNumber(value: value)) ?? "$0"
+    }
+}
+
+// MARK: - ActionButton (File Scope)
+struct ActionButton: View {
+    let icon: String
+    let text: String
+    let action: () -> Void
+    let type: ButtonType
+    let isModal: Bool
+    
+    enum ButtonType {
+        case expand
+        case pin
+        case budget
+        case added
+    }
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: isModal ? 17 : 15))
+                Text(text)
+            }
+            .font(.system(size: isModal ? 17 : 15, weight: .medium))
+            .foregroundColor(textColor)
+            .frame(maxWidth: .infinity)
+            .frame(height: isModal ? 56 : 44)
+            .background(buttonBackground)
+            .cornerRadius(isModal ? 12 : 8)
+            .overlay(
+                RoundedRectangle(cornerRadius: isModal ? 12 : 8)
+                    .stroke(buttonBorder, lineWidth: 1)
+            )
+        }
+    }
+    
+    private var buttonBackground: Color {
+        switch type {
+        case .budget where !isAdded:
+            return Theme.background.opacity(0.3)
+        case .expand, .pin, .budget, .added:
+            return Theme.background.opacity(0.15)
+        }
+    }
+    
+    private var buttonBorder: Color {
+        Color.white.opacity(0.1)
+    }
+    
+    private var textColor: Color {
+        switch type {
+        case .added:
+            return Theme.tint
+        default:
+            return .white
+        }
+    }
+    
+    private var isAdded: Bool {
+        type == .added
+    }
+}
+
+// MARK: - CategoryDetailModal Modal Buttons Extension
+extension CategoryDetailModal {
+    var modalButtons: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                // Budget Button
+                if !isInBudget {
+                    ActionButton(
+                        icon: "plus",
+                        text: "Budget",
+                        action: { showAddToBudgetConfirmation = true },
+                        type: .budget,
+                        isModal: true
+                    )
+                } else {
+                    ActionButton(
+                        icon: "checkmark.circle.fill",
+                        text: "Added",
+                        action: {},
+                        type: .added,
+                        isModal: true
+                    )
+                }
+                
+                // Pin Button
+                ActionButton(
+                    icon: isPinned ? "pin.slash.fill" : "pin.fill",
+                    text: isPinned ? "Unpin" : "Pin",
+                    action: {
+                        onPinChanged(category.id, !isPinned)
+                        isPresented = false
+                    },
+                    type: .pin,
+                    isModal: true
+                )
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(Theme.background)
     }
 }
