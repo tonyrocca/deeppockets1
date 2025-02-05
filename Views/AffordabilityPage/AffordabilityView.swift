@@ -1,11 +1,13 @@
 import SwiftUI
 
+// MARK: - AffordabilityView
 struct AffordabilityView: View {
     @ObservedObject var model: AffordabilityModel
     @StateObject private var store = BudgetCategoryStore.shared
     @State private var searchText = ""
-    @State private var pinnedCategories: Set<String> = [] // Track pinned category IDs
-    
+    @State private var pinnedCategories: Set<String> = []
+    @FocusState private var isSearchFocused: Bool // Focus state for the search field
+
     private var filteredCategories: [BudgetCategory] {
         guard !searchText.isEmpty else { return store.categories }
         return store.categories.filter {
@@ -22,10 +24,10 @@ struct AffordabilityView: View {
     }
     
     var body: some View {
-        ZStack(alignment: .top) {
-            ScrollView {
-                LazyVStack(spacing: 12) {
-                    // Pinned Categories Section (only shows if there are pinned categories)
+        ScrollView {
+            LazyVStack(spacing: 12, pinnedViews: [.sectionHeaders]) { // Enable sticky header for the search bar
+                Section(header: searchBar) { // The search bar stays at the top as a sticky header
+                    // Pinned Categories Section
                     if !pinnedCategories.isEmpty {
                         VStack(alignment: .leading, spacing: 16) {
                             Text("PINNED")
@@ -115,15 +117,17 @@ struct AffordabilityView: View {
                     )
                     .padding(.horizontal, 16)
                 }
-                .padding(.top, 70) // leave space for the pinned search bar
                 .padding(.bottom, 16)
             }
-            .background(Theme.background)
-            
-            // The search bar is rendered on top and remains sticky.
-            searchBar
-                .zIndex(1)
         }
+        .background(Theme.background)
+        // Dismiss the keyboard when tapping outside the search field
+        .gesture(
+            TapGesture()
+                .onEnded { _ in
+                    isSearchFocused = false
+                }
+        )
     }
     
     private var searchBar: some View {
@@ -131,15 +135,22 @@ struct AffordabilityView: View {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(Theme.secondaryLabel)
             TextField("Search categories", text: $searchText)
+                .focused($isSearchFocused) // Bind the focus state
                 .font(.system(size: 17))
                 .foregroundColor(Theme.label)
+                .textInputAutocapitalization(.never)
+                .disableAutocorrection(true)
+                .submitLabel(.search)
                 .placeholder(when: searchText.isEmpty) {
                     Text("Search categories")
                         .foregroundColor(Theme.label.opacity(0.6))
                 }
             
             if !searchText.isEmpty {
-                Button(action: { searchText = "" }) {
+                Button(action: {
+                    searchText = ""
+                    isSearchFocused = false // Dismiss the keyboard when clearing the text
+                }) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(Theme.secondaryLabel)
                 }
@@ -153,6 +164,7 @@ struct AffordabilityView: View {
     }
 }
 
+// MARK: - AssumptionSliderView
 struct AssumptionSliderView: View {
     let title: String
     let range: ClosedRange<Double>
@@ -206,6 +218,7 @@ struct AssumptionSliderView: View {
     }
 }
 
+// MARK: - CategoryRowView
 struct CategoryRowView: View {
     let category: BudgetCategory
     let amount: Double
@@ -504,6 +517,7 @@ extension CategoryRowView {
     }
 }
 
+// MARK: - AssumptionView
 struct AssumptionView: View {
     @Binding var assumption: CategoryAssumption
     let onChanged: (CategoryAssumption) -> Void
