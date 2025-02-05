@@ -6,8 +6,12 @@ struct ActionButtonMenu: View {
     let onSavingsTap: () -> Void
     let onDebtTap: () -> Void
     @Binding var isShowing: Bool
-    
     @State private var menuOffset: CGFloat = 100
+        
+    private let buttonSize: CGFloat = 66 // Increased from 60
+        private let menuItemSize: CGFloat = 55 // Increased from 50
+        private let menuSpacing: CGFloat = 16.5 // Increased from 15
+        private let menuItemOffset: CGFloat = 82.5 // Increased from 75
     
     var body: some View {
         ZStack {

@@ -382,7 +382,7 @@ extension CategoryDetailModal {
                 if !isInBudget {
                     ActionButton(
                         icon: "plus",
-                        text: "Budget",
+                        text: "Add to Budget",
                         action: { showAddToBudgetConfirmation = true },
                         type: .budget,
                         isModal: true
