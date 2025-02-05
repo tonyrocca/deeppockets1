@@ -4,16 +4,11 @@ struct StickyIncomeHeader: View {
     let monthlyIncome: Double
     let payPeriod: PayPeriod
     @State private var selectedPeriod: IncomePeriod = .annual
-    @State private var showPeriodPicker = false
-    
-    private var annualIncome: Double {
-        monthlyIncome * 12
-    }
     
     private var displayedAmount: Double {
         switch selectedPeriod {
         case .annual:
-            return annualIncome
+            return monthlyIncome * 12
         case .monthly:
             return monthlyIncome
         case .perPaycheck:
@@ -21,63 +16,62 @@ struct StickyIncomeHeader: View {
         }
     }
     
+    private var displayPeriodText: String {
+        switch selectedPeriod {
+        case .annual:
+            return "/year"
+        case .monthly:
+            return "/month"
+        case .perPaycheck:
+            return "/paycheck"
+        }
+    }
+    
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
+            // Income Display Container
             VStack(spacing: 12) {
-                // Income Display with Dropdown
-                HStack(alignment: .center) {
-                    HStack(spacing: 4) {
-                        Text("Your")
-                            .font(.system(size: 17))
-                        
-                        // Period Menu
-                        Menu {
-                            ForEach(IncomePeriod.allCases, id: \.self) { period in
-                                Button(action: {
-                                    withAnimation {
-                                        selectedPeriod = period
-                                    }
-                                }) {
-                                    Text(period.rawValue)
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Text(selectedPeriod.rawValue)
-                                Image(systemName: "chevron.down")
-                                    .font(.system(size: 12))
-                            }
-                            .foregroundColor(Theme.tint)
-                        }
-                        
-                        Text("Income")
-                            .font(.system(size: 17))
-                    }
-                    .foregroundColor(Theme.label)
-                    
-                    Spacer()
-                    
+                // Income Amount with Period
+                HStack(spacing: 0) {
                     Text(formatCurrency(displayedAmount))
-                        .font(.system(size: 28, weight: .bold))
+                        .font(.system(size: 32, weight: .bold))
                         .foregroundColor(Theme.label)
+                    
+                    Text(displayPeriodText)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(Theme.secondaryLabel)
                 }
+                
+                // Period Selector
+                HStack(spacing: 0) {
+                    ForEach(IncomePeriod.allCases, id: \.self) { period in
+                        Button(action: {
+                            withAnimation {
+                                selectedPeriod = period
+                            }
+                        }) {
+                            Text(period.displayText)
+                                .font(.system(size: 15))
+                                .foregroundColor(selectedPeriod == period ? Theme.tint : Theme.secondaryLabel)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                        }
+                    }
+                }
+                .frame(width: UIScreen.main.bounds.width - 64) // Matches the original width
+                .background(Theme.surfaceBackground)
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
             }
-            .padding(16)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .frame(width: UIScreen.main.bounds.width - 32) // Matches the original container width
             .background(Theme.surfaceBackground)
             .cornerRadius(16)
             .padding(.horizontal, 16)
-            
-            // Title Section
-            VStack(alignment: .leading, spacing: 4) {
-                Text("What You Can Afford")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(Theme.label)
-                Text("This is what you can afford based on your income")
-                    .font(.system(size: 15))
-                    .foregroundColor(Theme.secondaryLabel)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
         }
         .background(Theme.background)
     }
@@ -87,5 +81,18 @@ struct StickyIncomeHeader: View {
         formatter.numberStyle = .currency
         formatter.maximumFractionDigits = 0
         return formatter.string(from: NSNumber(value: value)) ?? "$0"
+    }
+}
+
+extension IncomePeriod {
+    var displayText: String {
+        switch self {
+        case .annual:
+            return "Year"
+        case .monthly:
+            return "Month"
+        case .perPaycheck:
+            return "Paycheck"
+        }
     }
 }

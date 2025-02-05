@@ -1,13 +1,17 @@
 import SwiftUI
 
 // MARK: - AffordabilityView
+import SwiftUI
+
 struct AffordabilityView: View {
     @ObservedObject var model: AffordabilityModel
     @StateObject private var store = BudgetCategoryStore.shared
     @State private var searchText = ""
     @State private var pinnedCategories: Set<String> = []
-    @FocusState private var isSearchFocused: Bool // Focus state for the search field
-
+    @FocusState private var isSearchFocused: Bool
+    @State private var selectedPeriod: IncomePeriod = .annual
+    let payPeriod: PayPeriod
+    
     private var filteredCategories: [BudgetCategory] {
         guard !searchText.isEmpty else { return store.categories }
         return store.categories.filter {
@@ -23,10 +27,85 @@ struct AffordabilityView: View {
         filteredCategories.filter { !pinnedCategories.contains($0.id) }
     }
     
+    private var displayedAmount: Double {
+        switch selectedPeriod {
+        case .annual:
+            return model.monthlyIncome * 12
+        case .monthly:
+            return model.monthlyIncome
+        case .perPaycheck:
+            return model.monthlyIncome / payPeriod.multiplier
+        }
+    }
+    
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 12, pinnedViews: [.sectionHeaders]) { // Enable sticky header for the search bar
-                Section(header: searchBar) { // The search bar stays at the top as a sticky header
+            LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                // Title Section
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("What You Can Afford")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(Theme.label)
+                    Text("This is what you can afford based on your income")
+                        .font(.system(size: 15))
+                        .foregroundColor(Theme.secondaryLabel)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+                .background(Theme.background)
+                
+                // Search and Content Section
+                Section(header: searchBar) {
+                    // Income Display
+                    VStack {
+                        HStack(alignment: .center) {
+                            HStack(spacing: 8) {
+                                Text("Your Income")
+                                    .font(.system(size: 17))
+                                    .foregroundColor(Theme.label)
+                                
+                                // Enhanced Period Menu
+                                Menu {
+                                    ForEach(IncomePeriod.allCases, id: \.self) { period in
+                                        Button(action: {
+                                            withAnimation {
+                                                selectedPeriod = period
+                                            }
+                                        }) {
+                                            if period == selectedPeriod {
+                                                Label(period.rawValue, systemImage: "checkmark")
+                                            } else {
+                                                Text(period.rawValue)
+                                            }
+                                        }
+                                    }
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Text(selectedPeriod.rawValue)
+                                        Image(systemName: "chevron.down")
+                                            .font(.system(size: 12))
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Theme.tint)
+                                    .cornerRadius(8)
+                                }
+                            }
+                            
+                            Spacer()
+                            
+                            Text(formatCurrency(displayedAmount))
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundColor(Theme.label)
+                        }
+                        .padding(16)
+                        .background(Theme.surfaceBackground)
+                        .cornerRadius(16)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                    }
+                    
                     // Pinned Categories Section
                     if !pinnedCategories.isEmpty {
                         VStack(alignment: .leading, spacing: 16) {
@@ -121,7 +200,6 @@ struct AffordabilityView: View {
             }
         }
         .background(Theme.background)
-        // Dismiss the keyboard when tapping outside the search field
         .gesture(
             TapGesture()
                 .onEnded { _ in
@@ -135,7 +213,7 @@ struct AffordabilityView: View {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(Theme.secondaryLabel)
             TextField("Search categories", text: $searchText)
-                .focused($isSearchFocused) // Bind the focus state
+                .focused($isSearchFocused)
                 .font(.system(size: 17))
                 .foregroundColor(Theme.label)
                 .textInputAutocapitalization(.never)
@@ -149,7 +227,7 @@ struct AffordabilityView: View {
             if !searchText.isEmpty {
                 Button(action: {
                     searchText = ""
-                    isSearchFocused = false // Dismiss the keyboard when clearing the text
+                    isSearchFocused = false
                 }) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(Theme.secondaryLabel)
@@ -161,9 +239,16 @@ struct AffordabilityView: View {
         .cornerRadius(12)
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
+        .background(Theme.background)
+    }
+    
+    private func formatCurrency(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: value)) ?? "$0"
     }
 }
-
 // MARK: - AssumptionSliderView
 struct AssumptionSliderView: View {
     let title: String

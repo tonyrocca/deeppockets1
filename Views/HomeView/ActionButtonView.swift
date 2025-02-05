@@ -38,7 +38,7 @@ struct ActionButtonMenu: View {
                         menuButton(
                             title: "What can I afford?",
                             icon: "cart.fill",
-                            description: "Check if that purchase fits your budget",
+                            description: "Can I afford that?",
                             action: onAffordabilityTap
                         )
                         

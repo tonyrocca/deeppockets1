@@ -43,7 +43,7 @@ struct MainContentView: View {
                         ScrollView {
                             LazyVStack(spacing: 0) {
                                 Section(header: affordabilityHeader) {
-                                    AffordabilityView(model: model)
+                                    AffordabilityView(model: model, payPeriod: payPeriod)
                                         .environmentObject(budgetModel)
                                 }
                             }
