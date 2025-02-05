@@ -218,19 +218,20 @@ struct AssumptionSliderView: View {
     }
 }
 
-// MARK: - CategoryRowView
+// MARK: - CategoryRowView (Updated with fullScreenCover for details)
 struct CategoryRowView: View {
     let category: BudgetCategory
     let amount: Double
     let displayType: AmountDisplayType
     let isPinned: Bool
-    @State private var showDetails = false
+    @State private var showInlineDetails = false
+    @State private var showFullScreenDetails = false
     @State private var localAssumptions: [CategoryAssumption]
-    @State private var showingAddedToBudget = false
-    @State private var showAddToBudgetConfirmation = false
     let onAssumptionsChanged: (String, [CategoryAssumption]) -> Void
     let onPinChanged: (String, Bool) -> Void
     @EnvironmentObject private var budgetModel: BudgetModel
+    @State private var showAddToBudgetConfirmation = false
+    @State private var showingAddedToBudget = false
     
     init(category: BudgetCategory,
          amount: Double,
@@ -264,7 +265,7 @@ struct CategoryRowView: View {
             // Header
             Button {
                 withAnimation {
-                    showDetails.toggle()
+                    showInlineDetails.toggle()
                 }
             } label: {
                 HStack(alignment: .center, spacing: 12) {
@@ -282,7 +283,7 @@ struct CategoryRowView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
             
-            if showDetails {
+            if showInlineDetails {
                 VStack(alignment: .leading, spacing: 24) {
                     // Allocation Section
                     VStack(alignment: .leading, spacing: 8) {
@@ -334,6 +335,26 @@ struct CategoryRowView: View {
                     
                     // Action Buttons Row
                     HStack(spacing: 12) {
+                        // Expand Button
+                        Button(action: {
+                            showFullScreenDetails = true
+                        }) {
+                            HStack {
+                                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                Text("Expand")
+                            }
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
+                            .background(Theme.surfaceBackground)
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
+                        }
+                        
                         // Pin/Unpin Button
                         Button(action: {
                             onPinChanged(category.id, !isPinned)
@@ -386,7 +407,6 @@ struct CategoryRowView: View {
                             .cornerRadius(8)
                         }
                     }
-                    
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
@@ -395,6 +415,17 @@ struct CategoryRowView: View {
         }
         .background(isPinned ? Theme.mutedGreen.opacity(0.1) : Color.clear)
         .animation(.easeInOut, value: isPinned)
+        .fullScreenCover(isPresented: $showFullScreenDetails) {
+            CategoryDetailModal(
+                category: category,
+                amount: amount,
+                displayType: displayType,
+                isPinned: isPinned,
+                isPresented: $showFullScreenDetails,
+                onAssumptionsChanged: onAssumptionsChanged,
+                onPinChanged: onPinChanged
+            )
+        }
         .overlay(
             Group {
                 if showingAddedToBudget {
@@ -419,40 +450,8 @@ struct CategoryRowView: View {
         }
     }
     
-    private func addToBudget() {
-        // Calculate the recommended monthly amount
-        let monthlyAllocation = displayType == .monthly ? amount : amount / 12
-        
-        // First activate the category
-        budgetModel.toggleCategory(id: category.id)
-        
-        // Then set its allocation
-        budgetModel.updateAllocation(for: category.id, amount: monthlyAllocation)
-        
-        // Show feedback
-        withAnimation {
-            showingAddedToBudget = true
-            showAddToBudgetConfirmation = false
-        }
-        
-        // Hide feedback after delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            withAnimation {
-                showingAddedToBudget = false
-            }
-        }
-    }
-    
-    private func formatCurrency(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: NSNumber(value: value)) ?? "$0"
-    }
-}
-
-extension CategoryRowView {
-    var addToBudgetConfirmation: some View {
+    private var addToBudgetConfirmation: some View {
+        // Same confirmation overlay as before...
         ZStack {
             Color.black.opacity(0.5)
                 .ignoresSafeArea()
@@ -514,6 +513,37 @@ extension CategoryRowView {
             .cornerRadius(20)
             .padding(.horizontal, 20)
         }
+    }
+    
+    private func addToBudget() {
+        // Calculate the recommended monthly amount
+        let monthlyAllocation = displayType == .monthly ? amount : amount / 12
+        
+        // First activate the category
+        budgetModel.toggleCategory(id: category.id)
+        
+        // Then set its allocation
+        budgetModel.updateAllocation(for: category.id, amount: monthlyAllocation)
+        
+        // Show feedback
+        withAnimation {
+            showingAddedToBudget = true
+            showAddToBudgetConfirmation = false
+        }
+        
+        // Hide feedback after delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation {
+                showingAddedToBudget = false
+            }
+        }
+    }
+    
+    private func formatCurrency(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: value)) ?? "$0"
     }
 }
 
