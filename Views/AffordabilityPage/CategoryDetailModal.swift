@@ -44,151 +44,155 @@ struct CategoryDetailModal: View {
                     isPresented = false
                 }
             
-            // Modal Content
-            VStack(spacing: 0) {
-                // Header
-                HStack {
-                    Button(action: { isPresented = false }) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.white)
-                    }
-                    Spacer()
-                    Text(category.name)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.white)
-                    Spacer()
-                    // Placeholder view for alignment
-                    Image(systemName: "xmark")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.clear)
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 8)
-                
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
-                        // Category Header
-                        VStack(alignment: .center, spacing: 8) {
-                            Text(category.emoji)
-                                .font(.system(size: 48))
-                            Text(formatCurrency(amount) + (displayType == .monthly ? "/mo" : " total"))
-                                .font(.system(size: 28, weight: .bold))
+            // Centered modal content (using similar styling to AffordabilityCalculatorModal)
+            VStack {
+                Spacer()
+                VStack(spacing: 0) {
+                    // Header
+                    HStack {
+                        Button(action: { isPresented = false }) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 17, weight: .semibold))
                                 .foregroundColor(.white)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        
-                        // Allocation Section
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("ALLOCATION OF SALARY")
-                                .sectionHeader()
-                            Text(category.formattedAllocation)
-                                .font(.system(size: 17))
-                                .foregroundColor(Theme.label)
-                        }
-                        
-                        // Monthly Allocation (for total amounts)
-                        if displayType == .total {
+                        Spacer()
+                        Text(category.name)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.white)
+                        Spacer()
+                        // Placeholder for alignment
+                        Image(systemName: "xmark")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.clear)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 8)
+                    
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 24) {
+                            // Category Header
+                            VStack(alignment: .center, spacing: 8) {
+                                Text(category.emoji)
+                                    .font(.system(size: 48))
+                                Text(formatCurrency(amount) + (displayType == .monthly ? "/mo" : " total"))
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            
+                            // Allocation Section
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("ESTIMATED MONTHLY ALLOCATION")
+                                Text("ALLOCATION OF SALARY")
                                     .sectionHeader()
-                                let monthlyAmount = amount / 12
-                                Text(formatCurrency(monthlyAmount))
+                                Text(category.formattedAllocation)
                                     .font(.system(size: 17))
                                     .foregroundColor(Theme.label)
                             }
-                        }
-                        
-                        // Description Section
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("DESCRIPTION")
-                                .sectionHeader()
-                            Text(category.description)
-                                .font(.system(size: 15))
-                                .foregroundColor(Theme.secondaryLabel)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        
-                        // Assumptions Section
-                        if !localAssumptions.isEmpty {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("ASSUMPTIONS")
-                                    .sectionHeader()
-                                
-                                ForEach(localAssumptions.indices, id: \.self) { index in
-                                    AssumptionView(
-                                        assumption: $localAssumptions[index],
-                                        onChanged: { _ in
-                                            onAssumptionsChanged(category.id, localAssumptions)
-                                        }
-                                    )
+                            
+                            // Monthly Allocation (for total amounts)
+                            if displayType == .total {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("ESTIMATED MONTHLY ALLOCATION")
+                                        .sectionHeader()
+                                    let monthlyAmount = amount / 12
+                                    Text(formatCurrency(monthlyAmount))
+                                        .font(.system(size: 17))
+                                        .foregroundColor(Theme.label)
                                 }
                             }
+                            
+                            // Description Section
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("DESCRIPTION")
+                                    .sectionHeader()
+                                Text(category.description)
+                                    .font(.system(size: 15))
+                                    .foregroundColor(Theme.secondaryLabel)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            
+                            // Assumptions Section
+                            if !localAssumptions.isEmpty {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("ASSUMPTIONS")
+                                        .sectionHeader()
+                                    
+                                    ForEach(localAssumptions.indices, id: \.self) { index in
+                                        AssumptionView(
+                                            assumption: $localAssumptions[index],
+                                            onChanged: { _ in
+                                                onAssumptionsChanged(category.id, localAssumptions)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                    }
+                    
+                    // Bottom Action Buttons
+                    VStack(spacing: 12) {
+                        // Add to Budget Button
+                        if !isInBudget {
+                            Button(action: { showAddToBudgetConfirmation = true }) {
+                                HStack {
+                                    Text("Budget")
+                                    Image(systemName: "plus.circle.fill")
+                                }
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56)
+                                .background(Theme.tint)
+                                .cornerRadius(12)
+                            }
+                        } else {
+                            HStack {
+                                Text("Added to Budget")
+                                Image(systemName: "checkmark.circle.fill")
+                            }
+                            .font(.system(size: 17))
+                            .foregroundColor(Theme.tint)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(Theme.surfaceBackground)
+                            .cornerRadius(12)
+                        }
+                        
+                        // Pin/Unpin Button
+                        Button(action: {
+                            onPinChanged(category.id, !isPinned)
+                            isPresented = false
+                        }) {
+                            HStack {
+                                Image(systemName: isPinned ? "pin.slash.fill" : "pin.fill")
+                                Text(isPinned ? "Unpin" : "Pin")
+                            }
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(Theme.surfaceBackground)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
                         }
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 16)
+                    .background(Theme.background)
                 }
-                
-                // Bottom Action Buttons
-                VStack(spacing: 12) {
-                    // Add to Budget Button
-                    if !isInBudget {
-                        Button(action: { showAddToBudgetConfirmation = true }) {
-                            HStack {
-                                Text("Budget")
-                                Image(systemName: "plus.circle.fill")
-                            }
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(Theme.tint)
-                            .cornerRadius(12)
-                        }
-                    } else {
-                        HStack {
-                            Text("Added to Budget")
-                            Image(systemName: "checkmark.circle.fill")
-                        }
-                        .font(.system(size: 17))
-                        .foregroundColor(Theme.tint)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(Theme.surfaceBackground)
-                        .cornerRadius(12)
-                    }
-                    
-                    // Pin/Unpin Button
-                    Button(action: {
-                        onPinChanged(category.id, !isPinned)
-                        isPresented = false
-                    }) {
-                        HStack {
-                            Image(systemName: isPinned ? "pin.slash.fill" : "pin.fill")
-                            Text(isPinned ? "Unpin" : "Pin")
-                        }
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(Theme.surfaceBackground)
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                        )
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
                 .background(Theme.background)
+                .cornerRadius(20)
+                .padding(.horizontal, 20)
+                Spacer()
             }
-            .background(Theme.background)
-            .cornerRadius(20)
-            .frame(maxHeight: .infinity, alignment: .bottom)
             
             // Add to Budget Confirmation Sheet
             if showAddToBudgetConfirmation {
