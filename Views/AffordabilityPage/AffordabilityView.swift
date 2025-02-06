@@ -7,9 +7,9 @@ struct AffordabilityView: View {
     @ObservedObject var model: AffordabilityModel
     @StateObject private var store = BudgetCategoryStore.shared
     @State private var searchText = ""
-    @State private var pinnedCategories: Set<String> = []
+    @State private var pinnedCategories: Set<String> = [] // Add this
+    @State private var selectedPeriod: IncomePeriod = .annual // Add this
     @FocusState private var isSearchFocused: Bool
-    @State private var selectedPeriod: IncomePeriod = .annual
     let payPeriod: PayPeriod
     
     private var filteredCategories: [BudgetCategory] {
@@ -39,207 +39,159 @@ struct AffordabilityView: View {
     }
     
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
-                // Title Section
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("What You Can Afford")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(Theme.label)
-                    Text("This is what you can afford based on your income")
-                        .font(.system(size: 15))
-                        .foregroundColor(Theme.secondaryLabel)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 16)
-                .background(Theme.background)
-                
-                // Search and Content Section
-                Section(header: searchBar) {
-                    // Income Display
-                    VStack {
-                        HStack(alignment: .center) {
-                            HStack(spacing: 8) {
-                                Text("Your Income")
-                                    .font(.system(size: 17))
-                                    .foregroundColor(Theme.label)
-                                
-                                // Enhanced Period Menu
-                                Menu {
-                                    ForEach(IncomePeriod.allCases, id: \.self) { period in
-                                        Button(action: {
-                                            withAnimation {
-                                                selectedPeriod = period
-                                            }
-                                        }) {
-                                            if period == selectedPeriod {
-                                                Label(period.rawValue, systemImage: "checkmark")
-                                            } else {
-                                                Text(period.rawValue)
-                                            }
-                                        }
-                                    }
-                                } label: {
-                                    HStack(spacing: 4) {
-                                        Text(selectedPeriod.rawValue)
-                                        Image(systemName: "chevron.down")
-                                            .font(.system(size: 12))
-                                    }
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Theme.tint)
-                                    .cornerRadius(8)
-                                }
-                            }
-                            
-                            Spacer()
-                            
-                            Text(formatCurrency(displayedAmount))
-                                .font(.system(size: 28, weight: .bold))
-                                .foregroundColor(Theme.label)
-                        }
-                        .padding(16)
-                        .background(Theme.surfaceBackground)
-                        .cornerRadius(16)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
+            ScrollView {
+                LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    // Title Section
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("What You Can Afford")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(Theme.label)
+                        Text("This is what you can afford based on your income")
+                            .font(.system(size: 15))
+                            .foregroundColor(Theme.secondaryLabel)
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 16)
+                    .background(Theme.background)
                     
-                    // Pinned Categories Section
-                    if !pinnedCategories.isEmpty {
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("PINNED")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(Theme.tint)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Theme.mutedGreen.opacity(0.2))
-                                .cornerRadius(4)
-                                .padding(.horizontal, 20)
-                                .padding(.top, 16)
-                            
-                            VStack(spacing: 0) {
-                                ForEach(pinnedCategoryList) { category in
-                                    CategoryRowView(
-                                        category: category,
-                                        amount: model.calculateAffordableAmount(for: category),
-                                        displayType: category.displayType,
-                                        isPinned: true,
-                                        onAssumptionsChanged: model.updateAssumptions,
-                                        onPinChanged: { id, shouldPin in
-                                            withAnimation(.easeInOut) {
-                                                if shouldPin {
-                                                    pinnedCategories.insert(id)
-                                                } else {
-                                                    pinnedCategories.remove(id)
-                                                }
-                                            }
-                                        }
-                                    )
+                    // Single Section with search bar and categories
+                    Section(header: searchBar) {
+                        VStack(spacing: 16) {
+                            // Pinned Categories Section
+                            if !pinnedCategories.isEmpty {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    Text("PINNED")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundColor(Theme.tint)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Theme.mutedGreen.opacity(0.2))
+                                        .cornerRadius(4)
+                                        .padding(.horizontal, 20)
+                                        .padding(.top, 16)
                                     
-                                    if category.id != pinnedCategoryList.last?.id {
-                                        Divider()
-                                            .background(Theme.separator)
-                                            .padding(.horizontal, 20)
-                                    }
-                                }
-                            }
-                            
-                            Divider()
-                                .background(Theme.separator)
-                                .padding(.horizontal, 20)
-                        }
-                    }
-                    
-                    // Main Categories List
-                    VStack(spacing: 0) {
-                        if filteredCategories.isEmpty {
-                            Text("No matching categories found")
-                                .font(.system(size: 15))
-                                .foregroundColor(Theme.secondaryLabel)
-                                .padding(.vertical, 20)
-                        } else {
-                            ForEach(unpinnedCategories) { category in
-                                CategoryRowView(
-                                    category: category,
-                                    amount: model.calculateAffordableAmount(for: category),
-                                    displayType: category.displayType,
-                                    isPinned: false,
-                                    onAssumptionsChanged: model.updateAssumptions,
-                                    onPinChanged: { id, shouldPin in
-                                        withAnimation(.easeInOut) {
-                                            if shouldPin {
-                                                pinnedCategories.insert(id)
-                                            } else {
-                                                pinnedCategories.remove(id)
+                                    VStack(spacing: 0) {
+                                        ForEach(pinnedCategoryList) { category in
+                                            CategoryRowView(
+                                                category: category,
+                                                amount: model.calculateAffordableAmount(for: category),
+                                                displayType: category.displayType,
+                                                isPinned: true,
+                                                onAssumptionsChanged: model.updateAssumptions,
+                                                onPinChanged: { id, shouldPin in
+                                                    withAnimation(.easeInOut) {
+                                                        if shouldPin {
+                                                            pinnedCategories.insert(id)
+                                                        } else {
+                                                            pinnedCategories.remove(id)
+                                                        }
+                                                    }
+                                                }
+                                            )
+                                            
+                                            if category.id != pinnedCategoryList.last?.id {
+                                                Divider()
+                                                    .background(Theme.separator)
+                                                    .padding(.horizontal, 20)
                                             }
                                         }
                                     }
-                                )
-                                
-                                if category.id != unpinnedCategories.last?.id {
+                                    
                                     Divider()
                                         .background(Theme.separator)
                                         .padding(.horizontal, 20)
                                 }
                             }
+                            
+                            // Main Categories List
+                            VStack(spacing: 0) {
+                                if unpinnedCategories.isEmpty {
+                                    Text("No matching categories found")
+                                        .font(.system(size: 15))
+                                        .foregroundColor(Theme.secondaryLabel)
+                                        .padding(.vertical, 20)
+                                } else {
+                                    ForEach(unpinnedCategories) { category in
+                                        CategoryRowView(
+                                            category: category,
+                                            amount: model.calculateAffordableAmount(for: category),
+                                            displayType: category.displayType,
+                                            isPinned: false,
+                                            onAssumptionsChanged: model.updateAssumptions,
+                                            onPinChanged: { id, shouldPin in
+                                                withAnimation(.easeInOut) {
+                                                    if shouldPin {
+                                                        pinnedCategories.insert(id)
+                                                    } else {
+                                                        pinnedCategories.remove(id)
+                                                    }
+                                                }
+                                            }
+                                        )
+                                        
+                                        if category.id != unpinnedCategories.last?.id {
+                                            Divider()
+                                                .background(Theme.separator)
+                                                .padding(.horizontal, 20)
+                                        }
+                                    }
+                                }
+                            }
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Theme.surfaceBackground)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(Theme.separator, lineWidth: 1)
+                            )
                         }
+                        .padding(.horizontal, 16)
                     }
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Theme.surfaceBackground)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Theme.separator, lineWidth: 1)
-                    )
-                    .padding(.horizontal, 16)
-                }
-                .padding(.bottom, 16)
-            }
-        }
-        .background(Theme.background)
-        .gesture(
-            TapGesture()
-                .onEnded { _ in
-                    isSearchFocused = false
-                }
-        )
-    }
-    
-    private var searchBar: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(Theme.secondaryLabel)
-            TextField("Search categories", text: $searchText)
-                .focused($isSearchFocused)
-                .font(.system(size: 17))
-                .foregroundColor(Theme.label)
-                .textInputAutocapitalization(.never)
-                .disableAutocorrection(true)
-                .submitLabel(.search)
-                .placeholder(when: searchText.isEmpty) {
-                    Text("Search categories")
-                        .foregroundColor(Theme.label.opacity(0.6))
-                }
-            
-            if !searchText.isEmpty {
-                Button(action: {
-                    searchText = ""
-                    isSearchFocused = false
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(Theme.secondaryLabel)
                 }
             }
+            .background(Theme.background)
+            .gesture(
+                TapGesture()
+                    .onEnded { _ in
+                        isSearchFocused = false
+                    }
+            )
         }
-        .padding(12)
-        .background(Theme.elevatedBackground)
-        .cornerRadius(12)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(Theme.background)
+        
+        private var searchBar: some View {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(Theme.secondaryLabel)
+                TextField("Search categories", text: $searchText)
+                    .focused($isSearchFocused)
+                    .font(.system(size: 17))
+                    .foregroundColor(Theme.label)
+                    .textInputAutocapitalization(.never)
+                    .disableAutocorrection(true)
+                    .submitLabel(.search)
+                    .placeholder(when: searchText.isEmpty) {
+                        Text("Search categories")
+                            .foregroundColor(Theme.label.opacity(0.6))
+                    }
+                
+                if !searchText.isEmpty {
+                    Button(action: {
+                        searchText = ""
+                        isSearchFocused = false
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(Theme.secondaryLabel)
+                    }
+                }
+            }
+            .padding(12)
+            .background(Theme.elevatedBackground)
+            .cornerRadius(12)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Theme.background)
+        }
     }
     
     private func formatCurrency(_ value: Double) -> String {
@@ -248,7 +200,7 @@ struct AffordabilityView: View {
         formatter.maximumFractionDigits = 0
         return formatter.string(from: NSNumber(value: value)) ?? "$0"
     }
-}
+
 // MARK: - AssumptionSliderView
 struct AssumptionSliderView: View {
     let title: String

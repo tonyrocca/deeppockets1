@@ -42,10 +42,8 @@ struct MainContentView: View {
                         // Page 1: Affordability
                         ScrollView {
                             LazyVStack(spacing: 0) {
-                                Section(header: affordabilityHeader) {
-                                    AffordabilityView(model: model, payPeriod: payPeriod)
-                                        .environmentObject(budgetModel)
-                                }
+                                AffordabilityView(model: model, payPeriod: payPeriod)
+                                    .environmentObject(budgetModel)
                             }
                         }
                         .frame(width: geometry.size.width)
@@ -95,7 +93,7 @@ struct MainContentView: View {
                 monthlyIncome: $model.monthlyIncome,
                 payPeriod: $payPeriod
             )
-            .environmentObject(userModel) // Make sure userModel is passed here
+            .environmentObject(userModel)
         }
     }
     
@@ -116,12 +114,6 @@ struct MainContentView: View {
             }
         }
         .padding(.horizontal, 16)
-    }
-    
-    // MARK: - Affordability Header
-    private var affordabilityHeader: some View {
-        StickyIncomeHeader(monthlyIncome: model.monthlyIncome, payPeriod: payPeriod)
-            .background(Theme.background)
     }
     
     // MARK: - Overlay Content

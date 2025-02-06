@@ -40,7 +40,6 @@
 			membershipExceptions = (
 				AffordabilityPage/AffordabilityView.swift,
 				AffordabilityPage/CategoryDetailModal.swift,
-				AffordabilityPage/IncomeDisplay.swift,
 				BudgetPage/BudgetBuilderModal.swift,
 				BudgetPage/BudgetView.swift,
 				HomeView/ActionButtonView.swift,
