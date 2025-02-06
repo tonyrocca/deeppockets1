@@ -450,7 +450,27 @@ struct CategoryRowView: View {
                 .background(Theme.elevatedBackground)
             }
         }
-        .background(isPinned ? Theme.mutedGreen.opacity(0.1) : Color.clear)
+        .background(
+            Group {
+                if isPinned {
+                    // Create a layered background effect
+                    ZStack {
+                        // Base layer with slightly stronger opacity
+                        Theme.mutedGreen.opacity(0.2)
+                        
+                        // Left border indicator
+                        HStack {
+                            Rectangle()
+                                .fill(Theme.tint)
+                                .frame(width: 4)
+                            Spacer()
+                        }
+                    }
+                } else {
+                    Color.clear
+                }
+            }
+        )
         .animation(.easeInOut, value: isPinned)
         .fullScreenCover(isPresented: $showFullScreenDetails) {
             CategoryDetailModal(
