@@ -43,8 +43,8 @@ struct AffordabilityView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Title Section
-            Text("What you can afford based on your income...")
-                .font(.system(size: 28, weight: .bold))
+            Text("Below is what you can afford based on your income...")
+                .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
