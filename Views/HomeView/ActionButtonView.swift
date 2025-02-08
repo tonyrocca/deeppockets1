@@ -35,6 +35,18 @@ struct ActionButtonMenu: View {
                 if isShowing {
                     // Menu Container
                     VStack(spacing: 12) {
+                        // New Edit Profile Button
+                        menuButton(
+                            title: "Edit Profile",
+                            icon: "person.fill",
+                            description: "Update your personal details",
+                            action: {
+                                // Placeholder for edit profile action
+                                print("Edit Profile tapped")
+                            },
+                            customColor: Color.blue.opacity(0.2)
+                        )
+                        
                         menuButton(
                             title: "What can I afford?",
                             icon: "cart.fill",
@@ -43,7 +55,7 @@ struct ActionButtonMenu: View {
                         )
                         
                         menuButton(
-                            title: "Can I manage this debt?",
+                            title: "Can I pay this debt?",
                             icon: "creditcard.fill",
                             description: "Calculate your debt payments",
                             action: onDebtTap
@@ -55,15 +67,6 @@ struct ActionButtonMenu: View {
                             description: "Plan your savings strategy",
                             action: onSavingsTap
                         )
-                    }
-                    .offset(y: menuOffset)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 8)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .onAppear {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                            menuOffset = 0
-                        }
                     }
                 }
                 
@@ -96,7 +99,7 @@ struct ActionButtonMenu: View {
         }
     }
     
-    private func menuButton(title: String, icon: String, description: String, action: @escaping () -> Void) -> some View {
+    private func menuButton(title: String, icon: String, description: String, action: @escaping () -> Void, customColor: Color? = nil) -> some View {
         Button(action: {
             withAnimation {
                 isShowing = false
@@ -105,12 +108,12 @@ struct ActionButtonMenu: View {
         }) {
             HStack(spacing: 16) {
                 Circle()
-                    .fill(Theme.tint.opacity(0.2))
+                    .fill(customColor ?? Theme.tint.opacity(0.2))
                     .frame(width: 40, height: 40)
                     .overlay(
                         Image(systemName: icon)
                             .font(.system(size: 16))
-                            .foregroundColor(Theme.tint)
+                            .foregroundColor(customColor != nil ? .blue : Theme.tint)
                     )
                 
                 VStack(alignment: .leading, spacing: 2) {
