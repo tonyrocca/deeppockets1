@@ -85,20 +85,25 @@ struct CategoryDetailModal: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("ALLOCATION OF SALARY")
                                 .sectionHeader()
+                                .padding(.horizontal, 20)
                             Text(category.formattedAllocation)
                                 .font(.system(size: 17))
                                 .foregroundColor(Theme.label)
+                                .padding(.horizontal, 20)
                         }
+
                         
                         // Monthly Allocation Section (if applicable)
                         if displayType == .total {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("ESTIMATED MONTHLY ALLOCATION")
                                     .sectionHeader()
+                                    .padding(.horizontal, 20)
                                 let monthlyAmount = amount / 12
                                 Text(formatCurrency(monthlyAmount))
                                     .font(.system(size: 17))
                                     .foregroundColor(Theme.label)
+                                    .padding(.horizontal, 20)
                             }
                         }
                         
@@ -106,10 +111,12 @@ struct CategoryDetailModal: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("DESCRIPTION")
                                 .sectionHeader()
+                                .padding(.horizontal, 20)
                             Text(category.description)
                                 .font(.system(size: 15))
                                 .foregroundColor(Theme.secondaryLabel)
                                 .fixedSize(horizontal: false, vertical: true)
+                                .padding(.horizontal, 20)
                         }
                         
                         // Assumptions Section
@@ -117,6 +124,7 @@ struct CategoryDetailModal: View {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("ASSUMPTIONS")
                                     .sectionHeader()
+                                    .padding(.horizontal, 20)
                                 
                                 ForEach(localAssumptions.indices, id: \.self) { index in
                                     AssumptionView(
@@ -125,6 +133,7 @@ struct CategoryDetailModal: View {
                                             onAssumptionsChanged(category.id, localAssumptions)
                                         }
                                     )
+                                    .padding(.horizontal, 20)
                                 }
                             }
                         }
