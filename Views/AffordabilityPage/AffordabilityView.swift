@@ -51,7 +51,8 @@ struct AffordabilityView: View {
                             .foregroundColor(Theme.secondaryLabel)
                     }
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 16)
+                    .padding(.vertical, 24)
+                    .padding(.top, 0)
                     .background(Theme.background)
                     
                     // Single Section with search bar and categories
