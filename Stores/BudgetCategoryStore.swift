@@ -95,6 +95,34 @@ class BudgetCategoryStore: ObservableObject {
                 ]
             ),
             BudgetCategory(
+                            id: "car",
+                            name: "Car",
+                            emoji: "🚗",
+                            description: "Total purchase price for a car, including financing costs and fees.",
+                            allocationPercentage: 0.15,
+                            displayType: .total,
+                            assumptions: [
+                                CategoryAssumption(
+                                    title: "Down Payment",
+                                    value: "10",
+                                    inputType: .percentageSlider(step: 1),
+                                    description: "Percentage paid upfront."
+                                ),
+                                CategoryAssumption(
+                                    title: "Interest Rate",
+                                    value: "5.0",
+                                    inputType: .percentageSlider(step: 0.25),
+                                    description: "Annual car loan interest rate."
+                                ),
+                                CategoryAssumption(
+                                    title: "Sales Tax Rate",
+                                    value: "8.0",
+                                    inputType: .percentageSlider(step: 0.1),
+                                    description: "Sales tax applied to the purchase price."
+                                )
+                            ]
+                        ),
+            BudgetCategory(
                 id: "home_maintenance",
                 name: "Home Maintenance",
                 emoji: "🔨",
