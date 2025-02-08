@@ -43,13 +43,17 @@ struct AffordabilityView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Title Section
-            Text("Below is what you can afford based on your income...")
+            Text("Affordability")
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
+                .padding(.top, 4)
                 .background(Theme.background)
+            Text("Below is what you can afford bassed on your income")
+                .font(.system(size: 16))
+                .foregroundColor(Theme.secondaryLabel)
             
             // Fixed Search Bar
             searchBar
