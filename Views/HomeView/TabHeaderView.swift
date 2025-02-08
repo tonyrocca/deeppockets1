@@ -7,12 +7,14 @@ struct TabHeaderView: View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 TabButton(
+                    icon: "💳",
                     title: "Affordability",
                     isSelected: selectedTab == 0,
                     action: { selectedTab = 0 }
                 )
                 
                 TabButton(
+                    icon: "💰",
                     title: "Budget",
                     isSelected: selectedTab == 1,
                     action: { selectedTab = 1 }
@@ -20,33 +22,40 @@ struct TabHeaderView: View {
             }
             .frame(height: 44)
             
-            // Add small padding below the buttons
-            Color.clear
-                .frame(height: 12)
-            
+            // Black divider line
+            Rectangle()
+                .fill(Color.black.opacity(0.1))
+                .frame(height: 1)
         }
         .background(Theme.darkBackground)
     }
 }
 
 struct TabButton: View {
+    let icon: String
     let title: String
     let isSelected: Bool
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Text(icon)
+                    .font(.system(size: 20))
                 Text(title)
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundColor(isSelected ? .white : .gray)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 43)
-                
+                    .font(.system(size: 17, weight: isSelected ? .bold : .medium))
+            }
+            .foregroundColor(isSelected ? .white : .gray)
+            .frame(maxWidth: .infinity)
+            .frame(height: 43)
+            .background(isSelected ? Theme.darkBackground : Theme.darkBackground)
+            .overlay(
                 Rectangle()
                     .fill(isSelected ? .white : .clear)
-                    .frame(height: 1)
-            }
+                    .frame(height: 2)
+                    .padding(.horizontal, 8),
+                alignment: .bottom
+            )
         }
     }
 }
