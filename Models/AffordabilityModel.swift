@@ -3,21 +3,24 @@ import SwiftUI
 class AffordabilityModel: ObservableObject {
     @Published var monthlyIncome: Double = 0
     @Published var categories: [BudgetCategory] = []
+    @Published var affordabilityAmounts: [String: Double] = [:]  // Add this line
     private let store = BudgetCategoryStore.shared
     
-    // Make updateAssumptions public and properly marked for SwiftUI
-        @Published var assumptions: [String: [CategoryAssumption]] = [:]
+    @Published var assumptions: [String: [CategoryAssumption]] = [:]
         
-        func updateAssumptions(for categoryId: String, assumptions: [CategoryAssumption]) {
-            // Update the store
-            if let index = store.categories.firstIndex(where: { $0.id == categoryId }) {
-                store.categories[index].assumptions = assumptions
-                // Update local state
-                self.assumptions[categoryId] = assumptions
-                // Notify observers
-                objectWillChange.send()
+    func updateAssumptions(for categoryId: String, assumptions: [CategoryAssumption]) {
+                // Update the store
+                if let index = store.categories.firstIndex(where: { $0.id == categoryId }) {
+                    store.categories[index].assumptions = assumptions
+                    // Update local state
+                    self.assumptions[categoryId] = assumptions
+                    // Calculate new amount based on updated assumptions
+                    let newAmount = calculateAffordableAmount(for: store.categories[index])
+                    store.categories[index].recommendedAmount = newAmount
+                    // Notify observers
+                    objectWillChange.send()
+                }
             }
-        }
     
     // Financial Constants
     private let constants = FinancialConstants(
