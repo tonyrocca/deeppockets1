@@ -211,6 +211,8 @@ struct AffordabilityView: View {
 
 
 // MARK: - AssumptionSliderView
+import SwiftUI
+
 struct AssumptionSliderView: View {
     let title: String
     let range: ClosedRange<Double>
@@ -219,50 +221,162 @@ struct AssumptionSliderView: View {
     @Binding var value: String
     let onChanged: (String) -> Void
     
-    private var displayValue: String {
-        if title == "Months Coverage" {
-            // For months coverage, show just the number without decimal places
-            if let doubleValue = Double(value) {
-                return String(format: "%.0f", doubleValue)
-            }
-        }
-        return value + suffix
+    @State private var isEditing = false
+    @FocusState private var isFocused: Bool
+    
+    private var numericValue: Double {
+        Double(value) ?? range.lowerBound
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        VStack(alignment: .leading, spacing: 16) {
+            // Title and Value Row
+            HStack(alignment: .center) {
                 Text(title)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(Theme.label)
+                    .font(.system(size: 17))
+                    .foregroundColor(.white)
+                
                 Spacer()
-                if title == "Months Coverage" {
-                    Text("\(displayValue) months")
-                        .font(.system(size: 15))
-                        .foregroundColor(Theme.label)
-                } else {
-                    Text(displayValue)
-                        .font(.system(size: 15))
-                        .foregroundColor(Theme.label)
+                
+                // Value Box
+                Button(action: { startEditing() }) {
+                    HStack(spacing: 2) {
+                        if isEditing {
+                            TextField("", text: $value)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .focused($isFocused)
+                                .font(.system(size: 17, weight: .medium))
+                                .foregroundColor(.white)
+                                .frame(width: 60)
+                        } else {
+                            Text(String(format: "%.2f", numericValue))
+                                .font(.system(size: 17, weight: .medium))
+                                .foregroundColor(.white)
+                                .frame(width: 60, alignment: .trailing)
+                        }
+                        
+                        Text(suffix)
+                            .font(.system(size: 17))
+                            .foregroundColor(Theme.secondaryLabel)
+                            .frame(width: 30, alignment: .leading)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Theme.surfaceBackground)
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(isEditing ? Theme.tint : Color.white.opacity(0.2), lineWidth: 1)
+                    )
                 }
             }
             
-            Slider(
-                value: Binding(
-                    get: { Double(value) ?? range.lowerBound },
-                    set: { newValue in
-                        let rounded = (newValue / step).rounded() * step
-                        value = String(format: "%.2f", rounded)
-                        onChanged(value)
-                    }
-                ),
-                in: range,
-                step: step
-            )
-            .tint(Theme.tint)
+            // Slider Section
+            VStack(spacing: 8) {
+                Slider(
+                    value: Binding(
+                        get: { numericValue },
+                        set: { newValue in
+                            let rounded = (newValue / step).rounded() * step
+                            value = String(format: "%.2f", rounded)
+                            onChanged(value)
+                        }
+                    ),
+                    in: range,
+                    step: step
+                )
+                .tint(Theme.tint)
+                
+                // Range Labels
+                HStack {
+                    Text("\(String(format: "%.2f", range.lowerBound))\(suffix)")
+                        .font(.system(size: 13))
+                        .foregroundColor(Theme.secondaryLabel)
+                    
+                    Spacer()
+                    
+                    Text("\(String(format: "%.2f", range.upperBound))\(suffix)")
+                        .font(.system(size: 13))
+                        .foregroundColor(Theme.secondaryLabel)
+                }
+            }
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    commitEdit()
+                }
+            }
         }
     }
+    
+    private func startEditing() {
+        value = String(format: "%.2f", numericValue)
+        isEditing = true
+        isFocused = true
+    }
+    
+    private func commitEdit() {
+        guard let newValue = Double(value) else {
+            isEditing = false
+            return
+        }
+        
+        let clampedValue = min(max(newValue, range.lowerBound), range.upperBound)
+        value = String(format: "%.2f", (clampedValue / step).rounded() * step)
+        onChanged(value)
+        
+        isEditing = false
+        isFocused = false
+    }
 }
+
+// Preview
+#Preview {
+    ZStack {
+        Theme.background.ignoresSafeArea()
+        VStack(spacing: 24) {
+            Text("ASSUMPTIONS")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(Theme.tint)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
+            AssumptionSliderView(
+                title: "Down Payment",
+                range: 0...100,
+                step: 0.01,
+                suffix: "%",
+                value: .constant("20.00")
+            ) { newValue in
+                print("Value changed to: \(newValue)")
+            }
+            
+            AssumptionSliderView(
+                title: "Interest Rate",
+                range: 0...20,
+                step: 0.01,
+                suffix: "%",
+                value: .constant("7.00")
+            ) { newValue in
+                print("Value changed to: \(newValue)")
+            }
+            
+            AssumptionSliderView(
+                title: "Property Tax Rate",
+                range: 0...5,
+                step: 0.01,
+                suffix: "%",
+                value: .constant("1.10")
+            ) { newValue in
+                print("Value changed to: \(newValue)")
+            }
+        }
+        .padding()
+    }
+}
+
 
 // MARK: - CategoryRowView (Updated with fullScreenCover for details)
 struct CategoryRowView: View {
