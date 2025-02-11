@@ -48,12 +48,12 @@ struct AffordabilityView: View {
                 .background(Theme.background)
             
             // Section Title styled like a header
-            Text("What you can afford based on your income")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 12)
+           // Text("What you can afford based on your income")
+            //    .font(.system(size: 20, weight: .semibold))
+            //    .foregroundColor(.white)
+            //    .frame(maxWidth: .infinity, alignment: .leading)
+            //    .padding(.horizontal, 16)
+            //    .padding(.bottom, 12)
             
             // Scrollable Content
             ScrollView {
@@ -63,7 +63,7 @@ struct AffordabilityView: View {
                         // Pinned Categories Section
                         if !pinnedCategories.isEmpty {
                             VStack(alignment: .leading, spacing: 16) {
-                                Text("PINNED")
+                                Text("PINNED CATEGORIES")
                                     .font(.system(size: 13, weight: .bold))
                                     .foregroundColor(Theme.tint)
                                     .padding(.horizontal, 8)
@@ -105,47 +105,59 @@ struct AffordabilityView: View {
                             }
                         }
                         
-                        // Main Categories List
-                        VStack(spacing: 0) {
-                            if unpinnedCategories.isEmpty {
-                                Text("No matching categories found")
-                                    .font(.system(size: 15))
-                                    .foregroundColor(Theme.secondaryLabel)
-                                    .padding(.vertical, 20)
-                            } else {
-                                ForEach(unpinnedCategories) { category in
-                                    CategoryRowView(
-                                        category: category,
-                                        model: model,  // Pass the model directly
-                                        displayType: category.displayType,
-                                        isPinned: false,
-                                        onPinChanged: { id, shouldPin in
-                                            withAnimation(.easeInOut) {
-                                                if shouldPin {
-                                                    pinnedCategories.insert(id)
-                                                } else {
-                                                    pinnedCategories.remove(id)
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("WHAT YOU CAN AFFORD BASED ON INCOME")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(Theme.tint)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Theme.mutedGreen.opacity(0.2))
+                                .cornerRadius(4)
+                                .padding(.horizontal, 10)
+                                .padding(.top, 0)
+                            
+                            // Main Categories List
+                            VStack(spacing: 0) {
+                                if unpinnedCategories.isEmpty {
+                                    Text("No matching categories found")
+                                        .font(.system(size: 15))
+                                        .foregroundColor(Theme.secondaryLabel)
+                                        .padding(.vertical, 20)
+                                } else {
+                                    ForEach(unpinnedCategories) { category in
+                                        CategoryRowView(
+                                            category: category,
+                                            model: model,  // Pass the model directly
+                                            displayType: category.displayType,
+                                            isPinned: false,
+                                            onPinChanged: { id, shouldPin in
+                                                withAnimation(.easeInOut) {
+                                                    if shouldPin {
+                                                        pinnedCategories.insert(id)
+                                                    } else {
+                                                        pinnedCategories.remove(id)
+                                                    }
                                                 }
                                             }
+                                        )
+                                        
+                                        if category.id != unpinnedCategories.last?.id {
+                                            Divider()
+                                                .background(Theme.separator)
+                                                .padding(.horizontal, 20)
                                         }
-                                    )
-                                    
-                                    if category.id != unpinnedCategories.last?.id {
-                                        Divider()
-                                            .background(Theme.separator)
-                                            .padding(.horizontal, 20)
                                     }
                                 }
                             }
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Theme.surfaceBackground)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(Theme.separator, lineWidth: 1)
+                            )
                         }
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Theme.surfaceBackground)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Theme.separator, lineWidth: 1)
-                        )
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
