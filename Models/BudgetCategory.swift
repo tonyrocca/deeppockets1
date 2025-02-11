@@ -20,6 +20,20 @@ enum AmountDisplayType {
     case total
 }
 
+enum CategoryType {
+    case housing
+    case transportation
+    case savings
+    case debt
+    case utilities
+    case food
+    case entertainment
+    case insurance
+    case education
+    case personal
+    case other
+}
+
 struct BudgetCategory: Identifiable {
     let id: String
     let name: String
@@ -29,7 +43,14 @@ struct BudgetCategory: Identifiable {
     var recommendedAmount: Double = 0
     let displayType: AmountDisplayType
     var assumptions: [CategoryAssumption]
-    
+    let type: CategoryType  // Added `type` to categorize affordability logic
+
+    // Optional Properties (Fixing missing `savingsGoal` issue)
+    var savingsGoal: Double?
+    var savingsTimeline: Int?
+    var debtAmount: Double?
+    var debtInterestRate: Double?
+
     var formattedAllocation: String {
         let percentage = allocationPercentage * 100
         return String(format: "%.1f%%", percentage)
@@ -51,64 +72,60 @@ extension CategoryAssumption {
 
 extension BudgetCategory {
     mutating func calculateRecommendedAmount(monthlyIncome: Double) {
-        switch displayType {
-        case .monthly:
-            recommendedAmount = monthlyIncome * allocationPercentage
-            
-        case .total:
-            switch id {
-            case "home":
-                // Complex home affordability calculation
-                let monthlyPayment = monthlyIncome * allocationPercentage
-                if let interestRateStr = assumptions.first(where: { $0.title == "Interest Rate" })?.value,
-                   let downPaymentStr = assumptions.first(where: { $0.title == "Down Payment" })?.value,
-                   let interestRate = Double(interestRateStr),
-                   let downPayment = Double(downPaymentStr) {
-                    
-                    let monthlyRate = (interestRate / 100) / 12
-                    let numberOfPayments = 30.0 * 12 // 30 year fixed
-                    
-                    if monthlyRate > 0 {
-                        let loanAmount = monthlyPayment * ((pow(1 + monthlyRate, numberOfPayments) - 1) / (monthlyRate * pow(1 + monthlyRate, numberOfPayments)))
-                        recommendedAmount = loanAmount / (1 - (downPayment / 100))
-                    } else {
-                        recommendedAmount = monthlyPayment * numberOfPayments
-                    }
-                } else {
-                    recommendedAmount = monthlyPayment * 12
-                }
-                
-            case "vacation":
-                // Simple yearly calculation
-                recommendedAmount = monthlyIncome * allocationPercentage * 12
-                
-                // Apply multiplier based on destination type
-                if let destinationType = assumptions.first(where: { $0.title == "Destination Type" })?.value {
-                    switch destinationType.lowercased() {
-                    case "international":
-                        recommendedAmount *= 2.0
-                    case "luxury":
-                        recommendedAmount *= 3.0
-                    default: // domestic
-                        break
-                    }
-                }
-                
-            case "college_savings":
-                // Calculate based on years to college
-                if let yearsToStr = assumptions.first(where: { $0.title == "Years to College" })?.value,
-                   let yearsTo = Double(yearsToStr) {
-                    let baseAmount = monthlyIncome * allocationPercentage * 12
-                    let inflation = 0.04 // 4% education inflation
-                    recommendedAmount = baseAmount * pow(1 + inflation, yearsTo)
-                } else {
-                    recommendedAmount = monthlyIncome * allocationPercentage * 12
-                }
-                
-            default:
-                // Default total calculation
-                recommendedAmount = monthlyIncome * allocationPercentage * 12
-            }
+        switch type {
+        case .housing:
+            recommendedAmount = calculateHousingAffordability(monthlyIncome: monthlyIncome)
+
+        case .transportation:
+            recommendedAmount = calculateCarAffordability(monthlyIncome: monthlyIncome)
+
+        case .savings:
+            recommendedAmount = calculateSavingsGoal(monthlyIncome: monthlyIncome)
+
+        case .debt:
+            recommendedAmount = calculateDebtRepayment(monthlyIncome: monthlyIncome)
+
+        case .utilities, .food, .entertainment, .insurance, .education, .personal, .other:
+            recommendedAmount = monthlyIncome * allocationPercentage * 12
         }
+    }
+
+    private func calculateHousingAffordability(monthlyIncome: Double) -> Double {
+        guard let interestRateStr = assumptions.first(where: { $0.title == "Interest Rate" })?.value,
+              let downPaymentStr = assumptions.first(where: { $0.title == "Down Payment" })?.value,
+              let interestRate = Double(interestRateStr),
+              let downPayment = Double(downPaymentStr) else {
+            return monthlyIncome * 4 // Default to 4x income if missing values
+        }
+        
+        let monthlyPayment = monthlyIncome * allocationPercentage
+        let monthlyRate = (interestRate / 100) / 12
+        let numberOfPayments = 30.0 * 12
+
+        let loanAmount = monthlyPayment * ((pow(1 + monthlyRate, numberOfPayments) - 1) /
+                                           (monthlyRate * pow(1 + monthlyRate, numberOfPayments)))
+        
+        return loanAmount / (1 - (downPayment / 100))
+    }
+
+    private func calculateCarAffordability(monthlyIncome: Double) -> Double {
+        let baseCarBudget = monthlyIncome * allocationPercentage * 12
+        let depreciation = 0.15 // Annual depreciation
+        return baseCarBudget * (1 - depreciation)
+    }
+
+    private func calculateSavingsGoal(monthlyIncome: Double) -> Double {
+        guard let savingsGoal = savingsGoal, let monthsToSave = savingsTimeline else {
+            return monthlyIncome * allocationPercentage * 12
+        }
+        return min(savingsGoal, monthlyIncome * allocationPercentage * Double(monthsToSave))
+    }
+
+    private func calculateDebtRepayment(monthlyIncome: Double) -> Double {
+        guard let debtAmount = debtAmount, let interestRate = debtInterestRate else {
+            return monthlyIncome * allocationPercentage
+        }
+        let monthlyPayment = (debtAmount * (interestRate / 100)) / 12
+        return max(monthlyPayment, monthlyIncome * allocationPercentage)
     }
 }

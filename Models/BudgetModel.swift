@@ -128,6 +128,8 @@ class BudgetModel: ObservableObject {
     
     func addCustomCategory(name: String, emoji: String, allocation: Double,
                            type: BudgetCategoryType, priority: BudgetCategoryPriority) {
+        let categoryType: CategoryType = (type == .savings) ? .savings : .other
+        
         let newCategory = BudgetCategory(
             id: "custom_\(UUID().uuidString)",
             name: name,
@@ -135,7 +137,8 @@ class BudgetModel: ObservableObject {
             description: "Custom category",
             allocationPercentage: allocation / monthlyIncome,
             displayType: .monthly,
-            assumptions: []
+            assumptions: [],
+            type: categoryType  // ✅ Fixed: Added `type` argument
         )
         
         let newItem = BudgetItem(
