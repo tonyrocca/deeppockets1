@@ -29,10 +29,6 @@ struct MainContentView: View {
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
-                // Custom Navigation Bar
-                customNavigationBar
-                    .padding(.top, 8)
-                
                 // Tab Header
                 TabHeaderView(selectedTab: $selectedTab)
                 
@@ -89,31 +85,9 @@ struct MainContentView: View {
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
         .sheet(isPresented: $showProfile) {
-            ProfileView(
-                monthlyIncome: $model.monthlyIncome,
-                payPeriod: $payPeriod
-            )
-            .environmentObject(userModel)
+            ProfileView(monthlyIncome: $model.monthlyIncome, payPeriod: $payPeriod)
+                .environmentObject(userModel)
         }
-    }
-    
-    // MARK: - Navigation Bar
-    private var customNavigationBar: some View {
-        HStack {
-            Spacer()
-            // Profile Button
-            Button(action: { showProfile = true }) {
-                Circle()
-                    .fill(Theme.surfaceBackground)
-                    .frame(width: 36, height: 36)
-                    .overlay(
-                        Image(systemName: "person.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(Theme.secondaryLabel)
-                    )
-            }
-        }
-        .padding(.horizontal, 16)
     }
     
     // MARK: - Overlay Content
@@ -176,6 +150,8 @@ struct MainContentView: View {
                             showDebtCalculator = true
                         }
                     },
+                    monthlyIncome: $model.monthlyIncome,
+                    payPeriod: $payPeriod,
                     isShowing: $showActionMenu
                 )
                 .padding(.trailing, 16)

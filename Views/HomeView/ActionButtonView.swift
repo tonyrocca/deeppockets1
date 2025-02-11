@@ -5,8 +5,11 @@ struct ActionButtonMenu: View {
     let onAffordabilityTap: () -> Void
     let onSavingsTap: () -> Void
     let onDebtTap: () -> Void
+    @Binding var monthlyIncome: Double
+    @Binding var payPeriod: PayPeriod
+    @State private var showProfile = false
+    @EnvironmentObject private var userModel: UserModel
     @Binding var isShowing: Bool
-    @State private var menuOffset: CGFloat = 100
         
     private let buttonSize: CGFloat = 66 // Increased from 60
         private let menuItemSize: CGFloat = 55 // Increased from 50
