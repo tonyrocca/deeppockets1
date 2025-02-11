@@ -121,6 +121,15 @@ struct DebtCalculatorModal: View {
                                         Text(selected.name)
                                             .foregroundColor(.white)
                                         Spacer()
+                                        Button(action: {
+                                            selectedCategory = nil
+                                            debtAmount = ""
+                                            interestRate = ""
+                                        }) {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .foregroundColor(Theme.secondaryLabel)
+                                                .font(.system(size: 22))
+                                        }
                                     }
                                     .padding()
                                     .background(Theme.surfaceBackground)

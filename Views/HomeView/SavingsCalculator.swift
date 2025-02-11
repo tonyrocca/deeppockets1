@@ -116,6 +116,14 @@ struct SavingsCalculatorModal: View {
                                         Text(selected.name)
                                             .foregroundColor(.white)
                                         Spacer()
+                                        Button(action: {
+                                            selectedCategory = nil
+                                            targetAmount = ""
+                                        }) {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .foregroundColor(Theme.secondaryLabel)
+                                                .font(.system(size: 22))
+                                        }
                                     }
                                     .padding()
                                     .background(Theme.surfaceBackground)
