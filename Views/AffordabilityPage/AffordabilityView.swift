@@ -11,9 +11,11 @@ struct AffordabilityView: View {
     let payPeriod: PayPeriod
     
     private var filteredCategories: [BudgetCategory] {
-        guard !searchText.isEmpty else { return store.categories }
+        guard !searchText.isEmpty else {
+            return store.categories.filter { !isDebtCategory($0) }
+        }
         return store.categories.filter {
-            $0.name.lowercased().contains(searchText.lowercased())
+            !isDebtCategory($0) && $0.name.lowercased().contains(searchText.lowercased())
         }
     }
     
@@ -206,6 +208,11 @@ struct AffordabilityView: View {
         )
         .cornerRadius(12)
         .padding(.horizontal, 16)
+    }
+
+    private func isDebtCategory(_ category: BudgetCategory) -> Bool {
+        let debtCategories = ["credit_cards", "student_loans", "personal_loans", "car_loan", "medical_debt", "mortgage"]
+        return debtCategories.contains(category.id)
     }
     
     private func formatCurrency(_ value: Double) -> String {
