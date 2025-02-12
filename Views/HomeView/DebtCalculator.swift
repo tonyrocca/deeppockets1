@@ -240,6 +240,8 @@ struct DebtCalculatorModal: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 20)
                 }
+                .scrollDismissesKeyboard(.interactively)
+                .ignoresSafeArea(.keyboard)
             }
             .background(Theme.background)
             .cornerRadius(20)
