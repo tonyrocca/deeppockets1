@@ -3,7 +3,7 @@ import SwiftUI
 struct MainContentView: View {
     @StateObject private var model: AffordabilityModel
     @StateObject private var budgetModel: BudgetModel
-    @StateObject private var userModel = UserModel() // Add this line
+    @StateObject private var userModel = UserModel() // Added this line
     @State private var selectedTab = 0
     @State private var showActionMenu = false
     @State private var showAffordabilityCalculator = false
@@ -12,10 +12,10 @@ struct MainContentView: View {
     @State private var showProfile = false
     @Environment(\.dismiss) private var dismiss
     @State private var payPeriod: PayPeriod
-    
-    // This gesture state will track the ongoing drag offset for interactive swiping
+
+    // This gesture state will track the ongoing drag offset for interactive swiping.
     @GestureState private var dragOffset: CGFloat = 0
-    
+
     init(monthlyIncome: Double, payPeriod: PayPeriod) {
         let model = AffordabilityModel()
         model.monthlyIncome = monthlyIncome
@@ -53,10 +53,10 @@ struct MainContentView: View {
                         }
                         .frame(width: geometry.size.width)
                     }
-                    // Calculate the offset from the selected tab plus the interactive drag offset.
+                    // The offset is computed based on the current selected tab plus any drag in progress.
                     .offset(x: -CGFloat(selectedTab) * geometry.size.width + dragOffset)
-                    // Animate any change to selectedTab smoothly.
-                    .animation(.easeOut, value: selectedTab)
+                    // Remove the implicit animation modifier here.
+                    // Instead, animate the state update in the gesture’s onEnded.
                     .gesture(
                         DragGesture()
                             .updating($dragOffset) { value, state, _ in
@@ -64,12 +64,16 @@ struct MainContentView: View {
                             }
                             .onEnded { value in
                                 let threshold: CGFloat = geometry.size.width * 0.3
-                                if value.translation.width < -threshold {
-                                    // Swipe left: move to the next tab if possible.
-                                    selectedTab = min(1, selectedTab + 1)
-                                } else if value.translation.width > threshold {
-                                    // Swipe right: move to the previous tab if possible.
-                                    selectedTab = max(0, selectedTab - 1)
+                                withAnimation(.interactiveSpring(response: 0.5,
+                                                                  dampingFraction: 0.8,
+                                                                  blendDuration: 0.5)) {
+                                    if value.translation.width < -threshold {
+                                        // Swipe left: move to the next tab if possible.
+                                        selectedTab = min(1, selectedTab + 1)
+                                    } else if value.translation.width > threshold {
+                                        // Swipe right: move to the previous tab if possible.
+                                        selectedTab = max(0, selectedTab - 1)
+                                    }
                                 }
                             }
                     )
