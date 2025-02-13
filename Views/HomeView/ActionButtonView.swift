@@ -7,14 +7,14 @@ struct ActionButtonMenu: View {
     let onDebtTap: () -> Void
     @Binding var monthlyIncome: Double
     @Binding var payPeriod: PayPeriod
-    @State private var showProfile = false
+    @Binding var showProfile: Bool  // <-- Added binding here
     @EnvironmentObject private var userModel: UserModel
     @Binding var isShowing: Bool
         
-    private let buttonSize: CGFloat = 66 // Increased from 60
-        private let menuItemSize: CGFloat = 55 // Increased from 50
-        private let menuSpacing: CGFloat = 16.5 // Increased from 15
-        private let menuItemOffset: CGFloat = 82.5 // Increased from 75
+    private let buttonSize: CGFloat = 66
+    private let menuItemSize: CGFloat = 55
+    private let menuSpacing: CGFloat = 16.5
+    private let menuItemOffset: CGFloat = 82.5
     
     var body: some View {
         ZStack {
@@ -38,14 +38,16 @@ struct ActionButtonMenu: View {
                 if isShowing {
                     // Menu Container
                     VStack(spacing: 12) {
-                        // New Edit Profile Button
+                        // Edit Profile Button
                         menuButton(
                             title: "Edit Profile",
                             icon: "person.fill",
                             description: "Update your personal details",
                             action: {
-                                // Placeholder for edit profile action
-                                print("Edit Profile tapped")
+                                withAnimation {
+                                    isShowing = false
+                                    showProfile = true  // <-- Set showProfile to true
+                                }
                             },
                             customColor: Color.blue.opacity(0.2)
                         )

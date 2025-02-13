@@ -159,11 +159,11 @@ struct MainContentView: View {
                     },
                     monthlyIncome: $model.monthlyIncome,
                     payPeriod: $payPeriod,
+                    showProfile: $showProfile, // <-- Pass the binding here
                     isShowing: $showActionMenu
                 )
                 .padding(.trailing, 16)
                 .padding(.bottom, 16)
-                // Keep it anchored below the keyboard:
                 .ignoresSafeArea(.keyboard, edges: .bottom)
             }
         }
