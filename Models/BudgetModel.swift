@@ -138,7 +138,8 @@ class BudgetModel: ObservableObject {
             allocationPercentage: allocation / monthlyIncome,
             displayType: .monthly,
             assumptions: [],
-            type: categoryType  // ✅ Fixed: Added `type` argument
+            type: categoryType,
+            priority: priority.rawValue // Pass the raw value of the enum
         )
         
         let newItem = BudgetItem(

@@ -305,7 +305,7 @@ struct StickyIncomeHeader: View {
    }
 }
 
-// MARK: - Updated AssumptionSliderView
+// MARK: - AssumptionSliderView
 struct AssumptionSliderView: View {
     let title: String
     let range: ClosedRange<Double>
@@ -365,8 +365,8 @@ struct AssumptionSliderView: View {
                 }
             }
             
-            // Slider Section with wider touch area
-            ZStack {
+            // Slider Section
+            VStack(spacing: 8) {
                 Slider(
                     value: Binding(
                         get: { numericValue },
@@ -380,21 +380,19 @@ struct AssumptionSliderView: View {
                     step: step
                 )
                 .tint(Theme.tint)
-                .frame(minHeight: 44)
-                .highPriorityGesture(DragGesture())
-            }
-            .contentShape(Rectangle())
-            .padding(.vertical, 20)
-            
-            // Range Labels
-            HStack {
-                Text("\(String(format: "%.2f", range.lowerBound))\(suffix)")
-                    .font(.system(size: 13))
-                    .foregroundColor(Theme.secondaryLabel)
-                Spacer()
-                Text("\(String(format: "%.2f", range.upperBound))\(suffix)")
-                    .font(.system(size: 13))
-                    .foregroundColor(Theme.secondaryLabel)
+                
+                // Range Labels
+                HStack {
+                    Text("\(String(format: "%.2f", range.lowerBound))\(suffix)")
+                        .font(.system(size: 13))
+                        .foregroundColor(Theme.secondaryLabel)
+                    
+                    Spacer()
+                    
+                    Text("\(String(format: "%.2f", range.upperBound))\(suffix)")
+                        .font(.system(size: 13))
+                        .foregroundColor(Theme.secondaryLabel)
+                }
             }
         }
         .toolbar {

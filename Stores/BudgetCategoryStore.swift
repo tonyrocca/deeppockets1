@@ -1,27 +1,108 @@
 import SwiftUI
 import Foundation
 
-// MARK: - DisplayType Enum
-enum DisplayType {
+// MARK: - AmountDisplayType Enum
+enum AmountDisplayType {
     case monthly
     case total
+}
+
+// MARK: - AssumptionInputType Enum
+enum AssumptionInputType {
+    case percentageSlider(step: Double)
+    case yearSlider(min: Int, max: Int)
+    case textField
+    case percentageDistribution
+}
+
+// MARK: - CategoryAssumption Struct
+struct CategoryAssumption: Identifiable {
+    let title: String
+    var value: String
+    let inputType: AssumptionInputType
+    let description: String?
+    var id: String { title }
+}
+
+extension CategoryAssumption {
+    var displayValue: String {
+        switch inputType {
+        case .percentageSlider:
+            return value + "%"
+        case .yearSlider:
+            return value + " years"
+        default:
+            return value
+        }
+    }
+}
+
+// MARK: - CategoryType Enum
+enum CategoryType {
+    case housing
+    case transportation
+    case savings
+    case debt
+    case utilities
+    case food
+    case entertainment
+    case insurance
+    case education
+    case personal
+    case other
+}
+
+// MARK: - BudgetCategory Struct
+struct BudgetCategory: Identifiable {
+    let id: String
+    let name: String
+    let emoji: String
+    let description: String
+    let allocationPercentage: Double
+    var recommendedAmount: Double = 0
+    let displayType: AmountDisplayType  // Updated: Using AmountDisplayType
+    var assumptions: [CategoryAssumption]
+    let type: CategoryType
+    let priority: Int
+    
+    // Optional properties
+    var savingsGoal: Double?
+    var savingsTimeline: Int?
+    var debtAmount: Double?
+    var debtInterestRate: Double?
+    
+    var formattedAllocation: String {
+        let percentage = allocationPercentage * 100
+        return String(format: "%.1f%%", percentage)
+    }
+}
+
+extension BudgetCategory {
+    mutating func calculateRecommendedAmount(monthlyIncome: Double) {
+        if displayType == .monthly {
+            recommendedAmount = monthlyIncome * allocationPercentage
+        } else {
+            recommendedAmount = monthlyIncome * allocationPercentage * 12
+        }
+    }
 }
 
 // MARK: - BudgetCategoryStore Class
 class BudgetCategoryStore: ObservableObject {
     
-    // MARK: - Singleton
+    // Singleton instance
     static let shared = BudgetCategoryStore()
     
-    // MARK: - Published Properties
+    // Published list of categories
     @Published var categories: [BudgetCategory] = []
     
-    // MARK: - Init
+    // Private initializer ensures only one instance is created
     private init() {
         self.categories = createCategories()
     }
     
     // MARK: - Public Methods
+    
     func category(for id: String) -> BudgetCategory? {
         return categories.first { $0.id == id }
     }
@@ -32,8 +113,7 @@ class BudgetCategoryStore: ObservableObject {
         }
     }
     
-    /// Calculate recommended amounts for all categories based on `monthlyIncome`.
-    /// This will call each category's `calculateRecommendedAmount` method in turn.
+    /// Calculates recommended amounts for all categories based on monthlyIncome.
     func calculateAllRecommendedAmounts(monthlyIncome: Double) {
         for i in 0..<categories.count {
             categories[i].calculateRecommendedAmount(monthlyIncome: monthlyIncome)
@@ -43,7 +123,7 @@ class BudgetCategoryStore: ObservableObject {
     // MARK: - Factory Method
     /// Creates the initial array of BudgetCategories.
     func createCategories() -> [BudgetCategory] {
-        return [
+        var list: [BudgetCategory] = [
             // -------------------------------
             // Housing & Shelter
             // -------------------------------
@@ -74,7 +154,8 @@ class BudgetCategoryStore: ObservableObject {
                         description: "Annual property tax as % of value."
                     )
                 ],
-                type: .housing
+                type: .housing,
+                priority: 1
             ),
             BudgetCategory(
                 id: "rent",
@@ -91,7 +172,8 @@ class BudgetCategoryStore: ObservableObject {
                         description: "Length of lease in months."
                     )
                 ],
-                type: .housing
+                type: .housing,
+                priority: 1
             ),
             BudgetCategory(
                 id: "home_maintenance",
@@ -101,7 +183,8 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.05,
                 displayType: .monthly,
                 assumptions: [],
-                type: .housing
+                type: .housing,
+                priority: 3
             ),
             // -------------------------------
             // Transportation
@@ -133,7 +216,8 @@ class BudgetCategoryStore: ObservableObject {
                         description: "Sales tax applied to the purchase price."
                     )
                 ],
-                type: .transportation
+                type: .transportation,
+                priority: 2
             ),
             BudgetCategory(
                 id: "car_maintenance",
@@ -143,7 +227,8 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.03,
                 displayType: .monthly,
                 assumptions: [],
-                type: .transportation
+                type: .transportation,
+                priority: 4
             ),
             BudgetCategory(
                 id: "transportation",
@@ -153,7 +238,8 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.07,
                 displayType: .monthly,
                 assumptions: [],
-                type: .transportation
+                type: .transportation,
+                priority: 3
             ),
             // -------------------------------
             // Utilities & Bills
@@ -166,7 +252,8 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.08,
                 displayType: .monthly,
                 assumptions: [],
-                type: .utilities
+                type: .utilities,
+                priority: 2
             ),
             BudgetCategory(
                 id: "internet",
@@ -176,7 +263,8 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.03,
                 displayType: .monthly,
                 assumptions: [],
-                type: .utilities
+                type: .utilities,
+                priority: 3
             ),
             // -------------------------------
             // Food & Groceries
@@ -189,7 +277,8 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.12,
                 displayType: .monthly,
                 assumptions: [],
-                type: .food
+                type: .food,
+                priority: 1
             ),
             BudgetCategory(
                 id: "dining",
@@ -199,7 +288,8 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.05,
                 displayType: .monthly,
                 assumptions: [],
-                type: .food
+                type: .food,
+                priority: 3
             ),
             // -------------------------------
             // Entertainment
@@ -212,7 +302,8 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.02,
                 displayType: .monthly,
                 assumptions: [],
-                type: .entertainment
+                type: .entertainment,
+                priority: 4
             ),
             BudgetCategory(
                 id: "hobbies",
@@ -222,7 +313,8 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.02,
                 displayType: .monthly,
                 assumptions: [],
-                type: .entertainment
+                type: .entertainment,
+                priority: 4
             ),
             BudgetCategory(
                 id: "subscriptions",
@@ -232,7 +324,8 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.02,
                 displayType: .monthly,
                 assumptions: [],
-                type: .entertainment
+                type: .entertainment,
+                priority: 4
             ),
             // -------------------------------
             // Insurance
@@ -245,7 +338,8 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.06,
                 displayType: .monthly,
                 assumptions: [],
-                type: .insurance
+                type: .insurance,
+                priority: 1
             ),
             BudgetCategory(
                 id: "health_insurance",
@@ -255,7 +349,8 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.05,
                 displayType: .monthly,
                 assumptions: [],
-                type: .insurance
+                type: .insurance,
+                priority: 1
             ),
             BudgetCategory(
                 id: "auto_insurance",
@@ -265,7 +360,8 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.03,
                 displayType: .monthly,
                 assumptions: [],
-                type: .insurance
+                type: .insurance,
+                priority: 2
             ),
             BudgetCategory(
                 id: "home_insurance",
@@ -275,9 +371,9 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.03,
                 displayType: .monthly,
                 assumptions: [],
-                type: .insurance
+                type: .insurance,
+                priority: 2
             ),
-            
             // -------------------------------
             // Savings Categories
             // -------------------------------
@@ -289,7 +385,8 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.10,
                 displayType: .monthly,
                 assumptions: [],
-                type: .savings
+                type: .savings,
+                priority: 1
             ),
             BudgetCategory(
                 id: "shortterm_savings",
@@ -299,7 +396,8 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.05,
                 displayType: .monthly,
                 assumptions: [],
-                type: .savings
+                type: .savings,
+                priority: 1
             ),
             BudgetCategory(
                 id: "college_savings",
@@ -316,7 +414,8 @@ class BudgetCategoryStore: ObservableObject {
                         description: "Years until college starts."
                     )
                 ],
-                type: .savings
+                type: .savings,
+                priority: 2
             ),
             BudgetCategory(
                 id: "investments",
@@ -345,7 +444,8 @@ class BudgetCategoryStore: ObservableObject {
                         description: "Percentage allocation to other assets."
                     )
                 ],
-                type: .savings
+                type: .savings,
+                priority: 2
             ),
             BudgetCategory(
                 id: "charity",
@@ -355,9 +455,9 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.02,
                 displayType: .monthly,
                 assumptions: [],
-                type: .savings
+                type: .savings,
+                priority: 3
             ),
-            
             // -------------------------------
             // Education
             // -------------------------------
@@ -376,7 +476,8 @@ class BudgetCategoryStore: ObservableObject {
                         description: "Monthly tuition cost estimate."
                     )
                 ],
-                type: .education
+                type: .education,
+                priority: 2
             ),
             BudgetCategory(
                 id: "personal_development",
@@ -386,9 +487,9 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.02,
                 displayType: .monthly,
                 assumptions: [],
-                type: .education
+                type: .education,
+                priority: 3
             ),
-            
             // -------------------------------
             // Debt Categories
             // -------------------------------
@@ -404,16 +505,17 @@ class BudgetCategoryStore: ObservableObject {
                         title: "APR",
                         value: "18",
                         inputType: .percentageSlider(step: 0.5),
-                        description: "Annual percentage rate"
+                        description: "Annual percentage rate."
                     ),
                     CategoryAssumption(
                         title: "Min Payment",
                         value: "2",
                         inputType: .percentageSlider(step: 0.5),
-                        description: "Min payment as % of balance"
+                        description: "Minimum payment as % of balance."
                     )
                 ],
-                type: .debt
+                type: .debt,
+                priority: 1
             ),
             BudgetCategory(
                 id: "student_loans",
@@ -427,16 +529,17 @@ class BudgetCategoryStore: ObservableObject {
                         title: "Interest Rate",
                         value: "5",
                         inputType: .percentageSlider(step: 0.25),
-                        description: "Annual interest rate"
+                        description: "Annual interest rate."
                     ),
                     CategoryAssumption(
                         title: "Loan Term",
                         value: "10",
                         inputType: .yearSlider(min: 5, max: 20),
-                        description: "Term in years"
+                        description: "Term in years."
                     )
                 ],
-                type: .debt
+                type: .debt,
+                priority: 2
             ),
             BudgetCategory(
                 id: "personal_loans",
@@ -450,16 +553,17 @@ class BudgetCategoryStore: ObservableObject {
                         title: "Interest Rate",
                         value: "8",
                         inputType: .percentageSlider(step: 0.5),
-                        description: "Annual interest rate"
+                        description: "Annual interest rate."
                     ),
                     CategoryAssumption(
                         title: "Loan Term",
                         value: "5",
                         inputType: .yearSlider(min: 1, max: 10),
-                        description: "Term in years"
+                        description: "Term in years."
                     )
                 ],
-                type: .debt
+                type: .debt,
+                priority: 2
             ),
             BudgetCategory(
                 id: "medical_debt",
@@ -469,7 +573,8 @@ class BudgetCategoryStore: ObservableObject {
                 allocationPercentage: 0.03,
                 displayType: .monthly,
                 assumptions: [],
-                type: .debt
+                type: .debt,
+                priority: 2
             ),
             BudgetCategory(
                 id: "mortgage",
@@ -483,17 +588,476 @@ class BudgetCategoryStore: ObservableObject {
                         title: "Interest Rate",
                         value: "4",
                         inputType: .percentageSlider(step: 0.25),
-                        description: "Annual interest rate"
+                        description: "Annual interest rate."
                     ),
                     CategoryAssumption(
                         title: "Loan Term",
                         value: "30",
                         inputType: .yearSlider(min: 15, max: 30),
-                        description: "Term in years"
+                        description: "Term in years."
                     )
                 ],
-                type: .debt
+                type: .debt,
+                priority: 1
             )
         ]
+        
+        // -------------------------------
+        // Additional 25+ Categories (example additions)
+        // -------------------------------
+        list += [
+            BudgetCategory(
+                id: "emergency_savings",
+                name: "Emergency Savings",
+                emoji: "🚨",
+                description: "Savings for unexpected emergencies.",
+                allocationPercentage: 0.10,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Target Amount",
+                        value: "10000",
+                        inputType: .textField,
+                        description: "Desired emergency fund total."
+                    )
+                ],
+                type: .savings,
+                priority: 1
+            ),
+            BudgetCategory(
+                id: "vacation_savings",
+                name: "Vacation Savings",
+                emoji: "🏖️",
+                description: "Savings for vacations and leisure travel.",
+                allocationPercentage: 0.03,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Target Amount",
+                        value: "2000",
+                        inputType: .textField,
+                        description: "Desired vacation fund total."
+                    )
+                ],
+                type: .savings,
+                priority: 4
+            ),
+            BudgetCategory(
+                id: "childcare",
+                name: "Childcare",
+                emoji: "👶",
+                description: "Expenses for childcare or daycare.",
+                allocationPercentage: 0.08,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Cost per Child",
+                        value: "800",
+                        inputType: .textField,
+                        description: "Average monthly cost per child."
+                    )
+                ],
+                type: .other,
+                priority: 2
+            ),
+            BudgetCategory(
+                id: "child_education",
+                name: "Child Education",
+                emoji: "🎒",
+                description: "Expenses for school and extracurriculars.",
+                allocationPercentage: 0.04,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Cost",
+                        value: "300",
+                        inputType: .textField,
+                        description: "Average monthly education cost."
+                    )
+                ],
+                type: .other,
+                priority: 3
+            ),
+            BudgetCategory(
+                id: "pet_care",
+                name: "Pet Care",
+                emoji: "🐾",
+                description: "Expenses for pet food, vet, and supplies.",
+                allocationPercentage: 0.03,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Cost",
+                        value: "150",
+                        inputType: .textField,
+                        description: "Average monthly pet expense."
+                    )
+                ],
+                type: .other,
+                priority: 3
+            ),
+            BudgetCategory(
+                id: "clothing",
+                name: "Clothing",
+                emoji: "👗",
+                description: "Expenses for apparel and accessories.",
+                allocationPercentage: 0.04,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Budget",
+                        value: "200",
+                        inputType: .textField,
+                        description: "Average monthly clothing expense."
+                    )
+                ],
+                type: .other,
+                priority: 3
+            ),
+            BudgetCategory(
+                id: "personal_care",
+                name: "Personal Care",
+                emoji: "💄",
+                description: "Expenses for grooming, haircuts, and toiletries.",
+                allocationPercentage: 0.03,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Budget",
+                        value: "100",
+                        inputType: .textField,
+                        description: "Average monthly personal care expense."
+                    )
+                ],
+                type: .other,
+                priority: 3
+            ),
+            BudgetCategory(
+                id: "gym_membership",
+                name: "Gym Membership",
+                emoji: "🏋️‍♀️",
+                description: "Cost for fitness club membership.",
+                allocationPercentage: 0.02,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Cost",
+                        value: "50",
+                        inputType: .textField,
+                        description: "Monthly gym membership fee."
+                    )
+                ],
+                type: .other,
+                priority: 4
+            ),
+            BudgetCategory(
+                id: "cell_phone",
+                name: "Cell Phone",
+                emoji: "📱",
+                description: "Monthly cell phone bill.",
+                allocationPercentage: 0.03,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Cost",
+                        value: "70",
+                        inputType: .textField,
+                        description: "Average monthly cell phone expense."
+                    )
+                ],
+                type: .utilities,
+                priority: 2
+            ),
+            BudgetCategory(
+                id: "home_improvement",
+                name: "Home Improvement",
+                emoji: "🏡",
+                description: "Funds for home renovations and upgrades.",
+                allocationPercentage: 0.04,
+                displayType: .total,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Renovation Budget",
+                        value: "15000",
+                        inputType: .textField,
+                        description: "Total budget for home improvements."
+                    )
+                ],
+                type: .housing,
+                priority: 3
+            ),
+            BudgetCategory(
+                id: "home_security",
+                name: "Home Security",
+                emoji: "🔒",
+                description: "Expenses for home security systems.",
+                allocationPercentage: 0.02,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Cost",
+                        value: "40",
+                        inputType: .textField,
+                        description: "Monthly home security expense."
+                    )
+                ],
+                type: .utilities,
+                priority: 2
+            ),
+            BudgetCategory(
+                id: "medical_expenses",
+                name: "Medical Expenses",
+                emoji: "🏥",
+                description: "Out-of-pocket medical costs.",
+                allocationPercentage: 0.05,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Budget",
+                        value: "200",
+                        inputType: .textField,
+                        description: "Average monthly medical expense."
+                    )
+                ],
+                type: .other,
+                priority: 2
+            ),
+            BudgetCategory(
+                id: "dental",
+                name: "Dental",
+                emoji: "😬",
+                description: "Expenses for dental care.",
+                allocationPercentage: 0.02,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Budget",
+                        value: "50",
+                        inputType: .textField,
+                        description: "Average monthly dental expense."
+                    )
+                ],
+                type: .other,
+                priority: 2
+            ),
+            BudgetCategory(
+                id: "vision_care",
+                name: "Vision Care",
+                emoji: "👓",
+                description: "Expenses for eye exams and glasses.",
+                allocationPercentage: 0.01,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Budget",
+                        value: "30",
+                        inputType: .textField,
+                        description: "Average monthly vision care expense."
+                    )
+                ],
+                type: .other,
+                priority: 3
+            ),
+            BudgetCategory(
+                id: "professional_development",
+                name: "Professional Development",
+                emoji: "📖",
+                description: "Investments in career development.",
+                allocationPercentage: 0.03,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Budget",
+                        value: "100",
+                        inputType: .textField,
+                        description: "Average monthly cost for professional development."
+                    )
+                ],
+                type: .other,
+                priority: 3
+            ),
+            BudgetCategory(
+                id: "work_expenses",
+                name: "Work Expenses",
+                emoji: "💼",
+                description: "Costs related to work such as commuting and supplies.",
+                allocationPercentage: 0.04,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Cost",
+                        value: "150",
+                        inputType: .textField,
+                        description: "Average monthly work expense."
+                    )
+                ],
+                type: .other,
+                priority: 2
+            ),
+            BudgetCategory(
+                id: "tax_savings",
+                name: "Tax Savings",
+                emoji: "🧾",
+                description: "Funds set aside for tax payments.",
+                allocationPercentage: 0.05,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Savings Target",
+                        value: "300",
+                        inputType: .textField,
+                        description: "Amount to save monthly for taxes."
+                    )
+                ],
+                type: .savings,
+                priority: 1
+            ),
+            BudgetCategory(
+                id: "miscellaneous",
+                name: "Miscellaneous",
+                emoji: "📦",
+                description: "Other unplanned expenses.",
+                allocationPercentage: 0.03,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Budget",
+                        value: "100",
+                        inputType: .textField,
+                        description: "Budget for miscellaneous expenses."
+                    )
+                ],
+                type: .other,
+                priority: 4
+            ),
+            BudgetCategory(
+                id: "travel",
+                name: "Travel",
+                emoji: "✈️",
+                description: "Expenses for travel not related to vacations.",
+                allocationPercentage: 0.03,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Budget",
+                        value: "150",
+                        inputType: .textField,
+                        description: "Average monthly travel expense."
+                    )
+                ],
+                type: .other,
+                priority: 4
+            ),
+            BudgetCategory(
+                id: "gifts",
+                name: "Gifts",
+                emoji: "🎁",
+                description: "Budget for gift giving.",
+                allocationPercentage: 0.02,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Budget",
+                        value: "50",
+                        inputType: .textField,
+                        description: "Budget for gifts."
+                    )
+                ],
+                type: .other,
+                priority: 4
+            ),
+            BudgetCategory(
+                id: "legal_expenses",
+                name: "Legal Expenses",
+                emoji: "⚖️",
+                description: "Costs for legal fees and advice.",
+                allocationPercentage: 0.01,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Budget",
+                        value: "30",
+                        inputType: .textField,
+                        description: "Average monthly legal expense."
+                    )
+                ],
+                type: .other,
+                priority: 3
+            ),
+            BudgetCategory(
+                id: "investment_fees",
+                name: "Investment Fees",
+                emoji: "💼",
+                description: "Management fees for investments.",
+                allocationPercentage: 0.01,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Cost",
+                        value: "20",
+                        inputType: .textField,
+                        description: "Average monthly investment fees."
+                    )
+                ],
+                type: .savings,
+                priority: 3
+            ),
+            BudgetCategory(
+                id: "charitable_donations",
+                name: "Charitable Donations",
+                emoji: "🤝",
+                description: "Additional donations beyond basic charity.",
+                allocationPercentage: 0.01,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Donation",
+                        value: "25",
+                        inputType: .textField,
+                        description: "Budget for extra charitable donations."
+                    )
+                ],
+                type: .savings,
+                priority: 4
+            ),
+            BudgetCategory(
+                id: "lawn_care",
+                name: "Lawn Care",
+                emoji: "🌱",
+                description: "Expenses for maintaining your yard.",
+                allocationPercentage: 0.02,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Cost",
+                        value: "40",
+                        inputType: .textField,
+                        description: "Average monthly lawn care expense."
+                    )
+                ],
+                type: .other,
+                priority: 4
+            ),
+            BudgetCategory(
+                id: "cleaning_services",
+                name: "Cleaning Services",
+                emoji: "🧹",
+                description: "Costs for professional cleaning.",
+                allocationPercentage: 0.02,
+                displayType: .monthly,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Monthly Cost",
+                        value: "80",
+                        inputType: .textField,
+                        description: "Average monthly cleaning service expense."
+                    )
+                ],
+                type: .other,
+                priority: 4
+            )
+        ]
+        
+        return list
     }
 }
