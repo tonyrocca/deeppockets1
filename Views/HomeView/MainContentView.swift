@@ -28,6 +28,13 @@ struct MainContentView: View {
     
     var body: some View {
         ZStack {
+            // A transparent background that dismisses the keyboard when tapped.
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    hideKeyboard()
+                }
+            
             VStack(spacing: 0) {
                 // Tab Header
                 TabHeaderView(selectedTab: $selectedTab)
@@ -53,10 +60,7 @@ struct MainContentView: View {
                         }
                         .frame(width: geometry.size.width)
                     }
-                    // The offset is computed based on the current selected tab plus any drag in progress.
                     .offset(x: -CGFloat(selectedTab) * geometry.size.width + dragOffset)
-                    // Remove the implicit animation modifier here.
-                    // Instead, animate the state update in the gesture’s onEnded.
                     .gesture(
                         DragGesture()
                             .updating($dragOffset) { value, state, _ in
@@ -68,10 +72,8 @@ struct MainContentView: View {
                                                                   dampingFraction: 0.8,
                                                                   blendDuration: 0.5)) {
                                     if value.translation.width < -threshold {
-                                        // Swipe left: move to the next tab if possible.
                                         selectedTab = min(1, selectedTab + 1)
                                     } else if value.translation.width > threshold {
-                                        // Swipe right: move to the previous tab if possible.
                                         selectedTab = max(0, selectedTab - 1)
                                     }
                                 }
@@ -160,8 +162,19 @@ struct MainContentView: View {
                 )
                 .padding(.trailing, 16)
                 .padding(.bottom, 16)
+                // This keeps the button anchored below the keyboard.
+                .ignoresSafeArea(.keyboard, edges: .bottom)
             }
         }
+    }
+}
+
+extension View {
+    func hideKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil, from: nil, for: nil
+        )
     }
 }
 
