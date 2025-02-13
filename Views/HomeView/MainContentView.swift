@@ -1,5 +1,6 @@
 import SwiftUI
 
+// MARK: - MainContentView
 struct MainContentView: View {
     @StateObject private var model: AffordabilityModel
     @StateObject private var budgetModel: BudgetModel
@@ -162,13 +163,14 @@ struct MainContentView: View {
                 )
                 .padding(.trailing, 16)
                 .padding(.bottom, 16)
-                // This keeps the button anchored below the keyboard.
+                // Keep it anchored below the keyboard:
                 .ignoresSafeArea(.keyboard, edges: .bottom)
             }
         }
     }
 }
 
+// MARK: - Extension for Keyboard Dismissal
 extension View {
     func hideKeyboard() {
         UIApplication.shared.sendAction(

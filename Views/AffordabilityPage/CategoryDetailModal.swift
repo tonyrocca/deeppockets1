@@ -174,7 +174,8 @@ struct CategoryDetailModal: View {
             .gesture(
                 TapGesture()
                     .onEnded { _ in
-                        focusedField = nil // Dismiss keyboard on tap
+                        // Call the hideKeyboard() extension to dismiss the keyboard.
+                        hideKeyboard()
                     }
             )
         }
