@@ -479,12 +479,13 @@ struct CategoryRowView: View {
     let isPinned: Bool
     @State private var showInlineDetails = false
     @State private var showFullScreenDetails = false
+    // Initialize local assumptions from the category
     @State private var localAssumptions: [CategoryAssumption]
     let onPinChanged: (String, Bool) -> Void
     @EnvironmentObject private var budgetModel: BudgetModel
     @State private var showAddToBudgetConfirmation = false
     @State private var showingAddedToBudget = false
-    
+
     // Compute the amount from the model; use a cached value if available
     private var amount: Double {
         model.affordabilityAmounts[category.id] ?? model.calculateAffordableAmount(for: category)
@@ -499,6 +500,7 @@ struct CategoryRowView: View {
         self.model = model
         self.displayType = displayType
         self.isPinned = isPinned
+        // Initialize localAssumptions from the category’s assumptions.
         self._localAssumptions = State(initialValue: category.assumptions)
         self.onPinChanged = onPinChanged
     }
@@ -513,7 +515,7 @@ struct CategoryRowView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header
+            // Header button to toggle inline details
             Button {
                 withAnimation {
                     showInlineDetails.toggle()
@@ -545,7 +547,7 @@ struct CategoryRowView: View {
                             .foregroundColor(Theme.label)
                     }
                     
-                    // Monthly Allocation (for total amounts)
+                    // Monthly Allocation (for total display types)
                     if displayType == .total {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("ESTIMATED MONTHLY ALLOCATION")
@@ -577,6 +579,7 @@ struct CategoryRowView: View {
                                 AssumptionView(
                                     assumption: $localAssumptions[index],
                                     onChanged: { _ in
+                                        // Update the shared model when an assumption changes.
                                         model.updateAssumptions(for: category.id, assumptions: localAssumptions)
                                     }
                                 )
@@ -667,12 +670,8 @@ struct CategoryRowView: View {
         .background(
             Group {
                 if isPinned {
-                    // Create a layered background effect
                     ZStack {
-                        // Base layer with slightly stronger opacity
                         Theme.mutedGreen.opacity(0.2)
-                        
-                        // Left border indicator
                         HStack {
                             Rectangle()
                                 .fill(Theme.tint)
@@ -719,6 +718,12 @@ struct CategoryRowView: View {
         .overlay {
             if showAddToBudgetConfirmation {
                 addToBudgetConfirmation
+            }
+        }
+        // Listen for updates to the shared assumptions and update our local copy.
+        .onReceive(model.$assumptions) { updated in
+            if let newAssumptions = updated[category.id] {
+                localAssumptions = newAssumptions
             }
         }
     }
