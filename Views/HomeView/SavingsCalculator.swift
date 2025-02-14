@@ -66,7 +66,7 @@ struct SavingsCalculatorModal: View {
                                             .textFieldStyle(PlainTextFieldStyle())
                                             .foregroundColor(.white)
                                             .placeholder(when: searchText.isEmpty) {
-                                                Text("Enter category")
+                                                Text("Enter savings category")
                                                     .foregroundColor(Theme.secondaryLabel)
                                             }
                                     }

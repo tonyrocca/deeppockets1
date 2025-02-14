@@ -1,41 +1,47 @@
 import SwiftUI
 
 struct AffordabilityCalculatorModal: View {
-   @Binding var isPresented: Bool
-   let monthlyIncome: Double
-   @State private var selectedCategory: BudgetCategory?
-   @State private var amount: String = ""
-   @State private var showResults = false
-   @State private var selectedTimeframe: TimeFrame = .monthly
-   @State private var searchText = ""
-   
-   enum TimeFrame {
-       case monthly, yearly, overall
-       
-       var text: String {
-           switch self {
-           case .monthly: return "per month"
-           case .yearly: return "per year"
-           case .overall: return "overall"
-           }
-       }
-       
-       var multiplier: Double {
-           switch self {
-           case .monthly: return 1
-           case .yearly: return 12
-           case .overall: return 1
-           }
-       }
-   }
-   
-   private var filteredCategories: [BudgetCategory] {
-       guard !searchText.isEmpty else { return BudgetCategoryStore.shared.categories }
-       return BudgetCategoryStore.shared.categories.filter {
-           $0.name.lowercased().contains(searchText.lowercased())
-       }
-   }
-   
+    @Binding var isPresented: Bool
+    let monthlyIncome: Double
+    @State private var selectedCategory: BudgetCategory?
+    @State private var amount: String = ""
+    @State private var showResults = false
+    @State private var selectedTimeframe: TimeFrame = .monthly
+    @State private var searchText = ""
+    @State private var isSearching = true  // Start in search mode
+    @FocusState private var isAmountFocused: Bool
+
+    enum TimeFrame: Hashable {
+        case monthly, yearly, overall
+        
+        var text: String {
+            switch self {
+            case .monthly: return "per month"
+            case .yearly: return "per year"
+            case .overall: return "overall"
+            }
+        }
+        
+        var multiplier: Double {
+            switch self {
+            case .monthly: return 1
+            case .yearly: return 12
+            case .overall: return 1
+            }
+        }
+    }
+    
+    // Modified filteredCategories logic
+    private var filteredCategories: [BudgetCategory] {
+        if searchText.isEmpty {
+            return []  // Return empty array when search is empty
+        }
+        return BudgetCategoryStore.shared.categories.filter {
+            $0.name.lowercased().contains(searchText.lowercased()) ||
+            $0.description.lowercased().contains(searchText.lowercased())
+        }
+    }
+    
     var body: some View {
         ZStack {
             Color.black.opacity(0.5)
@@ -70,37 +76,66 @@ struct AffordabilityCalculatorModal: View {
                         if !showResults {
                             // Input Section
                             VStack(spacing: 24) {
-                                // Category Selection
+                                // Category Selection / Search Area
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("What would you like to buy?")
                                         .font(.system(size: 17, weight: .medium))
                                         .foregroundColor(.white)
                                     
-                                    // Search Field
-                                    HStack {
-                                        Image(systemName: "magnifyingglass")
-                                            .foregroundColor(Theme.secondaryLabel)
-                                        TextField("", text: $searchText)
-                                            .textFieldStyle(PlainTextFieldStyle())
-                                            .foregroundColor(.white)
-                                            .placeholder(when: searchText.isEmpty) {
-                                                Text("Enter category")
+                                    if selectedCategory == nil || isSearching {
+                                        // Search Field with a title
+                                        HStack {
+                                            Image(systemName: "magnifyingglass")
+                                                .foregroundColor(Theme.secondaryLabel)
+                                            TextField("", text: $searchText)
+                                                .textFieldStyle(PlainTextFieldStyle())
+                                                .foregroundColor(.white)
+                                                .placeholder(when: searchText.isEmpty) {
+                                                    Text("Enter expense category")
+                                                        .foregroundColor(Theme.secondaryLabel)
+                                                }
+                                        }
+                                        .padding()
+                                        .background(Theme.surfaceBackground)
+                                        .cornerRadius(12)
+                                    } else {
+                                        // Selected Category Display
+                                        HStack {
+                                            Text(selectedCategory?.emoji ?? "")
+                                                .font(.title2)
+                                            Text(selectedCategory?.name ?? "")
+                                                .foregroundColor(.white)
+                                            Spacer()
+                                            Button(action: {
+                                                withAnimation {
+                                                    selectedCategory = nil
+                                                    searchText = ""
+                                                    isSearching = true
+                                                    amount = ""
+                                                }
+                                            }) {
+                                                Image(systemName: "xmark.circle.fill")
                                                     .foregroundColor(Theme.secondaryLabel)
+                                                    .font(.system(size: 22))
                                             }
+                                        }
+                                        .padding()
+                                        .background(Theme.surfaceBackground)
+                                        .cornerRadius(12)
                                     }
-                                    .padding()
-                                    .background(Theme.surfaceBackground)
-                                    .cornerRadius(12)
                                 }
                                 
-                                // Categories appear here when searching
-                                if !filteredCategories.isEmpty && !searchText.isEmpty {
+                                // Search Results with modified condition
+                                if (selectedCategory == nil || isSearching) && !searchText.isEmpty {
                                     ScrollView {
                                         LazyVStack(spacing: 0) {
                                             ForEach(filteredCategories) { category in
                                                 Button(action: {
-                                                    selectedCategory = category
-                                                    searchText = ""
+                                                    withAnimation {
+                                                        selectedCategory = category
+                                                        searchText = ""
+                                                        isSearching = false
+                                                    }
                                                 }) {
                                                     HStack {
                                                         Text(category.emoji)
@@ -127,27 +162,8 @@ struct AffordabilityCalculatorModal: View {
                                     .cornerRadius(12)
                                 }
                                 
+                                // Amount Input and Timeframe Selection UI
                                 if let selected = selectedCategory {
-                                    HStack {
-                                        Text(selected.emoji)
-                                            .font(.title2)
-                                        Text(selected.name)
-                                            .foregroundColor(.white)
-                                        Spacer()
-                                        Button(action: {
-                                            selectedCategory = nil
-                                            amount = ""
-                                        }) {
-                                            Image(systemName: "xmark.circle.fill")
-                                                .foregroundColor(Theme.secondaryLabel)
-                                                .font(.system(size: 22))
-                                        }
-                                    }
-                                    .padding()
-                                    .background(Theme.surfaceBackground)
-                                    .cornerRadius(12)
-                                
-                                    // Amount Input Section
                                     VStack(alignment: .leading, spacing: 8) {
                                         Text("How much will it cost?")
                                             .font(.system(size: 17, weight: .medium))
@@ -164,6 +180,15 @@ struct AffordabilityCalculatorModal: View {
                                                     .placeholder(when: amount.isEmpty) {
                                                         Text("0")
                                                             .foregroundColor(Theme.secondaryLabel)
+                                                    }
+                                                    .focused($isAmountFocused)
+                                                    .toolbar {
+                                                        ToolbarItemGroup(placement: .keyboard) {
+                                                            Spacer()
+                                                            Button("Done") {
+                                                                isAmountFocused = false
+                                                            }
+                                                        }
                                                     }
                                             }
                                             .padding()
@@ -238,14 +263,8 @@ struct AffordabilityCalculatorModal: View {
             .padding()
         }
     }
-   
-   private func formatCurrency(_ value: Double) -> String {
-       let formatter = NumberFormatter()
-       formatter.numberStyle = .currency
-       formatter.maximumFractionDigits = 0
-       return formatter.string(from: NSNumber(value: value)) ?? "$0"
-   }
 }
+
 
 struct InfoCard: View {
     let title: String

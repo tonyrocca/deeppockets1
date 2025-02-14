@@ -9,14 +9,18 @@ struct DebtCalculatorModal: View {
     @State private var targetDate = Date().addingTimeInterval(365 * 24 * 60 * 60) // Default to 1 year
     @State private var showResults = false
     @State private var searchText = ""
-    
+    @State private var isSearching = true  // Start in search mode
+
+    // Modified filteredCategories logic
     private var filteredCategories: [BudgetCategory] {
-        guard !searchText.isEmpty else {
-            return BudgetCategoryStore.shared.categories.filter { isDebtCategory($0.id) }
+        if searchText.isEmpty {
+            return []  // Return empty array when search is empty
         }
-        return BudgetCategoryStore.shared.categories
-            .filter { isDebtCategory($0.id) }
-            .filter { $0.name.lowercased().contains(searchText.lowercased()) }
+        return BudgetCategoryStore.shared.categories.filter { category in
+            isDebtCategory(category.id) &&
+            (category.name.lowercased().contains(searchText.lowercased()) ||
+             category.description.lowercased().contains(searchText.lowercased()))
+        }
     }
     
     private func isDebtCategory(_ id: String) -> Bool {
@@ -57,84 +61,95 @@ struct DebtCalculatorModal: View {
                         if !showResults {
                             // Input Section
                             VStack(spacing: 24) {
-                                // Category Selection
+                                // Category Selection / Search Area
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("What type of debt is this?")
                                         .font(.system(size: 17, weight: .medium))
                                         .foregroundColor(.white)
                                     
-                                    // Search Field
-                                    HStack {
-                                        Image(systemName: "magnifyingglass")
-                                            .foregroundColor(Theme.secondaryLabel)
-                                        TextField("", text: $searchText)
-                                            .textFieldStyle(PlainTextFieldStyle())
-                                            .foregroundColor(.white)
-                                            .placeholder(when: searchText.isEmpty) {
-                                                Text("Enter debt type")
-                                                    .foregroundColor(Theme.secondaryLabel)
-                                            }
-                                    }
-                                    .padding()
-                                    .background(Theme.surfaceBackground)
-                                    .cornerRadius(12)
-                                }
-                                
-                                // Categories appear here when searching
-                                if !filteredCategories.isEmpty && !searchText.isEmpty {
-                                    ScrollView {
-                                        LazyVStack(spacing: 0) {
-                                            ForEach(filteredCategories) { category in
-                                                Button(action: {
-                                                    selectedCategory = category
-                                                    searchText = ""
-                                                }) {
-                                                    HStack {
-                                                        Text(category.emoji)
-                                                            .font(.title2)
-                                                        Text(category.name)
-                                                            .foregroundColor(.white)
-                                                        Spacer()
-                                                    }
-                                                    .padding()
-                                                    .background(
-                                                        selectedCategory?.id == category.id ?
-                                                        Theme.tint.opacity(0.2) :
-                                                        Color.clear
-                                                    )
-                                                }
-                                                
-                                                Divider()
-                                                    .background(Theme.separator)
-                                            }
-                                        }
-                                    }
-                                    .frame(maxHeight: 200)
-                                    .background(Theme.surfaceBackground)
-                                    .cornerRadius(12)
-                                }
-                                
-                                if let selected = selectedCategory {
-                                    HStack {
-                                        Text(selected.emoji)
-                                            .font(.title2)
-                                        Text(selected.name)
-                                            .foregroundColor(.white)
-                                        Spacer()
-                                        Button(action: {
-                                            selectedCategory = nil
-                                            debtAmount = ""
-                                            interestRate = ""
-                                        }) {
-                                            Image(systemName: "xmark.circle.fill")
+                                    if selectedCategory == nil || isSearching {
+                                        // Search Field
+                                        HStack {
+                                            Image(systemName: "magnifyingglass")
                                                 .foregroundColor(Theme.secondaryLabel)
-                                                .font(.system(size: 22))
+                                            TextField("", text: $searchText)
+                                                .textFieldStyle(PlainTextFieldStyle())
+                                                .foregroundColor(.white)
+                                                .placeholder(when: searchText.isEmpty) {
+                                                    Text("Enter category")
+                                                        .foregroundColor(Theme.secondaryLabel)
+                                                }
                                         }
+                                        .padding()
+                                        .background(Theme.surfaceBackground)
+                                        .cornerRadius(12)
+                                        
+                                        // Search Results with modified condition
+                                        if !searchText.isEmpty {
+                                            ScrollView {
+                                                LazyVStack(spacing: 0) {
+                                                    ForEach(filteredCategories) { category in
+                                                        Button(action: {
+                                                            withAnimation {
+                                                                selectedCategory = category
+                                                                searchText = ""
+                                                                isSearching = false
+                                                            }
+                                                        }) {
+                                                            HStack {
+                                                                Text(category.emoji)
+                                                                    .font(.title2)
+                                                                Text(category.name)
+                                                                    .foregroundColor(.white)
+                                                                Spacer()
+                                                            }
+                                                            .padding()
+                                                            .background(
+                                                                selectedCategory?.id == category.id ?
+                                                                Theme.tint.opacity(0.2) :
+                                                                Color.clear
+                                                            )
+                                                        }
+                                                        
+                                                        Divider()
+                                                            .background(Theme.separator)
+                                                    }
+                                                }
+                                            }
+                                            .frame(maxHeight: 200)
+                                            .background(Theme.surfaceBackground)
+                                            .cornerRadius(12)
+                                        }
+                                    } else {
+                                        // Selected Category Display
+                                        HStack {
+                                            Text(selectedCategory?.emoji ?? "")
+                                                .font(.title2)
+                                            Text(selectedCategory?.name ?? "")
+                                                .foregroundColor(.white)
+                                            Spacer()
+                                            Button(action: {
+                                                withAnimation {
+                                                    selectedCategory = nil
+                                                    searchText = ""
+                                                    isSearching = true
+                                                    debtAmount = ""
+                                                    interestRate = ""
+                                                }
+                                            }) {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .foregroundColor(Theme.secondaryLabel)
+                                                    .font(.system(size: 22))
+                                            }
+                                        }
+                                        .padding()
+                                        .background(Theme.surfaceBackground)
+                                        .cornerRadius(12)
                                     }
-                                    .padding()
-                                    .background(Theme.surfaceBackground)
-                                    .cornerRadius(12)
-                                    
+                                }
+                                
+                                // Rest of your input fields...
+                                if let selected = selectedCategory {
                                     // Debt Amount Input
                                     VStack(alignment: .leading, spacing: 8) {
                                         Text("How much is the total debt?")
@@ -190,9 +205,9 @@ struct DebtCalculatorModal: View {
                                                 .foregroundColor(.white)
                                             Spacer()
                                             DatePicker("",
-                                                      selection: $targetDate,
-                                                      in: Date()...,
-                                                      displayedComponents: .date)
+                                                       selection: $targetDate,
+                                                       in: Date()...,
+                                                       displayedComponents: .date)
                                                 .datePickerStyle(.compact)
                                                 .colorScheme(.dark)
                                                 .labelsHidden()
@@ -311,7 +326,7 @@ struct DebtResultView: View {
                 }
                 .foregroundColor(Theme.tint)
                 
-                VStack(spacing: 24) {  // Increased spacing between sections
+                VStack(spacing: 24) {
                     // Required Monthly Payment
                     ComparisonRow(
                         label: "Monthly Payment Required",
@@ -330,13 +345,13 @@ struct DebtResultView: View {
                             .font(.system(size: 17, weight: .medium))
                             .foregroundColor(.white)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)  // Full width alignment
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .padding()
             .background(Theme.surfaceBackground)
             .cornerRadius(12)
-
+            
             // Recommendations
             VStack(alignment: .leading, spacing: 8) {
                 Label {
@@ -349,17 +364,17 @@ struct DebtResultView: View {
                 
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(analysis.recommendations, id: \.self) { tip in
-                        HStack(alignment: .top, spacing: 8) {  // Added consistent spacing
+                        HStack(alignment: .top, spacing: 8) {
                             Text("•")
                             Text(tip)
-                                .fixedSize(horizontal: false, vertical: true)  // Allow proper text wrapping
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         .font(.system(size: 15))
                         .foregroundColor(.white)
-                        .frame(maxWidth: .infinity, alignment: .leading)  // Full width alignment
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
-                .frame(maxWidth: .infinity)  // Ensure full width
+                .frame(maxWidth: .infinity)
             }
             .padding()
             .background(Theme.surfaceBackground)
@@ -427,13 +442,13 @@ struct DebtResultView: View {
         formatter.maximumFractionDigits = 0
         return formatter.string(from: NSNumber(value: value)) ?? "$0"
     }
-    }
+}
 
-    struct DebtAnalysis {
-        let canAfford: Bool
-        let summary: String
-        let requiredMonthlyPayment: Double
-        let recommendedMonthlyPayment: Double
-        let totalInterest: Double
-        let recommendations: [String]
-    }
+struct DebtAnalysis {
+    let canAfford: Bool
+    let summary: String
+    let requiredMonthlyPayment: Double
+    let recommendedMonthlyPayment: Double
+    let totalInterest: Double
+    let recommendations: [String]
+}
