@@ -88,7 +88,8 @@ class AffordabilityModel: ObservableObject {
             return calculateSavingsGoal(for: category, monthlyAmount: monthlyAmount)
         case .debt:
             return calculateDebtRepaymentPlan(for: category, monthlyAmount: monthlyAmount)
-        case .utilities, .food, .entertainment, .insurance, .education, .personal, .other:
+        case .utilities, .food, .entertainment, .insurance, .education, .personal, .health, .family, .other:
+            // For these categories, use simple monthly * 12 calculation
             return monthlyAmount * 12
         }
     }
