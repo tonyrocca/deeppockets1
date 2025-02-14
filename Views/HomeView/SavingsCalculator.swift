@@ -8,14 +8,17 @@ struct SavingsCalculatorModal: View {
     @State private var targetDate = Date().addingTimeInterval(365 * 24 * 60 * 60) // Default to 1 year
     @State private var showResults = false
     @State private var searchText = ""
-    
+    @State private var isSearching = true  // Start in search mode
+
+    // Modified filteredCategories logic
     private var filteredCategories: [BudgetCategory] {
-        guard !searchText.isEmpty else {
-            return BudgetCategoryStore.shared.categories.filter { $0.displayType == .total }
+        if searchText.isEmpty {
+            return []  // Return empty array when search is empty
         }
-        return BudgetCategoryStore.shared.categories
-            .filter { $0.displayType == .total }
-            .filter { $0.name.lowercased().contains(searchText.lowercased()) }
+        return BudgetCategoryStore.shared.categories.filter { category in
+            category.displayType == .total &&
+            category.name.lowercased().contains(searchText.lowercased())
+        }
     }
     
     var body: some View {
@@ -38,7 +41,7 @@ struct SavingsCalculatorModal: View {
                 
                 ScrollView {
                     VStack(spacing: 32) {
-                        // Title
+                        // Title Section
                         VStack(spacing: 8) {
                             Text("Can I save for this?")
                                 .font(.system(size: 28, weight: .bold))
@@ -52,83 +55,93 @@ struct SavingsCalculatorModal: View {
                         if !showResults {
                             // Input Section
                             VStack(spacing: 24) {
-                                // Category Selection
+                                // Category Selection / Search Area
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("What are you saving for?")
                                         .font(.system(size: 17, weight: .medium))
                                         .foregroundColor(.white)
                                     
-                                    // Search Field
-                                    HStack {
-                                        Image(systemName: "magnifyingglass")
-                                            .foregroundColor(Theme.secondaryLabel)
-                                        TextField("", text: $searchText)
-                                            .textFieldStyle(PlainTextFieldStyle())
-                                            .foregroundColor(.white)
-                                            .placeholder(when: searchText.isEmpty) {
-                                                Text("Enter savings category")
-                                                    .foregroundColor(Theme.secondaryLabel)
-                                            }
-                                    }
-                                    .padding()
-                                    .background(Theme.surfaceBackground)
-                                    .cornerRadius(12)
-                                }
-                                
-                                // Categories appear here when searching
-                                if !filteredCategories.isEmpty && !searchText.isEmpty {
-                                    ScrollView {
-                                        LazyVStack(spacing: 0) {
-                                            ForEach(filteredCategories) { category in
-                                                Button(action: {
-                                                    selectedCategory = category
-                                                    searchText = ""
-                                                }) {
-                                                    HStack {
-                                                        Text(category.emoji)
-                                                            .font(.title2)
-                                                        Text(category.name)
-                                                            .foregroundColor(.white)
-                                                        Spacer()
-                                                    }
-                                                    .padding()
-                                                    .background(
-                                                        selectedCategory?.id == category.id ?
-                                                        Theme.tint.opacity(0.2) :
-                                                        Color.clear
-                                                    )
+                                    if selectedCategory == nil || isSearching {
+                                        // Search Field
+                                        HStack {
+                                            Image(systemName: "magnifyingglass")
+                                                .foregroundColor(Theme.secondaryLabel)
+                                            TextField("", text: $searchText)
+                                                .textFieldStyle(PlainTextFieldStyle())
+                                                .foregroundColor(.white)
+                                                .placeholder(when: searchText.isEmpty) {
+                                                    Text("Enter savings category")
+                                                        .foregroundColor(Theme.secondaryLabel)
                                                 }
-                                                
-                                                Divider()
-                                                    .background(Theme.separator)
+                                        }
+                                        .padding()
+                                        .background(Theme.surfaceBackground)
+                                        .cornerRadius(12)
+                                        
+                                        // Search Results with modified condition
+                                        if !searchText.isEmpty {
+                                            ScrollView {
+                                                LazyVStack(spacing: 0) {
+                                                    ForEach(filteredCategories) { category in
+                                                        Button(action: {
+                                                            withAnimation {
+                                                                selectedCategory = category
+                                                                searchText = ""
+                                                                isSearching = false
+                                                            }
+                                                        }) {
+                                                            HStack {
+                                                                Text(category.emoji)
+                                                                    .font(.title2)
+                                                                Text(category.name)
+                                                                    .foregroundColor(.white)
+                                                                Spacer()
+                                                            }
+                                                            .padding()
+                                                            .background(
+                                                                selectedCategory?.id == category.id ?
+                                                                Theme.tint.opacity(0.2) :
+                                                                Color.clear
+                                                            )
+                                                        }
+                                                        
+                                                        Divider()
+                                                            .background(Theme.separator)
+                                                    }
+                                                }
+                                            }
+                                            .frame(maxHeight: 200)
+                                            .background(Theme.surfaceBackground)
+                                            .cornerRadius(12)
+                                        }
+                                    } else {
+                                        // Selected Category Display
+                                        HStack {
+                                            Text(selectedCategory?.emoji ?? "")
+                                                .font(.title2)
+                                            Text(selectedCategory?.name ?? "")
+                                                .foregroundColor(.white)
+                                            Spacer()
+                                            Button(action: {
+                                                withAnimation {
+                                                    selectedCategory = nil
+                                                    searchText = ""
+                                                    isSearching = true
+                                                    targetAmount = ""
+                                                }
+                                            }) {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .foregroundColor(Theme.secondaryLabel)
+                                                    .font(.system(size: 22))
                                             }
                                         }
+                                        .padding()
+                                        .background(Theme.surfaceBackground)
+                                        .cornerRadius(12)
                                     }
-                                    .frame(maxHeight: 200)
-                                    .background(Theme.surfaceBackground)
-                                    .cornerRadius(12)
                                 }
                                 
                                 if let selected = selectedCategory {
-                                    HStack {
-                                        Text(selected.emoji)
-                                            .font(.title2)
-                                        Text(selected.name)
-                                            .foregroundColor(.white)
-                                        Spacer()
-                                        Button(action: {
-                                            selectedCategory = nil
-                                            targetAmount = ""
-                                        }) {
-                                            Image(systemName: "xmark.circle.fill")
-                                                .foregroundColor(Theme.secondaryLabel)
-                                                .font(.system(size: 22))
-                                        }
-                                    }
-                                    .padding()
-                                    .background(Theme.surfaceBackground)
-                                    .cornerRadius(12)
-                                
                                     // Target Amount Input
                                     VStack(alignment: .leading, spacing: 8) {
                                         Text("How much do you need to save?")
@@ -162,9 +175,9 @@ struct SavingsCalculatorModal: View {
                                                 .foregroundColor(.white)
                                             Spacer()
                                             DatePicker("",
-                                                      selection: $targetDate,
-                                                      in: Date()...,
-                                                      displayedComponents: .date)
+                                                       selection: $targetDate,
+                                                       in: Date()...,
+                                                       displayedComponents: .date)
                                                 .datePickerStyle(.compact)
                                                 .colorScheme(.dark)
                                                 .labelsHidden()
