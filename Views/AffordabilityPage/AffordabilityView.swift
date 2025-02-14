@@ -49,14 +49,6 @@ struct AffordabilityView: View {
                 .padding(.vertical, 16)
                 .background(Theme.background)
             
-            // Section Title styled like a header
-           // Text("What you can afford based on your income")
-            //    .font(.system(size: 20, weight: .semibold))
-            //    .foregroundColor(.white)
-            //    .frame(maxWidth: .infinity, alignment: .leading)
-            //    .padding(.horizontal, 16)
-            //    .padding(.bottom, 12)
-            
             // Scrollable Content
             ScrollView {
                 LazyVStack(spacing: 0) {
@@ -164,6 +156,11 @@ struct AffordabilityView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
                 }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
+                                              to: nil, from: nil, for: nil)
             }
         }
         .background(Theme.background)
@@ -514,130 +511,91 @@ struct CategoryRowView: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Header button to toggle inline details
-            Button {
-                withAnimation {
-                    showInlineDetails.toggle()
-                }
-            } label: {
-                HStack(alignment: .center, spacing: 12) {
-                    Text(category.emoji)
-                        .font(.title2)
-                    Text(category.name)
-                        .font(.system(size: 17))
-                        .foregroundColor(Theme.label)
-                    Spacer()
-                    Text(displayAmount)
-                        .font(.system(size: 17))
-                        .foregroundColor(Theme.secondaryLabel)
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            
-            if showInlineDetails {
-                VStack(alignment: .leading, spacing: 24) {
-                    // Allocation Section
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("ALLOCATION OF SALARY")
-                            .sectionHeader()
-                        Text(category.formattedAllocation)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                // Header button to toggle inline details
+                Button {
+                    withAnimation {
+                        showInlineDetails.toggle()
+                    }
+                } label: {
+                    HStack(alignment: .center, spacing: 12) {
+                        Text(category.emoji)
+                            .font(.title2)
+                        Text(category.name)
                             .font(.system(size: 17))
                             .foregroundColor(Theme.label)
+                        Spacer()
+                        Text(displayAmount)
+                            .font(.system(size: 17))
+                            .foregroundColor(Theme.secondaryLabel)
                     }
-                    
-                    // Monthly Allocation (for total display types)
-                    if displayType == .total {
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                
+                if showInlineDetails {
+                    VStack(alignment: .leading, spacing: 24) {
+                        // Allocation Section
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("ESTIMATED MONTHLY ALLOCATION")
+                            Text("ALLOCATION OF SALARY")
                                 .sectionHeader()
-                            let monthlyAmount = amount / 12
-                            Text(formatCurrency(monthlyAmount))
+                            Text(category.formattedAllocation)
                                 .font(.system(size: 17))
                                 .foregroundColor(Theme.label)
                         }
-                    }
-                    
-                    // Description Section
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("DESCRIPTION")
-                            .sectionHeader()
-                        Text(category.description)
-                            .font(.system(size: 15))
-                            .foregroundColor(Theme.secondaryLabel)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    
-                    // Assumptions Section
-                    if !localAssumptions.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("ASSUMPTIONS")
+                        
+                        // Monthly Allocation (for total display types)
+                        if displayType == .total {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("ESTIMATED MONTHLY ALLOCATION")
+                                    .sectionHeader()
+                                let monthlyAmount = amount / 12
+                                Text(formatCurrency(monthlyAmount))
+                                    .font(.system(size: 17))
+                                    .foregroundColor(Theme.label)
+                            }
+                        }
+                        
+                        // Description Section
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("DESCRIPTION")
                                 .sectionHeader()
-                            
-                            ForEach(localAssumptions.indices, id: \.self) { index in
-                                AssumptionView(
-                                    assumption: $localAssumptions[index],
-                                    onChanged: { _ in
-                                        // Update the shared model when an assumption changes.
-                                        model.updateAssumptions(for: category.id, assumptions: localAssumptions)
-                                    }
-                                )
-                            }
-                        }
-                    }
-                    
-                    // Action Buttons Row
-                    HStack(spacing: 12) {
-                        // Expand Button
-                        Button(action: {
-                            showFullScreenDetails = true
-                        }) {
-                            HStack {
-                                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                Text("Expand")
-                            }
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.white)
-                            .padding(.vertical, 12)
-                            .frame(maxWidth: .infinity)
-                            .background(Theme.surfaceBackground)
-                            .cornerRadius(8)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                            )
+                            Text(category.description)
+                                .font(.system(size: 15))
+                                .foregroundColor(Theme.secondaryLabel)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         
-                        // Pin/Unpin Button
-                        Button(action: {
-                            onPinChanged(category.id, !isPinned)
-                        }) {
-                            HStack {
-                                Image(systemName: isPinned ? "pin.slash.fill" : "pin.fill")
-                                Text(isPinned ? "Unpin" : "Pin")
-                            }
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.white)
-                            .padding(.vertical, 12)
-                            .frame(maxWidth: .infinity)
-                            .background(Theme.surfaceBackground)
-                            .cornerRadius(8)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                            )
-                        }
-                        
-                        // Add to Budget Button
-                        if !isInBudget {
-                            Button(action: { showAddToBudgetConfirmation = true }) {
-                                HStack {
-                                    Text("Budget")
-                                        .font(.system(size: 15, weight: .medium))
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.system(size: 15))
+                        // Assumptions Section
+                        if !localAssumptions.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("ASSUMPTIONS")
+                                    .sectionHeader()
+                                
+                                ForEach(localAssumptions.indices, id: \.self) { index in
+                                    AssumptionView(
+                                        assumption: $localAssumptions[index],
+                                        onChanged: { _ in
+                                            // Update the shared model when an assumption changes.
+                                            model.updateAssumptions(for: category.id, assumptions: localAssumptions)
+                                        }
+                                    )
                                 }
+                            }
+                        }
+                        
+                        // Action Buttons Row
+                        HStack(spacing: 12) {
+                            // Expand Button
+                            Button(action: {
+                                showFullScreenDetails = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                    Text("Expand")
+                                }
+                                .font(.system(size: 15, weight: .medium))
                                 .foregroundColor(.white)
                                 .padding(.vertical, 12)
                                 .frame(maxWidth: .infinity)
@@ -648,24 +606,70 @@ struct CategoryRowView: View {
                                         .stroke(Color.white.opacity(0.2), lineWidth: 1)
                                 )
                             }
-                        } else {
-                            HStack {
-                                Text("Added to Budget")
-                                Image(systemName: "checkmark.circle.fill")
+                            
+                            // Pin/Unpin Button
+                            Button(action: {
+                                onPinChanged(category.id, !isPinned)
+                            }) {
+                                HStack {
+                                    Image(systemName: isPinned ? "pin.slash.fill" : "pin.fill")
+                                    Text(isPinned ? "Unpin" : "Pin")
+                                }
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.white)
+                                .padding(.vertical, 12)
+                                .frame(maxWidth: .infinity)
+                                .background(Theme.surfaceBackground)
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                )
                             }
-                            .font(.system(size: 15))
-                            .foregroundColor(Theme.tint)
-                            .padding(.vertical, 12)
-                            .frame(maxWidth: .infinity)
-                            .background(Theme.surfaceBackground)
-                            .cornerRadius(8)
+                            
+                            // Add to Budget Button
+                            if !isInBudget {
+                                Button(action: { showAddToBudgetConfirmation = true }) {
+                                    HStack {
+                                        Text("Budget")
+                                            .font(.system(size: 15, weight: .medium))
+                                        Image(systemName: "plus.circle.fill")
+                                            .font(.system(size: 15))
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.vertical, 12)
+                                    .frame(maxWidth: .infinity)
+                                    .background(Theme.surfaceBackground)
+                                    .cornerRadius(8)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                    )
+                                }
+                            } else {
+                                HStack {
+                                    Text("Added to Budget")
+                                    Image(systemName: "checkmark.circle.fill")
+                                }
+                                .font(.system(size: 15))
+                                .foregroundColor(Theme.tint)
+                                .padding(.vertical, 12)
+                                .frame(maxWidth: .infinity)
+                                .background(Theme.surfaceBackground)
+                                .cornerRadius(8)
+                            }
                         }
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .background(Theme.elevatedBackground)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-                .background(Theme.elevatedBackground)
             }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
+                                            to: nil, from: nil, for: nil)
         }
         .background(
             Group {
@@ -843,6 +847,14 @@ struct AssumptionView: View {
                                 .font(.system(size: 17))
                                 .foregroundColor(.white)
                                 .frame(width: 60)
+                                .toolbar {
+                                    ToolbarItemGroup(placement: .keyboard) {
+                                        Spacer()
+                                        Button("Done") {
+                                            focusedField = nil
+                                        }
+                                    }
+                                }
                                 .onChange(of: assumption.value) { newValue in
                                     let filtered = newValue.filter { "0123456789.".contains($0) }
                                     if filtered != newValue {
