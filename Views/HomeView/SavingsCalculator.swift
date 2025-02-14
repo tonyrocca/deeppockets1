@@ -11,14 +11,17 @@ struct SavingsCalculatorModal: View {
     @State private var isSearching = true  // Start in search mode
 
     // Modified filteredCategories logic
+    private var availableSavingsCategories: [BudgetCategory] {
+        return BudgetCategoryStore.shared.categories.filter { category in
+            category.type == .savings
+        }
+    }
+
     private var filteredCategories: [BudgetCategory] {
         if searchText.isEmpty {
-            return []  // Return empty array when search is empty
+            return []
         }
-        return BudgetCategoryStore.shared.categories.filter { category in
-            category.displayType == .total &&
-            category.name.lowercased().contains(searchText.lowercased())
-        }
+        return SearchUtils.searchCategories(availableSavingsCategories, searchText: searchText)
     }
     
     var body: some View {

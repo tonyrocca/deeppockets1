@@ -76,6 +76,7 @@ struct ActionButtonMenu: View {
                 }
                 
                 // Pill-shaped FAB Button
+                // Pill-shaped FAB Button
                 Button(action: {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         isShowing.toggle()
@@ -84,15 +85,15 @@ struct ActionButtonMenu: View {
                         }
                     }
                 }) {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 8) {
                         Image(systemName: "lightbulb.fill")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 18, weight: .semibold))
                         Text("Ask me")
-                            .font(.system(size: 14, weight: .medium))
+                            .font(.system(size: 18, weight: .medium))
                     }
                     .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 14)
                     .background(Theme.tint)
                     .clipShape(Capsule())
                     .shadow(color: Theme.tint.opacity(0.3), radius: 8, x: 0, y: 4)

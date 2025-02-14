@@ -34,12 +34,9 @@ struct AffordabilityCalculatorModal: View {
     // Modified filteredCategories logic
     private var filteredCategories: [BudgetCategory] {
         if searchText.isEmpty {
-            return []  // Return empty array when search is empty
+            return []
         }
-        return BudgetCategoryStore.shared.categories.filter {
-            $0.name.lowercased().contains(searchText.lowercased()) ||
-            $0.description.lowercased().contains(searchText.lowercased())
-        }
+        return SearchUtils.searchCategories(BudgetCategoryStore.shared.categories, searchText: searchText)
     }
     
     var body: some View {

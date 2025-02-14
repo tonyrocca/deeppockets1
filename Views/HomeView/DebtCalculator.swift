@@ -12,15 +12,17 @@ struct DebtCalculatorModal: View {
     @State private var isSearching = true  // Start in search mode
 
     // Modified filteredCategories logic
+    private var availableDebtCategories: [BudgetCategory] {
+        return BudgetCategoryStore.shared.categories.filter { category in
+            category.type == .debt
+        }
+    }
+
     private var filteredCategories: [BudgetCategory] {
         if searchText.isEmpty {
-            return []  // Return empty array when search is empty
+            return []
         }
-        return BudgetCategoryStore.shared.categories.filter { category in
-            isDebtCategory(category.id) &&
-            (category.name.lowercased().contains(searchText.lowercased()) ||
-             category.description.lowercased().contains(searchText.lowercased()))
-        }
+        return SearchUtils.searchCategories(availableDebtCategories, searchText: searchText)
     }
     
     private func isDebtCategory(_ id: String) -> Bool {
