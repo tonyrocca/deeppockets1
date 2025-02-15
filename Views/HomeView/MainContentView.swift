@@ -14,8 +14,8 @@ struct MainContentView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var payPeriod: PayPeriod
 
-    // This gesture state will track the ongoing drag offset for interactive swiping.
-    @GestureState private var dragOffset: CGFloat = 0
+    // Instead of a transient GestureState, we use a persistent state for the drag offset.
+    @State private var currentDragOffset: CGFloat = 0
 
     init(monthlyIncome: Double, payPeriod: PayPeriod) {
         let model = AffordabilityModel()
@@ -61,21 +61,33 @@ struct MainContentView: View {
                         }
                         .frame(width: geometry.size.width)
                     }
-                    .offset(x: -CGFloat(selectedTab) * geometry.size.width + dragOffset)
+                    .offset(x: -CGFloat(selectedTab) * geometry.size.width + currentDragOffset)
                     .gesture(
                         DragGesture()
-                            .updating($dragOffset) { value, state, _ in
-                                state = value.translation.width
+                            .onChanged { value in
+                                // Only update horizontal offset if horizontal drag is dominant.
+                                if abs(value.translation.width) > abs(value.translation.height) {
+                                    currentDragOffset = value.translation.width
+                                }
                             }
                             .onEnded { value in
-                                let threshold: CGFloat = geometry.size.width * 0.3
-                                withAnimation(.interactiveSpring(response: 0.5,
-                                                                  dampingFraction: 0.8,
-                                                                  blendDuration: 0.5)) {
-                                    if value.translation.width < -threshold {
-                                        selectedTab = min(1, selectedTab + 1)
-                                    } else if value.translation.width > threshold {
-                                        selectedTab = max(0, selectedTab - 1)
+                                if abs(value.translation.width) > abs(value.translation.height) {
+                                    // Calculate a combined translation with a fraction of the predicted end.
+                                    let combinedTranslation = value.translation.width + value.predictedEndTranslation.width * 0.1
+                                    let threshold: CGFloat = geometry.size.width * 0.3
+                                    withAnimation(.interactiveSpring(response: 0.35, dampingFraction: 0.8, blendDuration: 0.3)) {
+                                        if combinedTranslation < -threshold {
+                                            selectedTab = min(selectedTab + 1, 1) // Cap at 1 since we have 2 tabs.
+                                        } else if combinedTranslation > threshold {
+                                            selectedTab = max(selectedTab - 1, 0)
+                                        }
+                                        // Animate the drag offset back to zero.
+                                        currentDragOffset = 0
+                                    }
+                                } else {
+                                    // If not a dominant horizontal drag, just reset.
+                                    withAnimation {
+                                        currentDragOffset = 0
                                     }
                                 }
                             }
