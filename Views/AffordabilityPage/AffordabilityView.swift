@@ -49,14 +49,6 @@ struct AffordabilityView: View {
                 .padding(.vertical, 16)
                 .background(Theme.background)
             
-            // Section Title styled like a header
-           // Text("What you can afford based on your income")
-            //    .font(.system(size: 20, weight: .semibold))
-            //    .foregroundColor(.white)
-            //    .frame(maxWidth: .infinity, alignment: .leading)
-            //    .padding(.horizontal, 16)
-            //    .padding(.bottom, 12)
-            
             // Scrollable Content
             ScrollView {
                 LazyVStack(spacing: 0) {
@@ -228,8 +220,7 @@ struct AffordabilityView: View {
     }
 }
 
-
-
+// MARK: - StickyIncomeHeader
 struct StickyIncomeHeader: View {
    let monthlyIncome: Double
    private let incomePercentiles: [(threshold: Double, percentile: Int)] = [
@@ -400,6 +391,10 @@ struct AssumptionSliderView: View {
                 }
             }
         }
+        // The high priority gesture here ensures that drags within this view are captured,
+        // preventing the parent’s swipe gesture from triggering when interacting with the slider.
+        .contentShape(Rectangle())
+        .highPriorityGesture(DragGesture(minimumDistance: 0))
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
@@ -430,51 +425,6 @@ struct AssumptionSliderView: View {
         isFocused = false
     }
 }
-
-// Preview
-#Preview {
-    ZStack {
-        Theme.background.ignoresSafeArea()
-        VStack(spacing: 24) {
-            Text("ASSUMPTIONS")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundColor(Theme.tint)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            
-            AssumptionSliderView(
-                title: "Down Payment",
-                range: 0...100,
-                step: 0.01,
-                suffix: "%",
-                value: .constant("20.00")
-            ) { newValue in
-                print("Value changed to: \(newValue)")
-            }
-            
-            AssumptionSliderView(
-                title: "Interest Rate",
-                range: 0...20,
-                step: 0.01,
-                suffix: "%",
-                value: .constant("7.00")
-            ) { newValue in
-                print("Value changed to: \(newValue)")
-            }
-            
-            AssumptionSliderView(
-                title: "Property Tax Rate",
-                range: 0...5,
-                step: 0.01,
-                suffix: "%",
-                value: .constant("1.10")
-            ) { newValue in
-                print("Value changed to: \(newValue)")
-            }
-        }
-        .padding()
-    }
-}
-
 
 // MARK: - CategoryRowView (Updated with fullScreenCover for details)
 struct CategoryRowView: View {
