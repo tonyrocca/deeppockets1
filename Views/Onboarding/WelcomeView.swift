@@ -6,7 +6,7 @@ struct WelcomeView: View {
     @State private var showSalaryInput = false
     
     // Login states
-    @State private var phoneNumber = ""
+    @State private var email = ""
     @State private var password = ""
     @State private var showPassword = false
     @State private var isLoading = false
@@ -129,8 +129,8 @@ struct WelcomeView: View {
     }
     
     private func loadSavedCredentials() {
-        if let savedPhone = UserDefaults.standard.string(forKey: "savedPhone") {
-            phoneNumber = savedPhone
+        if let savedEmail = UserDefaults.standard.string(forKey: "savedEmail") {
+            email = savedEmail
         }
     }
     
@@ -144,10 +144,10 @@ struct WelcomeView: View {
                 DispatchQueue.main.async {
                     if success {
                         if let credentials = userModel.getBiometricCredentials() {
-                            self.phoneNumber = credentials.phoneNumber
-                            self.password = credentials.password
-                            login()
-                        }
+                                                    self.email = credentials.email
+                                                    self.password = credentials.password
+                                                    login()
+                                                }
                     }
                 }
             }
@@ -155,8 +155,8 @@ struct WelcomeView: View {
     }
     
     private func login() {
-        guard PhoneNumberFormatter.isValid(phoneNumber) else {
-            alertMessage = "Please enter a valid phone number"
+        guard EmailValidator.isValid(email) else {
+            alertMessage = "Please enter a valid email address"
             showAlert = true
             return
         }
@@ -171,18 +171,18 @@ struct WelcomeView: View {
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
             do {
-                try userModel.signIn(phoneNumber: phoneNumber, password: password)
+                try userModel.signIn(email: email, password: password) // Will need to update UserModel to use email
                 
                 // Save credentials if remember me is enabled
                 if rememberMe {
-                    UserDefaults.standard.set(phoneNumber, forKey: "savedPhone")
+                    UserDefaults.standard.set(email, forKey: "savedEmail")
                 } else {
-                    UserDefaults.standard.removeObject(forKey: "savedPhone")
+                    UserDefaults.standard.removeObject(forKey: "savedEmail")
                 }
                 
                 // Save biometric preference
                 if useBiometrics {
-                    try userModel.saveBiometricCredentials(phoneNumber: phoneNumber, password: password)
+                    try userModel.saveBiometricCredentials(email: email, password: password) // Will need to update UserModel to use email
                 }
                 
             } catch {

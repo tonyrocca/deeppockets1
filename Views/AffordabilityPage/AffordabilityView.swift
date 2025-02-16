@@ -100,7 +100,7 @@ struct AffordabilityView: View {
                         }
                         
                         VStack(alignment: .leading, spacing: 16) {
-                            Text("WHAT YOU CAN AFFORD BASED ON INCOME")
+                            Text("WHAT YOU CAN AFFORD BASED ON YOUR INCOME")
                                 .font(.system(size: 13, weight: .bold))
                                 .foregroundColor(Theme.tint)
                                 .padding(.horizontal, 8)

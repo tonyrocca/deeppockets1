@@ -5,7 +5,7 @@ import LocalAuthentication
 
 class UserModel: ObservableObject {
     @Published var isAuthenticated = false
-    @Published var phoneNumber: String = ""
+    @Published var email: String = ""
     @Published var currentUser: User? {
         didSet {
             isAuthenticated = currentUser != nil
@@ -15,28 +15,25 @@ class UserModel: ObservableObject {
         }
     }
     
-    private let phoneKey = "user_phone"
-    private let passwordKey = "user_password"
-    
     init() {
         // Try to load saved user data on init
         if let userData = UserDefaults.standard.data(forKey: "userData"),
            let user = try? JSONDecoder().decode(User.self, from: userData) {
             self.currentUser = user
-            self.phoneNumber = user.phoneNumber
+            self.email = user.email
         }
     }
     
     struct User: Codable {
-        var phoneNumber: String
+        var email: String
         var monthlyIncome: Double?
         var payPeriod: PayPeriod?
     }
     
-    func signUp(phoneNumber: String, password: String) throws {
-        // Validate phone number format
-        guard isValidPhoneNumber(phoneNumber) else {
-            throw AuthError.invalidPhoneNumber
+    func signUp(email: String, password: String) throws {
+        // Validate email format
+        guard EmailValidator.isValid(email) else {
+            throw AuthError.invalidEmail
         }
         
         // Validate password requirements
@@ -45,21 +42,21 @@ class UserModel: ObservableObject {
         }
         
         // Check if user already exists
-        if try getStoredPassword(for: phoneNumber) != nil {
+        if try getStoredPassword(for: email) != nil {
             throw AuthError.userAlreadyExists
         }
         
         // Store credentials
-        try storeCredentials(phoneNumber: phoneNumber, password: password)
+        try storeCredentials(email: email, password: password)
         
         // Create and set current user
-        let user = User(phoneNumber: phoneNumber)
+        let user = User(email: email)
         self.currentUser = user
-        self.phoneNumber = phoneNumber
+        self.email = email
     }
     
-    func signIn(phoneNumber: String, password: String) throws {
-        guard let storedPassword = try getStoredPassword(for: phoneNumber) else {
+    func signIn(email: String, password: String) throws {
+        guard let storedPassword = try getStoredPassword(for: email) else {
             throw AuthError.userNotFound
         }
         
@@ -67,18 +64,18 @@ class UserModel: ObservableObject {
             throw AuthError.invalidCredentials
         }
         
-        let user = User(phoneNumber: phoneNumber)
+        let user = User(email: email)
         self.currentUser = user
-        self.phoneNumber = phoneNumber
+        self.email = email
     }
     
     func updatePassword(currentPassword: String, newPassword: String) throws {
-        guard let phoneNumber = currentUser?.phoneNumber else {
+        guard let email = currentUser?.email else {
             throw AuthError.notAuthenticated
         }
         
         // Verify current password
-        guard let storedPassword = try getStoredPassword(for: phoneNumber),
+        guard let storedPassword = try getStoredPassword(for: email),
               storedPassword == currentPassword else {
             throw AuthError.invalidCredentials
         }
@@ -89,44 +86,44 @@ class UserModel: ObservableObject {
         }
         
         // Update password
-        try storeCredentials(phoneNumber: phoneNumber, password: newPassword)
+        try storeCredentials(email: email, password: newPassword)
     }
     
-    func updatePhoneNumber(newPhoneNumber: String, password: String) throws {
-        guard let currentPhone = currentUser?.phoneNumber else {
+    func updateEmail(newEmail: String, password: String) throws {
+        guard let currentEmail = currentUser?.email else {
             throw AuthError.notAuthenticated
         }
         
         // Verify password
-        guard let storedPassword = try getStoredPassword(for: currentPhone),
+        guard let storedPassword = try getStoredPassword(for: currentEmail),
               storedPassword == password else {
             throw AuthError.invalidCredentials
         }
         
-        // Validate new phone number
-        guard isValidPhoneNumber(newPhoneNumber) else {
-            throw AuthError.invalidPhoneNumber
+        // Validate new email
+        guard EmailValidator.isValid(newEmail) else {
+            throw AuthError.invalidEmail
         }
         
-        // Check if new phone number is already in use
-        if try getStoredPassword(for: newPhoneNumber) != nil {
+        // Check if new email is already in use
+        if try getStoredPassword(for: newEmail) != nil {
             throw AuthError.userAlreadyExists
         }
         
         // Delete old credentials and store new ones
-        try deleteCredentials(for: currentPhone)
-        try storeCredentials(phoneNumber: newPhoneNumber, password: password)
+        try deleteCredentials(for: currentEmail)
+        try storeCredentials(email: newEmail, password: password)
         
         // Update current user
         var updatedUser = currentUser
-        updatedUser?.phoneNumber = newPhoneNumber
+        updatedUser?.email = newEmail
         self.currentUser = updatedUser
-        self.phoneNumber = newPhoneNumber
+        self.email = newEmail
     }
     
     func signOut() {
         self.currentUser = nil
-        self.phoneNumber = ""
+        self.email = ""
         UserDefaults.standard.removeObject(forKey: "userData")
     }
     
@@ -145,21 +142,15 @@ class UserModel: ObservableObject {
         }
     }
     
-    private func isValidPhoneNumber(_ phone: String) -> Bool {
-        let phoneRegex = #"^\d{10}$"#
-        return phone.range(of: phoneRegex, options: .regularExpression) != nil
-    }
-    
     private func isValidPassword(_ password: String) -> Bool {
-        // At least 8 characters, 1 uppercase, 1 lowercase, 1 number
-        let passwordRegex = #"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{8,}$"#
-        return password.range(of: passwordRegex, options: .regularExpression) != nil
+        // Only check for minimum length now
+        return password.count >= 6
     }
     
-    private func storeCredentials(phoneNumber: String, password: String) throws {
+    private func storeCredentials(email: String, password: String) throws {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: phoneNumber,
+            kSecAttrAccount as String: email,
             kSecValueData as String: password.data(using: .utf8)!,
             kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked
         ]
@@ -170,10 +161,10 @@ class UserModel: ObservableObject {
         }
     }
     
-    private func getStoredPassword(for phoneNumber: String) throws -> String? {
+    private func getStoredPassword(for email: String) throws -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: phoneNumber,
+            kSecAttrAccount as String: email,
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecReturnData as String: true
         ]
@@ -194,10 +185,10 @@ class UserModel: ObservableObject {
         return password
     }
     
-    private func deleteCredentials(for phoneNumber: String) throws {
+    private func deleteCredentials(for email: String) throws {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: phoneNumber
+            kSecAttrAccount as String: email
         ]
         
         let status = SecItemDelete(query as CFDictionary)
@@ -208,7 +199,7 @@ class UserModel: ObservableObject {
 }
 
 enum AuthError: LocalizedError {
-    case invalidPhoneNumber
+    case invalidEmail
     case invalidPassword
     case userAlreadyExists
     case userNotFound
@@ -218,16 +209,16 @@ enum AuthError: LocalizedError {
     
     var errorDescription: String? {
         switch self {
-        case .invalidPhoneNumber:
-            return "Please enter a valid 10-digit phone number"
+        case .invalidEmail:
+            return "Please enter a valid email address"
         case .invalidPassword:
-            return "Password must be at least 8 characters with 1 uppercase, 1 lowercase, and 1 number"
+            return "Password must be at least 6 characters"
         case .userAlreadyExists:
-            return "An account with this phone number already exists"
+            return "An account with this email already exists"
         case .userNotFound:
-            return "No account found with this phone number"
+            return "No account found with this email"
         case .invalidCredentials:
-            return "Invalid phone number or password"
+            return "Invalid email or password"
         case .notAuthenticated:
             return "Please sign in to perform this action"
         case .storageError:
@@ -238,12 +229,12 @@ enum AuthError: LocalizedError {
 
 extension UserModel {
     struct BiometricCredentials {
-        let phoneNumber: String
+        let email: String
         let password: String
     }
     
-    func saveBiometricCredentials(phoneNumber: String, password: String) throws {
-        let credentials = BiometricCredentials(phoneNumber: phoneNumber, password: password)
+    func saveBiometricCredentials(email: String, password: String) throws {
+        let credentials = BiometricCredentials(email: email, password: password)
         let data = try JSONEncoder().encode(credentials)
         
         let query: [String: Any] = [
@@ -300,6 +291,6 @@ extension UserModel {
 // Make BiometricCredentials Codable
 extension UserModel.BiometricCredentials: Codable {
     private enum CodingKeys: String, CodingKey {
-        case phoneNumber, password
+        case email, password
     }
 }

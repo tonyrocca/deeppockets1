@@ -1,23 +1,46 @@
 import SwiftUI
+import LocalAuthentication
 
+// MARK: - ValidationError
+enum ValidationError: LocalizedError {
+    case emptyField(String)
+    case passwordMismatch
+    
+    var errorDescription: String? {
+        switch self {
+        case .emptyField(let field):
+            return "\(field) is required"
+        case .passwordMismatch:
+            return "New passwords do not match"
+        }
+    }
+}
+
+// MARK: - ProfileView
 struct ProfileView: View {
     @EnvironmentObject var userModel: UserModel
     @Environment(\.dismiss) private var dismiss
     @Binding var monthlyIncome: Double
     @Binding var payPeriod: PayPeriod
+    
+    // Sheet States
     @State private var showSalaryInput = false
     @State private var showPasswordChange = false
-    @State private var showPhoneChange = false
+    @State private var showEmailChange = false
     @State private var showLogin = false
-    @State private var newPhoneNumber = ""
+    
+    // Form Fields
+    @State private var newEmail = ""
     @State private var verifyPassword = ""
     @State private var currentPassword = ""
     @State private var newPassword = ""
     @State private var confirmPassword = ""
+    
+    // Alert States
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var showLogoutConfirmation = false
-
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -38,7 +61,7 @@ struct ProfileView: View {
                                 )
                             
                             if userModel.isAuthenticated {
-                                Text(userModel.phoneNumber)
+                                Text(userModel.email)
                                     .font(.system(size: 24, weight: .bold))
                                     .foregroundColor(.white)
                             } else {
@@ -51,13 +74,7 @@ struct ProfileView: View {
                         
                         // Income Section
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("INCOME")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(Theme.tint)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Theme.mutedGreen.opacity(0.2))
-                                .cornerRadius(4)
+                            sectionHeader("INCOME")
                             
                             Button(action: { showSalaryInput = true }) {
                                 HStack {
@@ -86,98 +103,22 @@ struct ProfileView: View {
                         // Account Section (Only show if authenticated)
                         if userModel.isAuthenticated {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("ACCOUNT")
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundColor(Theme.tint)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Theme.mutedGreen.opacity(0.2))
-                                    .cornerRadius(4)
+                                sectionHeader("ACCOUNT")
                                 
                                 VStack(spacing: 1) {
-                                    Button(action: { showPhoneChange = true }) {
-                                        HStack {
-                                            Text("Change Phone Number")
-                                                .font(.system(size: 17))
-                                                .foregroundColor(.white)
-                                            Spacer()
-                                            Image(systemName: "chevron.right")
-                                                .font(.system(size: 14))
-                                                .foregroundColor(Theme.secondaryLabel)
-                                        }
-                                        .padding()
-                                        .background(Theme.surfaceBackground)
+                                    accountButton("Change Email") {
+                                        showEmailChange = true
                                     }
                                     
-                                    Button(action: { showPasswordChange = true }) {
-                                        HStack {
-                                            Text("Change Password")
-                                                .font(.system(size: 17))
-                                                .foregroundColor(.white)
-                                            Spacer()
-                                            Image(systemName: "chevron.right")
-                                                .font(.system(size: 14))
-                                                .foregroundColor(Theme.secondaryLabel)
-                                        }
-                                        .padding()
-                                        .background(Theme.surfaceBackground)
+                                    accountButton("Change Password") {
+                                        showPasswordChange = true
                                     }
                                 }
                                 .cornerRadius(12)
                             }
                             .padding(.horizontal)
-                        }
-                        
-                        // Authentication Section
-                        if !userModel.isAuthenticated {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("ACCOUNT")
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundColor(Theme.tint)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Theme.mutedGreen.opacity(0.2))
-                                    .cornerRadius(4)
-                                
-                                VStack(spacing: 12) {
-                                    // Create Account Button
-                                    NavigationLink {
-                                        SignUpView()
-                                    } label: {
-                                        HStack {
-                                            Text("Create Account")
-                                                .font(.system(size: 17))
-                                                .foregroundColor(.white)
-                                            Spacer()
-                                            Image(systemName: "chevron.right")
-                                                .font(.system(size: 14))
-                                                .foregroundColor(Theme.secondaryLabel)
-                                        }
-                                        .padding()
-                                        .background(Theme.surfaceBackground)
-                                        .cornerRadius(12)
-                                    }
-                                    
-                                    // Login Button
-                                    Button(action: { showLogin = true }) {
-                                        HStack {
-                                            Text("Log In")
-                                                .font(.system(size: 17))
-                                                .foregroundColor(.white)
-                                            Spacer()
-                                            Image(systemName: "chevron.right")
-                                                .font(.system(size: 14))
-                                                .foregroundColor(Theme.secondaryLabel)
-                                        }
-                                        .padding()
-                                        .background(Theme.surfaceBackground)
-                                        .cornerRadius(12)
-                                    }
-                                }
-                            }
-                            .padding(.horizontal)
-                        } else {
-                            // Logout Button for authenticated users
+                            
+                            // Logout Button
                             VStack(alignment: .leading, spacing: 8) {
                                 Button(action: { showLogoutConfirmation = true }) {
                                     HStack {
@@ -192,66 +133,35 @@ struct ProfileView: View {
                                 }
                             }
                             .padding(.horizontal)
-                        }
-                    }
-                }
-                
-                // Change Phone Number Sheet
-                .sheet(isPresented: $showPhoneChange) {
-                    NavigationView {
-                        VStack(spacing: 24) {
-                            TextField("New Phone Number", text: $newPhoneNumber)
-                                .keyboardType(.numberPad)
-                                .textFieldStyle(Theme.CustomTextFieldStyle())
-                            SecureField("Verify Password", text: $verifyPassword)
-                                .textFieldStyle(Theme.CustomTextFieldStyle())
-                            
-                            Button(action: changePhoneNumber) {
-                                Text("Save")
-                                    .font(.system(size: 17, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 56)
-                                    .background(Theme.tint)
-                                    .cornerRadius(12)
+                        } else {
+                            // Authentication Section for guests
+                            VStack(alignment: .leading, spacing: 8) {
+                                sectionHeader("ACCOUNT")
+                                
+                                VStack(spacing: 12) {
+                                    NavigationLink {
+                                        SignUpView()
+                                    } label: {
+                                        accountButton("Create Account")
+                                    }
+                                    
+                                    Button(action: { showLogin = true }) {
+                                        accountButton("Log In")
+                                    }
+                                }
                             }
+                            .padding(.horizontal)
                         }
-                        .padding()
-                        .navigationTitle("Change Phone")
-                        .navigationBarTitleDisplayMode(.inline)
-                        .background(Theme.background)
                     }
                 }
                 
-                // Change Password Sheet
+                // All sheets and dialogs
+                .sheet(isPresented: $showEmailChange) {
+                    emailChangeSheet
+                }
                 .sheet(isPresented: $showPasswordChange) {
-                    NavigationView {
-                        VStack(spacing: 24) {
-                            SecureField("Current Password", text: $currentPassword)
-                                .textFieldStyle(Theme.CustomTextFieldStyle())
-                            SecureField("New Password", text: $newPassword)
-                                .textFieldStyle(Theme.CustomTextFieldStyle())
-                            SecureField("Confirm New Password", text: $confirmPassword)
-                                .textFieldStyle(Theme.CustomTextFieldStyle())
-                            
-                            Button(action: changePassword) {
-                                Text("Save")
-                                    .font(.system(size: 17, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 56)
-                                    .background(Theme.tint)
-                                    .cornerRadius(12)
-                            }
-                        }
-                        .padding()
-                        .navigationTitle("Change Password")
-                        .navigationBarTitleDisplayMode(.inline)
-                        .background(Theme.background)
-                    }
+                    passwordChangeSheet
                 }
-                
-                                        // Income Update Sheet
                 .sheet(isPresented: $showSalaryInput) {
                     SalaryInputSheet(monthlyIncome: $monthlyIncome, payPeriod: $payPeriod)
                         .onDisappear {
@@ -260,16 +170,11 @@ struct ProfileView: View {
                             }
                         }
                         .interactiveDismissDisabled()
-                        .toolbar {
-                            ToolbarItem(placement: .navigationBarLeading) {
-                                Button("Cancel") {
-                                    showSalaryInput = false
-                                }
-                            }
-                        }
                 }
-                
-                // Logout Confirmation Dialog
+                .sheet(isPresented: $showLogin) {
+                    LoginView()
+                        .environmentObject(userModel)
+                }
                 .confirmationDialog(
                     "Are you sure you want to logout?",
                     isPresented: $showLogoutConfirmation,
@@ -281,25 +186,116 @@ struct ProfileView: View {
                     }
                     Button("Cancel", role: .cancel) { }
                 }
+                .alert("Error", isPresented: $showAlert) {
+                    Button("OK", role: .cancel) { }
+                } message: {
+                    Text(alertMessage)
+                }
             }
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showLogin) {
-                LoginView()
-                    .environmentObject(userModel)
-            }
-            .alert("Error", isPresented: $showAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(alertMessage)
-            }
         }
     }
     
-    private func changePhoneNumber() {
+    // MARK: - Sheet Views
+    private var emailChangeSheet: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                TextField("New Email Address", text: $newEmail)
+                    .keyboardType(.emailAddress)
+                    .autocapitalization(.none)
+                    .textFieldStyle(Theme.CustomTextFieldStyle())
+                SecureField("Verify Password", text: $verifyPassword)
+                    .textFieldStyle(Theme.CustomTextFieldStyle())
+                
+                Button(action: changeEmail) {
+                    Text("Save")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(Theme.tint)
+                        .cornerRadius(12)
+                }
+            }
+            .padding()
+            .navigationTitle("Change Email")
+            .navigationBarTitleDisplayMode(.inline)
+            .background(Theme.background)
+        }
+    }
+    
+    private var passwordChangeSheet: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                SecureField("Current Password", text: $currentPassword)
+                    .textFieldStyle(Theme.CustomTextFieldStyle())
+                SecureField("New Password", text: $newPassword)
+                    .textFieldStyle(Theme.CustomTextFieldStyle())
+                SecureField("Confirm New Password", text: $confirmPassword)
+                    .textFieldStyle(Theme.CustomTextFieldStyle())
+                
+                Button(action: changePassword) {
+                    Text("Save")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(Theme.tint)
+                        .cornerRadius(12)
+                }
+            }
+            .padding()
+            .navigationTitle("Change Password")
+            .navigationBarTitleDisplayMode(.inline)
+            .background(Theme.background)
+        }
+    }
+    
+    // MARK: - Helper Views
+    private func sectionHeader(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 13, weight: .bold))
+            .foregroundColor(Theme.tint)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Theme.mutedGreen.opacity(0.2))
+            .cornerRadius(4)
+    }
+    
+    private func accountButton(_ title: String, action: (() -> Void)? = nil) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 17))
+                .foregroundColor(.white)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14))
+                .foregroundColor(Theme.secondaryLabel)
+        }
+        .padding()
+        .background(Theme.surfaceBackground)
+        .onTapGesture {
+            action?()
+        }
+    }
+    
+    // MARK: - Actions
+    private func changeEmail() {
         do {
-            try userModel.updatePhoneNumber(newPhoneNumber: newPhoneNumber, password: verifyPassword)
-            showPhoneChange = false
+            guard !newEmail.isEmpty else {
+                throw ValidationError.emptyField("Email")
+            }
+            guard !verifyPassword.isEmpty else {
+                throw ValidationError.emptyField("Password")
+            }
+            
+            try userModel.updateEmail(newEmail: newEmail, password: verifyPassword)
+            showEmailChange = false
+            
+            // Clear form
+            newEmail = ""
+            verifyPassword = ""
         } catch {
             alertMessage = error.localizedDescription
             showAlert = true
@@ -307,23 +303,27 @@ struct ProfileView: View {
     }
     
     private func changePassword() {
-        guard !currentPassword.isEmpty,
-              !newPassword.isEmpty,
-              !confirmPassword.isEmpty else {
-            alertMessage = "All fields are required"
-            showAlert = true
-            return
-        }
-        
-        guard newPassword == confirmPassword else {
-            alertMessage = "New passwords do not match"
-            showAlert = true
-            return
-        }
-        
         do {
+            guard !currentPassword.isEmpty else {
+                throw ValidationError.emptyField("Current password")
+            }
+            guard !newPassword.isEmpty else {
+                throw ValidationError.emptyField("New password")
+            }
+            guard !confirmPassword.isEmpty else {
+                throw ValidationError.emptyField("Confirm password")
+            }
+            guard newPassword == confirmPassword else {
+                throw ValidationError.passwordMismatch
+            }
+            
             try userModel.updatePassword(currentPassword: currentPassword, newPassword: newPassword)
             showPasswordChange = false
+            
+            // Clear form
+            currentPassword = ""
+            newPassword = ""
+            confirmPassword = ""
         } catch {
             alertMessage = error.localizedDescription
             showAlert = true
@@ -338,6 +338,7 @@ struct ProfileView: View {
     }
 }
 
+// MARK: - SalaryInputSheet
 struct SalaryInputSheet: View {
     @Binding var monthlyIncome: Double
     @Binding var payPeriod: PayPeriod

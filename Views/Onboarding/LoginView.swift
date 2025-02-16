@@ -5,7 +5,7 @@ struct LoginView: View {
     @EnvironmentObject var userModel: UserModel
     @Environment(\.dismiss) private var dismiss
     
-    @State private var phoneNumber = ""
+    @State private var email = ""
     @State private var password = ""
     @State private var showPassword = false
     @State private var rememberMe = false
@@ -45,18 +45,20 @@ struct LoginView: View {
                 
                 // Form Fields
                 VStack(spacing: 16) {
-                    // Phone Number Field
+                    // Email Field
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Phone Number")
+                        Text("Email")
                             .font(.system(size: 17, weight: .medium))
                             .foregroundColor(.white)
                         
-                        TextField("", text: $phoneNumber)
-                            .keyboardType(.numberPad)
+                        TextField("", text: $email)
+                            .keyboardType(.emailAddress)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
                             .font(.system(size: 17))
                             .foregroundColor(.white)
-                            .placeholder(when: phoneNumber.isEmpty) {
-                                Text("Enter phone number")
+                            .placeholder(when: email.isEmpty) {
+                                Text("Enter email address")
                                     .foregroundColor(Theme.secondaryLabel)
                             }
                             .padding()
@@ -84,7 +86,8 @@ struct LoginView: View {
                             }
                             
                             Button(action: { showPassword.toggle() }) {
-                                Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
+                                Text(showPassword ? "Hide" : "Show")
+                                    .font(.system(size: 17))
                                     .foregroundColor(Theme.secondaryLabel)
                             }
                         }
@@ -143,8 +146,8 @@ struct LoginView: View {
             }
             
             // Load saved credentials if remember me was enabled
-            if let savedPhone = UserDefaults.standard.string(forKey: "savedPhone") {
-                phoneNumber = savedPhone
+            if let savedEmail = UserDefaults.standard.string(forKey: "savedEmail") {
+                email = savedEmail
             }
         }
         .alert("Error", isPresented: $showAlert) {
@@ -159,18 +162,18 @@ struct LoginView: View {
     
     private func login() {
         do {
-            try userModel.signIn(phoneNumber: phoneNumber, password: password)
+            try userModel.signIn(email: email, password: password)
             
             // Save credentials if remember me is enabled
             if rememberMe {
-                UserDefaults.standard.set(phoneNumber, forKey: "savedPhone")
+                UserDefaults.standard.set(email, forKey: "savedEmail")
             } else {
-                UserDefaults.standard.removeObject(forKey: "savedPhone")
+                UserDefaults.standard.removeObject(forKey: "savedEmail")
             }
             
             // Save biometric preference
             if useBiometrics {
-                try userModel.saveBiometricCredentials(phoneNumber: phoneNumber, password: password)
+                try userModel.saveBiometricCredentials(email: email, password: password)
             }
             
             navigateToSalary = true
@@ -191,7 +194,7 @@ struct LoginView: View {
                     if success {
                         // Try to get stored credentials
                         if let credentials = userModel.getBiometricCredentials() {
-                            self.phoneNumber = credentials.phoneNumber
+                            self.email = credentials.email
                             self.password = credentials.password
                             login()
                         }
