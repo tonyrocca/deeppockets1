@@ -499,9 +499,10 @@ struct BudgetView: View {
                                     .padding(.vertical, 8)
                                 
                                 VStack(spacing: 12) {
-                                    summaryRow(title: "Debt", amount: debtTotal * periodMultiplier)
-                                    summaryRow(title: "Expenses", amount: expenseTotal * periodMultiplier)
+                                    // Reordered: Savings first, then Expenses, then Debt.
                                     summaryRow(title: "Savings", amount: savingsTotal * periodMultiplier)
+                                    summaryRow(title: "Expenses", amount: expenseTotal * periodMultiplier)
+                                    summaryRow(title: "Debt", amount: debtTotal * periodMultiplier)
                                 }
                             }
                         }
@@ -517,23 +518,21 @@ struct BudgetView: View {
                         
                         // Categories List
                         VStack(spacing: 16) {
-                            // Debt
-                            let debtItems = budgetModel.budgetItems.filter {
-                                $0.isActive && $0.type == .expense && isDebtCategory($0.category.id)
+                            // Reordered: Savings, then Expenses, then Debt.
+                            let savingsItems = budgetModel.budgetItems.filter {
+                                $0.isActive && $0.type == .savings
                             }
-                            categorySection(title: "DEBT", items: debtItems)
+                            categorySection(title: "SAVINGS", items: savingsItems)
                             
-                            // Expenses
                             let expenseItems = budgetModel.budgetItems.filter {
                                 $0.isActive && $0.type == .expense && !isDebtCategory($0.category.id)
                             }
                             categorySection(title: "EXPENSES", items: expenseItems)
                             
-                            // Savings
-                            let savingsItems = budgetModel.budgetItems.filter {
-                                $0.isActive && $0.type == .savings
+                            let debtItems = budgetModel.budgetItems.filter {
+                                $0.isActive && $0.type == .expense && isDebtCategory($0.category.id)
                             }
-                            categorySection(title: "SAVINGS", items: savingsItems)
+                            categorySection(title: "DEBT", items: debtItems)
                         }
                         .padding(.horizontal)
                     }
