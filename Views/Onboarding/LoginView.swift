@@ -20,7 +20,7 @@ struct LoginView: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 24) {
-                // Navigation Bar
+                // Custom Navigation Bar with Back Button
                 HStack {
                     Button(action: { dismiss() }) {
                         Image(systemName: "chevron.left")
@@ -139,6 +139,7 @@ struct LoginView: View {
                 .padding(.bottom, 16)
             }
         }
+        .navigationBarBackButtonHidden(true) // Hide the default back button
         .onAppear {
             // Check if we should attempt biometric login
             if useBiometrics {
@@ -189,7 +190,7 @@ struct LoginView: View {
         
         if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
             context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
-                                 localizedReason: "Sign in to your account") { success, error in
+                                   localizedReason: "Sign in to your account") { success, error in
                 DispatchQueue.main.async {
                     if success {
                         // Try to get stored credentials
