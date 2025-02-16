@@ -28,7 +28,7 @@ struct WelcomeView: View {
                     .overlay(
                         LinearGradient(
                             colors: [
-                                Theme.tint.opacity(0.1),
+                                Theme.tint.opacity(0.15),
                                 Theme.background,
                                 Theme.background
                             ],
@@ -38,10 +38,12 @@ struct WelcomeView: View {
                     )
                 
                 VStack(spacing: 0) {
+                    // Top spacer with ratio
                     Spacer()
+                        .frame(height: UIScreen.main.bounds.height * 0.15)
                     
                     // App Name and Tagline
-                    VStack(spacing: 16) {
+                    VStack(spacing: 20) {
                         Text("Deep Pockets")
                             .font(.system(size: 44, weight: .bold))
                             .foregroundColor(.white)
@@ -53,10 +55,12 @@ struct WelcomeView: View {
                             .lineSpacing(4)
                     }
                     
+                    // Flexible spacer
                     Spacer()
                     
-                    // Action Buttons
-                    VStack(spacing: 12) {
+                    // Action Buttons with improved styling
+                    VStack(spacing: 16) {
+                        // Get Started Button
                         NavigationLink {
                             SignUpView()
                                 .environmentObject(userModel)
@@ -70,6 +74,7 @@ struct WelcomeView: View {
                                 .cornerRadius(12)
                         }
                         
+                        // Login Button with improved visibility
                         NavigationLink {
                             LoginView()
                                 .environmentObject(userModel)
@@ -79,10 +84,15 @@ struct WelcomeView: View {
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 56)
-                                .background(Color.black.opacity(0.3))
+                                .background(Color.white.opacity(0.15))
                                 .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                )
                         }
                         
+                        // Skip Button
                         NavigationLink {
                             SalaryInputView()
                                 .environmentObject(userModel)
@@ -90,7 +100,7 @@ struct WelcomeView: View {
                             Text("Skip for now")
                                 .font(.system(size: 17))
                                 .foregroundColor(Theme.secondaryLabel)
-                                .padding(.vertical, 12)
+                                .padding(.vertical, 16)
                         }
                     }
                     .padding(.horizontal, 24)
@@ -109,6 +119,7 @@ struct WelcomeView: View {
                         )
                 }
             }
+            .preferredColorScheme(.dark)
         }
         .onAppear {
             loadSavedCredentials()
@@ -128,6 +139,7 @@ struct WelcomeView: View {
         }
     }
     
+    // MARK: - Helper Methods
     private func loadSavedCredentials() {
         if let savedEmail = UserDefaults.standard.string(forKey: "savedEmail") {
             email = savedEmail
@@ -144,10 +156,10 @@ struct WelcomeView: View {
                 DispatchQueue.main.async {
                     if success {
                         if let credentials = userModel.getBiometricCredentials() {
-                                                    self.email = credentials.email
-                                                    self.password = credentials.password
-                                                    login()
-                                                }
+                            self.email = credentials.email
+                            self.password = credentials.password
+                            login()
+                        }
                     }
                 }
             }
@@ -171,18 +183,16 @@ struct WelcomeView: View {
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
             do {
-                try userModel.signIn(email: email, password: password) // Will need to update UserModel to use email
+                try userModel.signIn(email: email, password: password)
                 
-                // Save credentials if remember me is enabled
                 if rememberMe {
                     UserDefaults.standard.set(email, forKey: "savedEmail")
                 } else {
                     UserDefaults.standard.removeObject(forKey: "savedEmail")
                 }
                 
-                // Save biometric preference
                 if useBiometrics {
-                    try userModel.saveBiometricCredentials(email: email, password: password) // Will need to update UserModel to use email
+                    try userModel.saveBiometricCredentials(email: email, password: password)
                 }
                 
             } catch {

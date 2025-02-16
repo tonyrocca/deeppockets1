@@ -192,3 +192,200 @@ extension BudgetModel {
         }
     }
 }
+
+// MARK: - Smart Budget Generation Extension
+extension BudgetModel {
+    /// Generates a smart budget allocation based on income and financial best practices
+    func generateSmartBudget() {
+        // Clear existing items
+        budgetItems.removeAll()
+        
+        // Financial constants
+        let constants = FinancialConstants(
+            emergencyFundMonths: 6.0,
+            maxHousingRatio: 0.33,
+            maxDebtToIncomeRatio: 0.36,
+            minRetirementPercentage: 0.15,
+            minEmergencySavings: 1000.0
+        )
+        
+        var remainingIncome = monthlyIncome
+        var allocations: [BudgetItem] = []
+        
+        // 1. First allocate essentials (Priority 1)
+        let essentialCategories = store.categories.filter {
+            determinePriority(for: $0) == .essential
+        }.sorted { $0.type.allocationOrder < $1.type.allocationOrder }
+        
+        for category in essentialCategories {
+            let amount = calculateSmartAllocation(
+                for: category,
+                monthlyIncome: monthlyIncome,
+                remainingIncome: remainingIncome,
+                constants: constants
+            )
+            
+            if amount > 0 {
+                let type: BudgetCategoryType = shouldBeSavingsCategory(category) ? .savings : .expense
+                
+                allocations.append(BudgetItem(
+                    id: category.id,
+                    category: category,
+                    allocatedAmount: amount,
+                    spentAmount: 0,
+                    type: type,
+                    priority: .essential,
+                    isActive: true
+                ))
+                
+                remainingIncome -= amount
+            }
+        }
+        
+        // 2. Then allocate important items (Priority 2)
+        let importantCategories = store.categories.filter {
+            determinePriority(for: $0) == .important
+        }.sorted { $0.type.allocationOrder < $1.type.allocationOrder }
+        
+        for category in importantCategories {
+            let amount = calculateSmartAllocation(
+                for: category,
+                monthlyIncome: monthlyIncome,
+                remainingIncome: remainingIncome,
+                constants: constants
+            )
+            
+            if amount > 0 {
+                let type: BudgetCategoryType = shouldBeSavingsCategory(category) ? .savings : .expense
+                
+                allocations.append(BudgetItem(
+                    id: category.id,
+                    category: category,
+                    allocatedAmount: amount,
+                    spentAmount: 0,
+                    type: type,
+                    priority: .important,
+                    isActive: true
+                ))
+                
+                remainingIncome -= amount
+            }
+        }
+        
+        // 3. Finally, allocate discretionary items if there's remaining income
+        if remainingIncome > 0 {
+            let discretionaryCategories = store.categories.filter {
+                determinePriority(for: $0) == .discretionary
+            }.sorted { $0.type.allocationOrder < $1.type.allocationOrder }
+            
+            for category in discretionaryCategories {
+                let amount = calculateSmartAllocation(
+                    for: category,
+                    monthlyIncome: monthlyIncome,
+                    remainingIncome: remainingIncome,
+                    constants: constants
+                )
+                
+                if amount > 0 {
+                    let type: BudgetCategoryType = shouldBeSavingsCategory(category) ? .savings : .expense
+                    
+                    allocations.append(BudgetItem(
+                        id: category.id,
+                        category: category,
+                        allocatedAmount: amount,
+                        spentAmount: 0,
+                        type: type,
+                        priority: .discretionary,
+                        isActive: true
+                    ))
+                    
+                    remainingIncome -= amount
+                }
+            }
+        }
+        
+        // Update budget items
+        budgetItems = allocations
+        calculateUnusedAmount()
+    }
+    
+    private func calculateSmartAllocation(
+        for category: BudgetCategory,
+        monthlyIncome: Double,
+        remainingIncome: Double,
+        constants: FinancialConstants
+    ) -> Double {
+        switch category.type {
+        case .savings where category.id == "emergency_savings":
+            // Calculate emergency fund contribution
+            let monthlyExpenses = calculateBasicMonthlyExpenses()
+            let targetEmergencyFund = max(constants.minEmergencySavings, monthlyExpenses * constants.emergencyFundMonths)
+            return min(remainingIncome * 0.2, targetEmergencyFund / 12)
+            
+        case .housing:
+            // Limit housing to recommended ratio
+            return min(monthlyIncome * constants.maxHousingRatio,
+                      monthlyIncome * category.allocationPercentage)
+            
+        case .debt:
+            // Calculate debt payments considering debt-to-income ratio
+            let currentDebtPayments = calculateCurrentDebtPayments()
+            let maxNewDebt = (monthlyIncome * constants.maxDebtToIncomeRatio) - currentDebtPayments
+            return min(maxNewDebt, monthlyIncome * category.allocationPercentage)
+            
+        case .savings where category.id == "retirement_savings":
+            // Ensure minimum retirement savings
+            return max(monthlyIncome * constants.minRetirementPercentage,
+                      monthlyIncome * category.allocationPercentage)
+            
+        default:
+            // For other categories, use standard allocation if affordable
+            let suggestedAmount = monthlyIncome * category.allocationPercentage
+            return min(suggestedAmount, remainingIncome * 0.5)
+        }
+    }
+    
+    private func calculateBasicMonthlyExpenses() -> Double {
+        let essentialCategories = budgetItems.filter {
+            $0.priority == .essential && $0.type == .expense
+        }
+        return essentialCategories.reduce(0) { $0 + $1.allocatedAmount }
+    }
+    
+    private func calculateCurrentDebtPayments() -> Double {
+        let debtCategories = budgetItems.filter {
+            $0.category.type == .debt
+        }
+        return debtCategories.reduce(0) { $0 + $1.allocatedAmount }
+    }
+}
+
+// MARK: - Supporting Types
+private struct FinancialConstants {
+    let emergencyFundMonths: Double
+    let maxHousingRatio: Double
+    let maxDebtToIncomeRatio: Double
+    let minRetirementPercentage: Double
+    let minEmergencySavings: Double
+}
+
+private extension CategoryType {
+    // Order in which category types should be allocated
+    var allocationOrder: Int {
+        switch self {
+        case .housing: return 1
+        case .utilities: return 2
+        case .food: return 3
+        case .health: return 4
+        case .insurance: return 5
+        case .savings: return 6
+        case .debt: return 7
+        case .transportation: return 8
+        case .family: return 9
+        case .education: return 10
+        case .personal: return 11
+        case .entertainment: return 12
+        case .other: return 13
+        }
+    }
+}

@@ -1130,85 +1130,89 @@ struct BudgetView: View {
     }
     
     private var emptyStateView: some View {
-            VStack(spacing: 24) {
-                // Header section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Build Your Budget")
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    Text("Choose how you want to create your personalized budget")
-                        .font(.system(size: 17))
-                        .foregroundColor(Theme.secondaryLabel)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 24)
+        VStack(spacing: 24) {
+            // Header section
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Build Your Budget")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 
-                VStack(spacing: 12) {
-                    // Build on Own Button
-                    Button(action: { showBudgetBuilder = true }) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    VStack(alignment: .leading) {
-                                        Text("Build on your own")
-                                            .font(.system(size: 17, weight: .semibold))
-                                        Text("Create your budget step by step")
-                                            .font(.system(size: 15))
-                                            .foregroundColor(Theme.secondaryLabel)
-                                    }
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 14))
+                Text("Choose how you want to create your personalized budget")
+                    .font(.system(size: 17))
+                    .foregroundColor(Theme.secondaryLabel)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 24)
+            
+            // Inside emptyStateView
+            VStack(spacing: 12) {
+                // Smart Budget Builder (Recommended)
+                Button(action: {
+                    // Just generate the smart budget
+                    budgetModel.generateSmartBudget()
+                }) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text("Build for me")
+                                        .font(.system(size: 17, weight: .semibold))
+                                    Text("Smart budget based on your income")
+                                        .font(.system(size: 15))
                                         .foregroundColor(Theme.secondaryLabel)
                                 }
-                                
-                                HStack(spacing: 4) {
-                                    Image(systemName: "star.fill")
-                                        .font(.system(size: 12))
-                                    Text("Recommended")
-                                        .font(.system(size: 13))
-                                }
-                                .foregroundColor(Theme.tint)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Theme.tint.opacity(0.15))
-                                .cornerRadius(6)
-                            }
-                            .foregroundColor(.white)
-                        }
-                        .padding(16)
-                        .frame(maxWidth: .infinity)
-                        .background(Theme.surfaceBackground)
-                        .cornerRadius(12)
-                    }
-                    
-                    // Build for Me Button
-                    Button(action: {}) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Build for me")
-                                    .font(.system(size: 17, weight: .semibold))
-                                Text("Based on your income")
-                                    .font(.system(size: 15))
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14))
                                     .foregroundColor(Theme.secondaryLabel)
                             }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 14))
-                                .foregroundColor(Theme.secondaryLabel)
+                            
+                            HStack(spacing: 4) {
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 12))
+                                Text("Recommended")
+                                    .font(.system(size: 13))
+                            }
+                            .foregroundColor(Theme.tint)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Theme.tint.opacity(0.15))
+                            .cornerRadius(6)
                         }
                         .foregroundColor(.white)
-                        .padding(16)
-                        .frame(maxWidth: .infinity)
-                        .background(Theme.surfaceBackground)
-                        .cornerRadius(12)
                     }
+                    .padding(16)
+                    .frame(maxWidth: .infinity)
+                    .background(Theme.surfaceBackground)
+                    .cornerRadius(12)
                 }
-                .padding(.horizontal, 16)
+                
+                // Manual Budget Builder
+                Button(action: { showBudgetBuilder = true }) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Build on your own")
+                                .font(.system(size: 17, weight: .semibold))
+                            Text("Create your budget step by step")
+                                .font(.system(size: 15))
+                                .foregroundColor(Theme.secondaryLabel)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14))
+                            .foregroundColor(Theme.secondaryLabel)
+                    }
+                    .foregroundColor(.white)
+                    .padding(16)
+                    .frame(maxWidth: .infinity)
+                    .background(Theme.surfaceBackground)
+                    .cornerRadius(12)
+                }
             }
+            .padding(.horizontal, 16)
+        }
     }
     
     struct PressableButtonStyle: ButtonStyle {
