@@ -71,7 +71,7 @@ struct AffordabilityView: View {
                                     ForEach(pinnedCategoryList) { category in
                                         CategoryRowView(
                                             category: category,
-                                            model: model,  // Pass the model directly
+                                            model: model,
                                             displayType: category.displayType,
                                             isPinned: true,
                                             onPinChanged: { id, shouldPin in
@@ -100,7 +100,7 @@ struct AffordabilityView: View {
                         }
                         
                         VStack(alignment: .leading, spacing: 16) {
-                            Text("WHAT YOU CAN AFFORD BASED ON YOUR INCOME")
+                            Text("WHAT YOU CAN AFFORD...")
                                 .font(.system(size: 13, weight: .bold))
                                 .foregroundColor(Theme.tint)
                                 .padding(.horizontal, 8)
@@ -121,7 +121,7 @@ struct AffordabilityView: View {
                                     ForEach(unpinnedCategories) { category in
                                         CategoryRowView(
                                             category: category,
-                                            model: model,  // Pass the model directly
+                                            model: model,
                                             displayType: category.displayType,
                                             isPinned: false,
                                             onPinChanged: { id, shouldPin in
@@ -210,13 +210,6 @@ struct AffordabilityView: View {
     private func isDebtCategory(_ category: BudgetCategory) -> Bool {
         let debtCategories = ["credit_cards", "student_loans", "personal_loans", "car_loan", "medical_debt", "mortgage"]
         return debtCategories.contains(category.id)
-    }
-    
-    private func formatCurrency(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: NSNumber(value: value)) ?? "$0"
     }
 }
 
@@ -391,8 +384,6 @@ struct AssumptionSliderView: View {
                 }
             }
         }
-        // The high priority gesture here ensures that drags within this view are captured,
-        // preventing the parent’s swipe gesture from triggering when interacting with the slider.
         .contentShape(Rectangle())
         .highPriorityGesture(DragGesture(minimumDistance: 0))
         .toolbar {
@@ -426,7 +417,7 @@ struct AssumptionSliderView: View {
     }
 }
 
-// MARK: - CategoryRowView (Updated with fullScreenCover for details)
+// MARK: - CategoryRowView (Updated with realistic monthly cost for .total)
 struct CategoryRowView: View {
     let category: BudgetCategory
     @ObservedObject var model: AffordabilityModel
@@ -441,9 +432,23 @@ struct CategoryRowView: View {
     @State private var showAddToBudgetConfirmation = false
     @State private var showingAddedToBudget = false
 
-    // Compute the amount from the model; use a cached value if available
-    private var amount: Double {
+    // Compute the total “affordable” amount from the model (e.g. total home price).
+    private var totalAmount: Double {
         model.affordabilityAmounts[category.id] ?? model.calculateAffordableAmount(for: category)
+    }
+    
+    /// For categories with `.total` display type (like "home" or "car"),
+    /// we show a realistic monthly cost rather than totalAmount / 12.
+    private var estimatedMonthlyCost: Double {
+        switch category.id {
+        case "home":
+            return calculateHomeMonthlyCost()
+        case "car":
+            return calculateCarMonthlyCost()
+        default:
+            // If it's some other “total” category, fallback to dividing by 12.
+            return totalAmount / 12
+        }
     }
     
     init(category: BudgetCategory,
@@ -455,7 +460,6 @@ struct CategoryRowView: View {
         self.model = model
         self.displayType = displayType
         self.isPinned = isPinned
-        // Initialize localAssumptions from the category’s assumptions.
         self._localAssumptions = State(initialValue: category.assumptions)
         self.onPinChanged = onPinChanged
     }
@@ -464,8 +468,17 @@ struct CategoryRowView: View {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.maximumFractionDigits = 0
-        let formattedAmount = formatter.string(from: NSNumber(value: amount)) ?? "$0"
-        return formattedAmount + (displayType == .monthly ? "/mo" : " total")
+        
+        if displayType == .monthly {
+            // For monthly categories, just show the monthly cost
+            let amount = totalAmount
+            return (formatter.string(from: NSNumber(value: amount)) ?? "$0") + "/mo"
+        } else {
+            // For total categories, show the total purchase price
+            let amount = totalAmount
+            let formatted = formatter.string(from: NSNumber(value: amount)) ?? "$0"
+            return formatted + " total"
+        }
     }
     
     var body: some View {
@@ -507,8 +520,7 @@ struct CategoryRowView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("ESTIMATED MONTHLY ALLOCATION")
                                 .sectionHeader()
-                            let monthlyAmount = amount / 12
-                            Text(formatCurrency(monthlyAmount))
+                            Text(formatCurrency(estimatedMonthlyCost))
                                 .font(.system(size: 17))
                                 .foregroundColor(Theme.label)
                         }
@@ -643,7 +655,7 @@ struct CategoryRowView: View {
         .fullScreenCover(isPresented: $showFullScreenDetails) {
             CategoryDetailModal(
                 category: category,
-                amount: amount,
+                amount: totalAmount,
                 displayType: displayType,
                 isPinned: isPinned,
                 isPresented: $showFullScreenDetails,
@@ -675,7 +687,6 @@ struct CategoryRowView: View {
                 addToBudgetConfirmation
             }
         }
-        // Listen for updates to the shared assumptions and update our local copy.
         .onReceive(model.$assumptions) { updated in
             if let newAssumptions = updated[category.id] {
                 localAssumptions = newAssumptions
@@ -683,10 +694,7 @@ struct CategoryRowView: View {
         }
     }
     
-    private var isInBudget: Bool {
-        budgetModel.budgetItems.contains { $0.id == category.id && $0.isActive }
-    }
-    
+    // MARK: - Add to Budget Confirmation
     private var addToBudgetConfirmation: some View {
         ZStack {
             Color.black.opacity(0.5)
@@ -707,7 +715,7 @@ struct CategoryRowView: View {
                     Text("Recommended Monthly Amount")
                         .font(.system(size: 15))
                         .foregroundColor(Theme.secondaryLabel)
-                    Text(formatCurrency(displayType == .monthly ? amount : amount / 12))
+                    Text(formatCurrency(displayType == .monthly ? totalAmount : estimatedMonthlyCost))
                         .font(.system(size: 28, weight: .bold))
                         .foregroundColor(.white)
                 }
@@ -749,7 +757,11 @@ struct CategoryRowView: View {
     }
     
     private func addToBudget() {
-        let monthlyAllocation = displayType == .monthly ? amount : amount / 12
+        // If monthly, use totalAmount as the monthly cost
+        // If total, use the “estimatedMonthlyCost”
+        let monthlyAllocation = (displayType == .monthly)
+            ? totalAmount
+            : estimatedMonthlyCost
         
         budgetModel.toggleCategory(id: category.id)
         budgetModel.updateAllocation(for: category.id, amount: monthlyAllocation)
@@ -766,6 +778,76 @@ struct CategoryRowView: View {
         }
     }
     
+    // MARK: - Mortgage Formula for Home
+    private func calculateHomeMonthlyCost() -> Double {
+        // Parse assumptions
+        let dp = getAssumptionValue("Down Payment") ?? 20.0
+        let ir = (getAssumptionValue("Interest Rate") ?? 7.0) / 100.0
+        let taxRate = (getAssumptionValue("Property Tax Rate") ?? 1.1) / 100.0
+        let termYears = Int(getAssumptionValue("Loan Term") ?? 30)
+        
+        // totalAmount is the total home price we can afford
+        let homePrice = totalAmount
+        let principal = homePrice * (1 - dp/100.0)
+        
+        // monthly interest
+        let monthlyInterest = ir / 12.0
+        let n = Double(termYears * 12)
+        guard n > 0, monthlyInterest >= 0 else { return 0 }
+        
+        // Mortgage factor
+        let numerator = monthlyInterest * pow(1 + monthlyInterest, n)
+        let denominator = pow(1 + monthlyInterest, n) - 1
+        if denominator <= 0 { return 0 }
+        let factor = numerator / denominator
+        
+        // Mortgage payment
+        let monthlyMortgage = principal * factor
+        
+        // Monthly property tax
+        let monthlyTax = homePrice * taxRate / 12.0
+        
+        return monthlyMortgage + monthlyTax
+    }
+    
+    // MARK: - Loan Formula for Car
+    private func calculateCarMonthlyCost() -> Double {
+        // Parse assumptions
+        let dp = getAssumptionValue("Down Payment") ?? 10.0
+        let ir = (getAssumptionValue("Interest Rate") ?? 5.0) / 100.0
+        let termYears = Int(getAssumptionValue("Loan Term") ?? 5)
+        
+        // totalAmount is the total car price we can afford
+        let carPrice = totalAmount
+        let principal = carPrice * (1 - dp/100.0)
+        
+        let monthlyInterest = ir / 12.0
+        let n = Double(termYears * 12)
+        guard n > 0, monthlyInterest >= 0 else { return 0 }
+        
+        let numerator = monthlyInterest * pow(1 + monthlyInterest, n)
+        let denominator = pow(1 + monthlyInterest, n) - 1
+        if denominator <= 0 { return 0 }
+        let factor = numerator / denominator
+        
+        // Monthly car payment
+        return principal * factor
+    }
+    
+    private func getAssumptionValue(_ title: String) -> Double? {
+        if let assumption = localAssumptions.first(where: { $0.title == title }),
+           let val = Double(assumption.value) {
+            return val
+        }
+        return nil
+    }
+    
+    // MARK: - Budget Check
+    private var isInBudget: Bool {
+        budgetModel.budgetItems.contains { $0.id == category.id && $0.isActive }
+    }
+    
+    // MARK: - Helpers
     private func formatCurrency(_ value: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
@@ -836,36 +918,11 @@ struct AssumptionView: View {
                     .tint(Theme.tint)
                 }
                 
-            // Similar patterns for other input types...
             case .yearSlider, .textField, .percentageDistribution:
-                // Existing implementation...
+                // For brevity, handle these as needed
                 EmptyView()
             }
         }
-    }
-    
-    private func getUnitLabel(for title: String) -> String {
-        if title == "Loan Term" || title == "Years to Save" {
-            return "yr"
-        }
-        if title == "Months Coverage" {
-            return "mo"  // Ensure months is displayed for Months Coverage
-        }
-        if title.contains("Rate") || title == "Monthly Save" {
-            return "%"
-        }
-        
-        let percentageFields = [
-            "Down Payment",
-            "Stocks", "Bonds", "Other Assets",
-            "Travel", "Lodging", "Activities"
-        ]
-        
-        if percentageFields.contains(title) {
-            return "%"
-        }
-        
-        return ""
     }
 }
 

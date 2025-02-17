@@ -62,7 +62,7 @@ struct BudgetCategory: Identifiable {
     let description: String
     let allocationPercentage: Double
     var recommendedAmount: Double = 0
-    let displayType: AmountDisplayType  // Updated: Using AmountDisplayType
+    let displayType: AmountDisplayType
     var assumptions: [CategoryAssumption]
     let type: CategoryType
     let priority: Int
@@ -77,13 +77,15 @@ struct BudgetCategory: Identifiable {
         let percentage = allocationPercentage * 100
         return String(format: "%.1f%%", percentage)
     }
-}
-
-extension BudgetCategory {
+    
+    /// Default fallback for categories that simply use “percentage of income.”
+    /// (Special categories like “home” or “car” can override this in the store.)
     mutating func calculateRecommendedAmount(monthlyIncome: Double) {
         if displayType == .monthly {
+            // e.g. 0.30 * monthlyIncome
             recommendedAmount = monthlyIncome * allocationPercentage
         } else {
+            // e.g. 0.28 * monthlyIncome * 12
             recommendedAmount = monthlyIncome * allocationPercentage * 12
         }
     }
@@ -115,10 +117,28 @@ class BudgetCategoryStore: ObservableObject {
         }
     }
     
-    /// Calculates recommended amounts for all categories based on monthlyIncome.
+    /// Re-calculate recommended amounts for all categories based on monthlyIncome.
+    /// This now includes special logic for “home”, “car”, and “emergency_savings.”
     func calculateAllRecommendedAmounts(monthlyIncome: Double) {
         for i in 0..<categories.count {
-            categories[i].calculateRecommendedAmount(monthlyIncome: monthlyIncome)
+            var category = categories[i]
+            
+            switch category.id {
+            case "home":
+                category.recommendedAmount = calculateHomeAffordability(category, monthlyIncome: monthlyIncome)
+                
+            case "car":
+                category.recommendedAmount = calculateCarAffordability(category, monthlyIncome: monthlyIncome)
+                
+            case "emergency_savings":
+                category.recommendedAmount = calculateEmergencySavings(category, monthlyIncome: monthlyIncome)
+                
+            default:
+                // Use the default fallback for everything else
+                category.calculateRecommendedAmount(monthlyIncome: monthlyIncome)
+            }
+            
+            categories[i] = category
         }
     }
     
@@ -154,6 +174,12 @@ class BudgetCategoryStore: ObservableObject {
                         value: "1.1",
                         inputType: .percentageSlider(step: 0.1),
                         description: "Annual property tax as % of value."
+                    ),
+                    CategoryAssumption(
+                        title: "Loan Term",
+                        value: "30",
+                        inputType: .yearSlider(min: 15, max: 30),
+                        description: "Loan term in years for your mortgage."
                     )
                 ],
                 type: .housing,
@@ -234,6 +260,12 @@ class BudgetCategoryStore: ObservableObject {
                         value: "8.0",
                         inputType: .percentageSlider(step: 0.1),
                         description: "Sales tax applied to the purchase price."
+                    ),
+                    CategoryAssumption(
+                        title: "Loan Term",
+                        value: "5",
+                        inputType: .yearSlider(min: 3, max: 7),
+                        description: "Loan term in years for your car loan."
                     )
                 ],
                 type: .transportation,
@@ -532,15 +564,15 @@ class BudgetCategoryStore: ObservableObject {
                 id: "emergency_savings",
                 name: "Emergency Savings",
                 emoji: "🚨",
-                description: "Savings for unexpected emergencies.",
+                description: "Savings for unexpected emergencies. Typically, you should cover around 6 months of your salary.",
                 allocationPercentage: 0.10,
                 displayType: .monthly,
                 assumptions: [
                     CategoryAssumption(
-                        title: "Target Amount",
-                        value: "10000",
-                        inputType: .textField,
-                        description: "Desired total in your emergency fund."
+                        title: "Months of Salary",
+                        value: "6",
+                        inputType: .yearSlider(min: 3, max: 12),
+                        description: "Number of months of salary to cover for emergencies."
                     )
                 ],
                 type: .savings,
@@ -1090,5 +1122,85 @@ class BudgetCategoryStore: ObservableObject {
         ]
         
         return list
+    }
+}
+
+// MARK: - Special Calculations Extension
+extension BudgetCategoryStore {
+    // Helper method to get assumption values
+    private func getAssumptionValue(_ assumptions: [CategoryAssumption], title: String) -> Double? {
+        if let valueStr = assumptions.first(where: { $0.title == title })?.value,
+           let value = Double(valueStr) {
+            return value
+        }
+        return nil
+    }
+    
+    func calculateHomeAffordability(_ category: BudgetCategory, monthlyIncome: Double) -> Double {
+        let assumptions = category.assumptions
+        let downPayment = getAssumptionValue(assumptions, title: "Down Payment") ?? 20.0
+        let interestRate = getAssumptionValue(assumptions, title: "Interest Rate") ?? 7.0
+        let propertyTax = getAssumptionValue(assumptions, title: "Property Tax Rate") ?? 1.1
+        let loanTermYears = Int(getAssumptionValue(assumptions, title: "Loan Term") ?? 30)
+        
+        // 1) Determine your target monthly budget for housing:
+        let monthlyBudget = monthlyIncome * category.allocationPercentage
+        
+        // 2) Convert annual interest to monthly
+        let monthlyInterest = (interestRate / 100.0) / 12.0
+        
+        // 3) Number of monthly payments
+        let n = Double(loanTermYears * 12)
+        
+        // 4) Mortgage factor: r(1+r)^n / ((1+r)^n - 1)
+        let numerator = monthlyInterest * pow(1 + monthlyInterest, n)
+        let denominator = pow(1 + monthlyInterest, n) - 1
+        guard denominator > 0 else { return 0 }
+        let factor = numerator / denominator
+        
+        // 5) Solve for homePrice such that:
+        //    ( (homePrice * (1 - dp/100)) * factor ) + (homePrice * (propertyTax/100) / 12 ) = monthlyBudget
+        let dpFraction = (1 - downPayment / 100.0)
+        let monthlyTaxFraction = (propertyTax / 100.0) / 12.0
+        
+        let divisor = dpFraction * factor + monthlyTaxFraction
+        guard divisor > 0 else { return 0 }
+        
+        let homePrice = monthlyBudget / divisor
+        return homePrice
+    }
+    
+    func calculateCarAffordability(_ category: BudgetCategory, monthlyIncome: Double) -> Double {
+        let assumptions = category.assumptions
+        let downPayment = getAssumptionValue(assumptions, title: "Down Payment") ?? 10.0
+        let interestRate = getAssumptionValue(assumptions, title: "Interest Rate") ?? 5.0
+        let loanTermYears = Int(getAssumptionValue(assumptions, title: "Loan Term") ?? 5)
+        
+        // 1) Determine your target monthly budget for car:
+        let monthlyBudget = monthlyIncome * category.allocationPercentage
+        
+        // 2) Convert annual interest to monthly
+        let monthlyInterest = (interestRate / 100.0) / 12.0
+        let n = Double(loanTermYears * 12)
+        guard n > 0, monthlyInterest >= 0 else { return 0 }
+        
+        // 3) Loan factor: r(1+r)^n / ((1+r)^n - 1)
+        let numerator = monthlyInterest * pow(1 + monthlyInterest, n)
+        let denominator = pow(1 + monthlyInterest, n) - 1
+        guard denominator > 0 else { return 0 }
+        let factor = numerator / denominator
+        
+        // 4) Solve for carPrice:
+        let dpFraction = 1.0 - (downPayment / 100.0)
+        guard dpFraction > 0 else { return 0 }
+        
+        let carPrice = monthlyBudget / (factor * dpFraction)
+        return carPrice
+    }
+    
+    func calculateEmergencySavings(_ category: BudgetCategory, monthlyIncome: Double) -> Double {
+        let assumptions = category.assumptions
+        let monthsOfSalary = getAssumptionValue(assumptions, title: "Months of Salary") ?? 6.0
+        return monthlyIncome * monthsOfSalary
     }
 }
