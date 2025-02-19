@@ -114,6 +114,34 @@ class AffordabilityModel: ObservableObject {
         guard divisor > 0 else { return 0 }
         
         let homePrice = monthlyBudget / divisor
+        
+        // -----------------------------------------------------
+        // EXTRA SNIPPET: Demonstrates monthly payment breakdown
+        // using the solved 'homePrice' above. This doesn't alter
+        // the returned 'homePrice' but shows how you'd compute
+        // monthlyMortgage, monthlyTax, monthlyInsurance, etc.
+        // -----------------------------------------------------
+        
+        // Loan amount after down payment:
+        let loanAmount = homePrice * dpFraction
+        
+        // Monthly mortgage payment using amortization formula:
+        let monthlyMortgage = loanAmount
+            * (monthlyInterest * pow(1 + monthlyInterest, n))
+            / (pow(1 + monthlyInterest, n) - 1)
+        
+        // Monthly property tax:
+        let monthlyTax = (homePrice * propertyTax / 100.0) / 12.0
+        
+        // Estimated homeowner's insurance at ~0.5% annually:
+        let monthlyInsurance = (homePrice * 0.005) / 12.0
+        
+        // If needed, you can track or store total monthly cost:
+        let totalMonthly = monthlyMortgage + monthlyTax + monthlyInsurance
+        // (Not returned here, but you can store or publish it
+        // in your model if you need to display it.)
+        // -----------------------------------------------------
+        
         return homePrice
     }
     
@@ -192,8 +220,9 @@ class AffordabilityModel: ObservableObject {
     /// Sums the recommended amounts for debt-related categories.
     private func calculateTotalDebtPayments() -> Double {
         let debtCategories = ["credit_cards", "student_loans", "personal_loans", "car_loan"]
-        return store.categories.filter { debtCategories.contains($0.id) }
-                               .reduce(0) { $0 + $1.recommendedAmount }
+        return store.categories
+            .filter { debtCategories.contains($0.id) }
+            .reduce(0) { $0 + $1.recommendedAmount }
     }
     
     /// Retrieves a numeric value from a set of assumptions based on its title.
@@ -227,10 +256,10 @@ private enum IncomeLevel {
     
     var multiplier: Double {
         switch self {
-        case .low: return 0.9
-        case .moderate: return 1.0
-        case .high: return 1.1
-        case .veryHigh: return 1.2
+        case .low:       return 0.9
+        case .moderate:  return 1.0
+        case .high:      return 1.1
+        case .veryHigh:  return 1.2
         }
     }
 }
@@ -241,10 +270,14 @@ private extension AffordabilityModel {
     func determineIncomeLevel(_ monthlyIncome: Double) -> IncomeLevel {
         let annualIncome = monthlyIncome * 12
         switch annualIncome {
-        case ..<50000: return .low
-        case 50000..<100000: return .moderate
-        case 100000..<200000: return .high
-        default: return .veryHigh
+        case ..<50000:
+            return .low
+        case 50000..<100000:
+            return .moderate
+        case 100000..<200000:
+            return .high
+        default:
+            return .veryHigh
         }
     }
 }
