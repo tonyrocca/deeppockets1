@@ -46,8 +46,11 @@ struct MainContentView: View {
                         // Page 1: Affordability
                         ScrollView {
                             LazyVStack(spacing: 0) {
-                                AffordabilityView(model: model, payPeriod: payPeriod)
-                                    .environmentObject(budgetModel)
+                                AffordabilityView(
+                                    model: model,
+                                    payPeriod: payPeriod
+                                )
+                                .environmentObject(budgetModel)
                             }
                         }
                         .frame(width: geometry.size.width)
@@ -119,7 +122,8 @@ struct MainContentView: View {
         if showAffordabilityCalculator {
             AffordabilityCalculatorModal(
                 isPresented: $showAffordabilityCalculator,
-                monthlyIncome: model.monthlyIncome
+                monthlyIncome: model.monthlyIncome,
+                payPeriod: payPeriod
             )
             .environmentObject(budgetModel)
             .zIndex(2)
