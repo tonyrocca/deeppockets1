@@ -1,6 +1,9 @@
 import SwiftUI
 
 // MARK: - AffordabilityView
+import SwiftUI
+
+// MARK: - AffordabilityView
 struct AffordabilityView: View {
     @ObservedObject var model: AffordabilityModel
     @StateObject private var store = BudgetCategoryStore.shared
@@ -9,20 +12,27 @@ struct AffordabilityView: View {
     @State private var selectedPeriod: IncomePeriod = .annual // Existing state for selected income period
     @FocusState private var isSearchFocused: Bool
     let payPeriod: PayPeriod
-    
+
+    // Filtered categories sorted by priority (most important at the top)
     private var filteredCategories: [BudgetCategory] {
-        guard !searchText.isEmpty else {
-            return store.categories.filter { !isDebtCategory($0) }
+        let categories: [BudgetCategory]
+        if searchText.isEmpty {
+            categories = store.categories.filter { !isDebtCategory($0) }
+        } else {
+            categories = store.categories.filter {
+                !isDebtCategory($0) && $0.name.lowercased().contains(searchText.lowercased())
+            }
         }
-        return store.categories.filter {
-            !isDebtCategory($0) && $0.name.lowercased().contains(searchText.lowercased())
-        }
+        return categories.sorted { $0.priority < $1.priority }
     }
     
+    // Pinned categories sorted by priority
     private var pinnedCategoryList: [BudgetCategory] {
-        store.categories.filter { pinnedCategories.contains($0.id) }
+        return store.categories.filter { pinnedCategories.contains($0.id) }
+            .sorted { $0.priority < $1.priority }
     }
     
+    // Unpinned categories (already sorted because filteredCategories is sorted)
     private var unpinnedCategories: [BudgetCategory] {
         filteredCategories.filter { !pinnedCategories.contains($0.id) }
     }
@@ -206,7 +216,7 @@ struct AffordabilityView: View {
         .cornerRadius(12)
         .padding(.horizontal, 16)
     }
-
+    
     private func isDebtCategory(_ category: BudgetCategory) -> Bool {
         let debtCategories = ["credit_cards", "student_loans", "personal_loans", "car_loan", "medical_debt", "mortgage"]
         return debtCategories.contains(category.id)
