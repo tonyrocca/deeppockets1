@@ -82,10 +82,8 @@ struct BudgetCategory: Identifiable {
     /// (Special categories like “home” or “car” can override this in the store.)
     mutating func calculateRecommendedAmount(monthlyIncome: Double) {
         if displayType == .monthly {
-            // e.g. 0.30 * monthlyIncome
             recommendedAmount = monthlyIncome * allocationPercentage
         } else {
-            // e.g. 0.28 * monthlyIncome * 12
             recommendedAmount = monthlyIncome * allocationPercentage * 12
         }
     }
@@ -126,15 +124,11 @@ class BudgetCategoryStore: ObservableObject {
             switch category.id {
             case "home":
                 category.recommendedAmount = calculateHomeAffordability(category, monthlyIncome: monthlyIncome)
-                
             case "car":
                 category.recommendedAmount = calculateCarAffordability(category, monthlyIncome: monthlyIncome)
-                
             case "emergency_savings":
                 category.recommendedAmount = calculateEmergencySavings(category, monthlyIncome: monthlyIncome)
-                
             default:
-                // Use the default fallback for everything else
                 category.calculateRecommendedAmount(monthlyIncome: monthlyIncome)
             }
             
@@ -151,15 +145,15 @@ class BudgetCategoryStore: ObservableObject {
             // -------------------------------
             BudgetCategory(
                 id: "home",
-                name: "Home Purchase",
+                name: "Home",
                 emoji: "🏠",
-                description: "Total purchase price for a home (or savings goal for a future purchase), including estimated taxes and insurance.",
+                description: "Total purchase price for a home, including estimated taxes and insurance.",
                 allocationPercentage: 0.28,
                 displayType: .total,
                 assumptions: [
                     CategoryAssumption(
                         title: "Down Payment",
-                        value: "20",
+                        value: "20", // Best practice is 20%
                         inputType: .percentageSlider(step: 1),
                         description: "Percentage paid upfront."
                     ),
@@ -237,7 +231,7 @@ class BudgetCategoryStore: ObservableObject {
             // -------------------------------
             BudgetCategory(
                 id: "car",
-                name: "Car Purchase",
+                name: "Car",
                 emoji: "🚗",
                 description: "Total purchase price for a car, including financing costs and fees.",
                 allocationPercentage: 0.15,
@@ -245,7 +239,7 @@ class BudgetCategoryStore: ObservableObject {
                 assumptions: [
                     CategoryAssumption(
                         title: "Down Payment",
-                        value: "10",
+                        value: "20", // Best practice: aim for 20%
                         inputType: .percentageSlider(step: 1),
                         description: "Percentage paid upfront."
                     ),
@@ -472,6 +466,46 @@ class BudgetCategoryStore: ObservableObject {
             // -------------------------------
             // Savings & Investments
             // -------------------------------
+            // New Savings Category for House Downpayment
+            BudgetCategory(
+                id: "house_downpayment",
+                name: "House Downpayment",
+                emoji: "🏡",
+                description: "Savings target for your house downpayment. Best practice is to aim for a 20% downpayment.",
+                allocationPercentage: 0.05,
+                displayType: .total,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Target Amount",
+                        value: "60000",
+                        inputType: .textField,
+                        description: "Total savings goal for a house downpayment."
+                    )
+                ],
+                type: .savings,
+                priority: 10,
+                savingsGoal: 60000
+            ),
+            // New Savings Category for Car Downpayment
+            BudgetCategory(
+                id: "car_downpayment",
+                name: "Car Downpayment",
+                emoji: "🚙",
+                description: "Savings target for your car downpayment. Aim for a 20% downpayment.",
+                allocationPercentage: 0.02,
+                displayType: .total,
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Target Amount",
+                        value: "5000",
+                        inputType: .textField,
+                        description: "Total savings goal for a car downpayment."
+                    )
+                ],
+                type: .savings,
+                priority: 10,
+                savingsGoal: 5000
+            ),
             BudgetCategory(
                 id: "retirement_savings",
                 name: "Retirement Savings",
@@ -937,7 +971,7 @@ class BudgetCategoryStore: ObservableObject {
                 id: "professional_development",
                 name: "Professional Development",
                 emoji: "📖",
-                description: "Investments in courses and career improvement.",
+                description: "Investments in courses, workshops, and self-improvement.",
                 allocationPercentage: 0.02,
                 displayType: .monthly,
                 assumptions: [
@@ -1172,7 +1206,7 @@ extension BudgetCategoryStore {
     
     func calculateCarAffordability(_ category: BudgetCategory, monthlyIncome: Double) -> Double {
         let assumptions = category.assumptions
-        let downPayment = getAssumptionValue(assumptions, title: "Down Payment") ?? 10.0
+        let downPayment = getAssumptionValue(assumptions, title: "Down Payment") ?? 20.0
         let interestRate = getAssumptionValue(assumptions, title: "Interest Rate") ?? 5.0
         let loanTermYears = Int(getAssumptionValue(assumptions, title: "Loan Term") ?? 5)
         
