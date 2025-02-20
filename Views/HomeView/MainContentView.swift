@@ -2,8 +2,16 @@ import SwiftUI
 
 // MARK: - MainContentView
 struct MainContentView: View {
-    @StateObject private var model: AffordabilityModel
-    @StateObject private var budgetModel: BudgetModel
+    @AppStorage("monthlyIncome") var monthlyIncomeStored: Double = 0
+    @AppStorage("selectedPayPeriod") var selectedPayPeriodRaw: String = "Monthly"
+    // Create a computed binding for the pay period based on the AppStorage value.
+    private var payPeriodStored: PayPeriod {
+        get { PayPeriod(rawValue: selectedPayPeriodRaw) ?? .monthly }
+        set { selectedPayPeriodRaw = newValue.rawValue }
+    }
+    
+    @StateObject private var model: AffordabilityModel = AffordabilityModel()
+    @StateObject private var budgetModel: BudgetModel = BudgetModel(monthlyIncome: 0)
     @StateObject private var userModel = UserModel() // Added this line
     @State private var selectedTab = 0
     @State private var showActionMenu = false
@@ -12,20 +20,7 @@ struct MainContentView: View {
     @State private var showDebtCalculator = false
     @State private var showProfile = false
     @Environment(\.dismiss) private var dismiss
-    @State private var payPeriod: PayPeriod
-
-    // Instead of a transient GestureState, we use a persistent state for the drag offset.
     @State private var currentDragOffset: CGFloat = 0
-
-    init(monthlyIncome: Double, payPeriod: PayPeriod) {
-        let model = AffordabilityModel()
-        model.monthlyIncome = monthlyIncome
-        _model = StateObject(wrappedValue: model)
-        
-        let budgetModel = BudgetModel(monthlyIncome: monthlyIncome)
-        _budgetModel = StateObject(wrappedValue: budgetModel)
-        _payPeriod = State(initialValue: payPeriod)
-    }
     
     var body: some View {
         ZStack {
@@ -46,11 +41,8 @@ struct MainContentView: View {
                         // Page 1: Affordability
                         ScrollView {
                             LazyVStack(spacing: 0) {
-                                AffordabilityView(
-                                    model: model,
-                                    payPeriod: payPeriod
-                                )
-                                .environmentObject(budgetModel)
+                                AffordabilityView(model: model, payPeriod: payPeriodStored)
+                                    .environmentObject(budgetModel)
                             }
                         }
                         .frame(width: geometry.size.width)
@@ -58,7 +50,7 @@ struct MainContentView: View {
                         // Page 2: Budget
                         ScrollView {
                             LazyVStack(spacing: 0) {
-                                BudgetView(monthlyIncome: model.monthlyIncome, payPeriod: payPeriod)
+                                BudgetView(monthlyIncome: model.monthlyIncome, payPeriod: payPeriodStored)
                                     .environmentObject(budgetModel)
                             }
                         }
@@ -75,7 +67,6 @@ struct MainContentView: View {
                             }
                             .onEnded { value in
                                 if abs(value.translation.width) > abs(value.translation.height) {
-                                    // Calculate a combined translation with a fraction of the predicted end.
                                     let combinedTranslation = value.translation.width + value.predictedEndTranslation.width * 0.1
                                     let threshold: CGFloat = geometry.size.width * 0.3
                                     withAnimation(.interactiveSpring(response: 0.35, dampingFraction: 0.8, blendDuration: 0.3)) {
@@ -84,11 +75,9 @@ struct MainContentView: View {
                                         } else if combinedTranslation > threshold {
                                             selectedTab = max(selectedTab - 1, 0)
                                         }
-                                        // Animate the drag offset back to zero.
                                         currentDragOffset = 0
                                     }
                                 } else {
-                                    // If not a dominant horizontal drag, just reset.
                                     withAnimation {
                                         currentDragOffset = 0
                                     }
@@ -107,8 +96,19 @@ struct MainContentView: View {
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
         .sheet(isPresented: $showProfile) {
-            ProfileView(monthlyIncome: $model.monthlyIncome, payPeriod: $payPeriod)
-                .environmentObject(userModel)
+            ProfileView(
+                monthlyIncome: $model.monthlyIncome,
+                payPeriod: Binding<PayPeriod>(
+                    get: { PayPeriod(rawValue: selectedPayPeriodRaw) ?? .monthly },
+                    set: { newValue in selectedPayPeriodRaw = newValue.rawValue }
+                )
+            )
+            .environmentObject(userModel)
+        }
+        .onAppear {
+            // Initialize your models with the persisted monthly income.
+            model.monthlyIncome = monthlyIncomeStored
+            budgetModel.monthlyIncome = monthlyIncomeStored
         }
     }
     
@@ -123,7 +123,7 @@ struct MainContentView: View {
             AffordabilityCalculatorModal(
                 isPresented: $showAffordabilityCalculator,
                 monthlyIncome: model.monthlyIncome,
-                payPeriod: payPeriod
+                payPeriod: payPeriodStored
             )
             .environmentObject(budgetModel)
             .zIndex(2)
@@ -174,8 +174,12 @@ struct MainContentView: View {
                         }
                     },
                     monthlyIncome: $model.monthlyIncome,
-                    payPeriod: $payPeriod,
-                    showProfile: $showProfile, // <-- Pass the binding here
+                    // Create a binding for the pay period using the AppStorage's projected value.
+                    payPeriod: Binding<PayPeriod>(
+                        get: { PayPeriod(rawValue: selectedPayPeriodRaw) ?? .monthly },
+                        set: { newValue in selectedPayPeriodRaw = newValue.rawValue }
+                    ),
+                    showProfile: $showProfile,
                     isShowing: $showActionMenu
                 )
                 .padding(.trailing, 16)
@@ -189,17 +193,14 @@ struct MainContentView: View {
 // MARK: - Extension for Keyboard Dismissal
 extension View {
     func hideKeyboard() {
-        UIApplication.shared.sendAction(
-            #selector(UIResponder.resignFirstResponder),
-            to: nil, from: nil, for: nil
-        )
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 
 // MARK: - Preview
 #Preview {
     NavigationStack {
-        MainContentView(monthlyIncome: 5000, payPeriod: .monthly)
+        MainContentView()
     }
     .preferredColorScheme(.dark)
 }

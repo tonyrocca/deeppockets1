@@ -1,6 +1,5 @@
 import SwiftUI
 
-// MARK: - CustomPickerView
 struct CustomPickerView: View {
     @Binding var selectedPayPeriod: PayPeriod?
     @Binding var isPresented: Bool
@@ -18,13 +17,8 @@ struct CustomPickerView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 12)
                         .padding(.horizontal, 16)
-                        .background(
-                            selectedPayPeriod == period ?
-                            Theme.tint.opacity(0.2) :
-                            Color.clear
-                        )
+                        .background(selectedPayPeriod == period ? Theme.tint.opacity(0.2) : Color.clear)
                 }
-                
                 if period != PayPeriod.allCases.last {
                     Divider()
                         .background(Theme.separator)
@@ -37,9 +31,17 @@ struct CustomPickerView: View {
 }
 
 struct SalaryInputView: View {
+    @AppStorage("paycheck") var paycheck: String = ""
+    @AppStorage("selectedPayPeriod") var selectedPayPeriodRaw: String = "Monthly"
+    @AppStorage("monthlyIncome") var monthlyIncome: Double = 0
+    
+    // Computed property for selected pay period.
+    var selectedPayPeriod: PayPeriod {
+        get { PayPeriod(rawValue: selectedPayPeriodRaw) ?? .monthly }
+        set { selectedPayPeriodRaw = newValue.rawValue }
+    }
+    
     @StateObject private var affordabilityModel = AffordabilityModel()
-    @State private var paycheck: String = ""
-    @State private var selectedPayPeriod: PayPeriod?
     @State private var showAffordability = false
     @State private var showPicker = false
     @Environment(\.dismiss) private var dismiss
@@ -48,7 +50,6 @@ struct SalaryInputView: View {
         ZStack {
             Theme.background
                 .ignoresSafeArea()
-            
             VStack(alignment: .leading, spacing: 24) {
                 // Navigation Bar
                 HStack {
@@ -71,14 +72,13 @@ struct SalaryInputView: View {
                         .font(.system(size: 17))
                         .foregroundColor(Theme.secondaryLabel)
                         .padding(.bottom, 4)
-                    
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             showPicker.toggle()
                         }
                     }) {
                         HStack {
-                            Text(selectedPayPeriod?.rawValue ?? "Select frequency")
+                            Text(selectedPayPeriod.rawValue)
                                 .font(.system(size: 17))
                                 .foregroundColor(Theme.label)
                             Spacer()
@@ -96,64 +96,68 @@ struct SalaryInputView: View {
                                 .stroke(Theme.separator, lineWidth: 1)
                         )
                     }
-                    
                     if showPicker {
-                        CustomPickerView(selectedPayPeriod: $selectedPayPeriod, isPresented: $showPicker)
-                            .transition(.opacity)
+                        CustomPickerView(
+                            selectedPayPeriod: Binding<PayPeriod?>(
+                                get: { PayPeriod(rawValue: selectedPayPeriodRaw) ?? .monthly },
+                                set: { newValue in
+                                    if let newValue = newValue {
+                                        selectedPayPeriodRaw = newValue.rawValue
+                                    }
+                                }
+                            ),
+                            isPresented: $showPicker
+                        )
+                        .transition(.opacity)
                     }
                 }
                 .padding(.horizontal, 16)
                 
                 // Take Home Pay Section
-                if selectedPayPeriod != nil {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Take Home Pay")
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(Theme.label)
-                        Text("Enter your take-home pay per paycheck")
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Take Home Pay")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(Theme.label)
+                    Text("Enter your take-home pay per paycheck")
+                        .font(.system(size: 17))
+                        .foregroundColor(Theme.secondaryLabel)
+                        .padding(.bottom, 4)
+                    HStack {
+                        Text("$")
                             .font(.system(size: 17))
-                            .foregroundColor(Theme.secondaryLabel)
-                            .padding(.bottom, 4)
-                        
-                        HStack {
-                            Text("$")
-                                .font(.system(size: 17))
-                                .foregroundColor(.white)
-                            TextField("e.g. 2000", text: $paycheck)
-                                .keyboardType(.decimalPad)
-                                .font(.system(size: 17))
-                                .foregroundColor(.white)
-                                .placeholder(when: paycheck.isEmpty) {
-                                    Text("e.g. 2000")
-                                        .foregroundColor(Color.white.opacity(0.6))
-                                }
-                            if let period = selectedPayPeriod {
-                                Text("/\(period.rawValue.lowercased())")
-                                    .font(.system(size: 17))
+                            .foregroundColor(.white)
+                        TextField("e.g. 2000", text: $paycheck)
+                            .keyboardType(.decimalPad)
+                            .font(.system(size: 17))
+                            .foregroundColor(.white)
+                            .placeholder(when: paycheck.isEmpty) {
+                                Text("e.g. 2000")
                                     .foregroundColor(Color.white.opacity(0.6))
                             }
-                        }
-                        .padding(16)
-                        .frame(maxWidth: .infinity)
-                        .background(Theme.surfaceBackground)
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Theme.separator, lineWidth: 1)
-                        )
+                        Text("/\(selectedPayPeriod.rawValue.lowercased())")
+                            .font(.system(size: 17))
+                            .foregroundColor(Color.white.opacity(0.6))
                     }
-                    .padding(.horizontal, 16)
-                    .transition(.opacity)
+                    .padding(16)
+                    .frame(maxWidth: .infinity)
+                    .background(Theme.surfaceBackground)
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Theme.separator, lineWidth: 1)
+                    )
                 }
+                .padding(.horizontal, 16)
+                .transition(.opacity)
                 
                 Spacer()
                 
                 // Calculate Button
-                if !paycheck.isEmpty && selectedPayPeriod != nil {
+                if !paycheck.isEmpty {
                     Button {
-                        if let amount = Double(paycheck),
-                           let period = selectedPayPeriod {
-                            affordabilityModel.monthlyIncome = amount * period.multiplier
+                        if let amount = Double(paycheck) {
+                            monthlyIncome = amount * selectedPayPeriod.multiplier
+                            affordabilityModel.monthlyIncome = monthlyIncome
                             showAffordability = true
                         }
                     } label: {
@@ -173,10 +177,8 @@ struct SalaryInputView: View {
         }
         .navigationBarHidden(true)
         .navigationDestination(isPresented: $showAffordability) {
-            MainContentView(
-                monthlyIncome: affordabilityModel.monthlyIncome,
-                payPeriod: selectedPayPeriod ?? .monthly
-            )
+            // Since your MainContentView initializer takes no arguments, call it without arguments.
+            MainContentView()
         }
     }
 }
