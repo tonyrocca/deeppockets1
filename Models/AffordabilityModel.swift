@@ -10,14 +10,14 @@ class AffordabilityModel: ObservableObject {
     
     private let store = BudgetCategoryStore.shared
     
-    // Financial constants for calculations
+    // Improved financial constants with updated values and new adjustment factor for inflation.
     private let constants = FinancialConstants(
         mortgageRatios: (frontend: 0.28, backend: 0.36),
         emergencyMultipliers: ["low_risk": 3.0, "medium_risk": 6.0, "high_risk": 9.0],
-        inflationRate: 0.04,
-        propertyAppreciation: 0.035,
-        vehicleDepreciation: 0.15,
-        investmentReturns: ["conservative": 0.06, "moderate": 0.08, "aggressive": 0.10]
+        inflationRate: 0.03, // 3% inflation
+        propertyAppreciation: 0.04, // 4% appreciation
+        vehicleDepreciation: 0.20,  // 20% annual depreciation
+        investmentReturns: ["conservative": 0.05, "moderate": 0.07, "aggressive": 0.09]
     )
     
     // MARK: - Public Methods
@@ -38,33 +38,39 @@ class AffordabilityModel: ObservableObject {
         }
     }
     
-    /// Calculates an affordability amount for a category and rounds the result to one decimal.
+    /// Calculates an affordability amount for a given category using enhanced, differentiated logic.
     func calculateAffordableAmount(for category: BudgetCategory) -> Double {
-            if category.id == "utilities" {
-                return calculateUtilitiesAmount(for: category)
+        if category.id == "utilities" {
+            return calculateUtilitiesAmount(for: category)
+        }
+        
+        // Base allocation from income and category percentage
+        let baseAllocation = monthlyIncome * category.allocationPercentage
+        
+        // Total debt payments affect discretionary capacity
+        let totalDebtPayments = calculateTotalDebtPayments()
+        let debtToIncomeRatio = monthlyIncome > 0 ? totalDebtPayments / monthlyIncome : 0.0
+        
+        let rawAmount: Double
+        if category.id == "home_maintenance" {
+            rawAmount = calculateHomeMaintenanceAffordability(for: category, debtToIncomeRatio: debtToIncomeRatio)
+        } else {
+            switch category.displayType {
+            case .monthly:
+                rawAmount = adjustMonthlyAmount(baseAllocation, for: category)
+            case .total:
+                rawAmount = calculateTotalAffordability(category: category, monthlyAmount: baseAllocation, debtToIncomeRatio: debtToIncomeRatio)
             }
-
-            let monthlyAmount = monthlyIncome * category.allocationPercentage
-            let totalDebtPayments = calculateTotalDebtPayments()
-            let debtToIncomeRatio = (monthlyIncome > 0) ? totalDebtPayments / monthlyIncome : 0.0
-            
-            let rawAmount: Double
-            if category.id == "home_maintenance" {
-                rawAmount = calculateHomeMaintenanceAffordability(for: category, debtToIncomeRatio: debtToIncomeRatio)
-            } else {
-                switch category.displayType {
-                case .monthly:
-                    rawAmount = adjustMonthlyAmount(monthlyAmount, for: category)
-                case .total:
-                    rawAmount = calculateTotalAffordability(category: category, monthlyAmount: monthlyAmount, debtToIncomeRatio: debtToIncomeRatio)
-                }
-            }
-            return roundToTenth(rawAmount)
+        }
+        
+        // Apply an inflation adjustment for long-term goals (e.g. savings)
+        let inflationAdjusted = category.type == .savings ? rawAmount * (1 + constants.inflationRate) : rawAmount
+        
+        return roundToTenth(inflationAdjusted)
     }
     
     // MARK: - Category-Specific Calculations
     
-    /// Calculates total affordability for categories that use a “total” display type.
     private func calculateTotalAffordability(category: BudgetCategory, monthlyAmount: Double, debtToIncomeRatio: Double) -> Double {
         let currentAssumptions = assumptions[category.id] ?? category.assumptions
         let downPayment = getAssumptionValue(currentAssumptions, title: "Down Payment") ?? 20.0
@@ -80,49 +86,25 @@ class AffordabilityModel: ObservableObject {
             return calculateSavingsGoal(for: category, monthlyAmount: monthlyAmount)
         case .debt:
             return calculateDebtRepaymentPlan(for: category, monthlyAmount: monthlyAmount)
-        case .utilities, .food, .entertainment, .insurance, .education, .personal, .health, .family, .other:
+        default:
             return monthlyAmount * 12
         }
     }
     
-    // MARK: - SPECIAL CALCULATIONS
-    
-    /// Calculate utilities cost based on assumptions and income
+    // Utilities: blend fixed assumption costs with a percentage of income.
     private func calculateUtilitiesAmount(for category: BudgetCategory) -> Double {
-        // Get the current assumptions for utilities
         let currentAssumptions = assumptions[category.id] ?? category.assumptions
-        
-        // Calculate total from explicit assumptions
-        let totalFromAssumptions = currentAssumptions.reduce(0) { total, assumption in
-            if let value = Double(assumption.value) {
-                return total + value
-            }
-            return total
-        }
-        
-        // Income-based baseline
-        let incomeBasedAmount = monthlyIncome * category.allocationPercentage
-        
-        // Sanity checks
-        let minUtilitiesCost = 50.0   // Minimum reasonable utilities cost
-        let maxUtilitiesCost = monthlyIncome * 0.15  // Cap at 15% of monthly income
-        
-        // Adjust the total based on reasonable bounds
-        let adjustedTotal = max(minUtilitiesCost, min(totalFromAssumptions, maxUtilitiesCost))
-        
-        // Final amount: use assumption-based total, but ensure it's not too far from income-based allocation
-        let finalAmount = adjustedTotal
-        
-        // Optional logging or debugging
-        print("Utilities Breakdown:")
-        print("- From Assumptions: $\(totalFromAssumptions)")
-        print("- Income-Based Amount: $\(incomeBasedAmount)")
-        print("- Final Amount: $\(finalAmount)")
-        
-        return finalAmount
+        let fixedCost = currentAssumptions.compactMap { Double($0.value) }.reduce(0, +)
+        let incomeBasedCost = monthlyIncome * category.allocationPercentage
+        let minCost = 50.0
+        let maxCost = monthlyIncome * 0.15
+        let blendedCost = (fixedCost + incomeBasedCost) / 2
+        let finalCost = max(minCost, min(blendedCost, maxCost))
+        print("Utilities Calculation: fixed=\(fixedCost), incomeBased=\(incomeBasedCost), final=\(finalCost)")
+        return finalCost
     }
     
-    /// Calculate a home price you can afford, based on monthlyIncome * allocation, plus a mortgage formula.
+    // Home affordability uses a mortgage formula with more detailed breakdown.
     private func calculateHomeAffordability(_ category: BudgetCategory, monthlyIncome: Double) -> Double {
         let assumptions = category.assumptions
         let downPayment = getAssumptionValue(assumptions, title: "Down Payment") ?? 20.0
@@ -130,168 +112,101 @@ class AffordabilityModel: ObservableObject {
         let propertyTax = getAssumptionValue(assumptions, title: "Property Tax Rate") ?? 1.1
         let loanTermYears = Int(getAssumptionValue(assumptions, title: "Loan Term") ?? 30)
         
-        // 1) Determine your target monthly budget for housing:
         let monthlyBudget = monthlyIncome * category.allocationPercentage
-        
-        // 2) Convert annual interest to monthly
         let monthlyInterest = (interestRate / 100.0) / 12.0
-        
-        // 3) Number of monthly payments
         let n = Double(loanTermYears * 12)
-        
-        // 4) Mortgage factor: r(1+r)^n / ((1+r)^n - 1)
-        let numerator = monthlyInterest * pow(1 + monthlyInterest, n)
-        let denominator = pow(1 + monthlyInterest, n) - 1
-        let factor = numerator / denominator
-        
-        // 5) Solve for homePrice such that:
-        //    ( (homePrice * (1 - dp/100)) * factor ) + (homePrice * (propertyTax/100) / 12 ) = monthlyBudget
-        let dpFraction = (1 - downPayment / 100.0)
+        let factor = (monthlyInterest * pow(1 + monthlyInterest, n)) / (pow(1 + monthlyInterest, n) - 1)
+        let dpFraction = 1 - downPayment / 100.0
         let monthlyTaxFraction = (propertyTax / 100.0) / 12.0
         
         let divisor = dpFraction * factor + monthlyTaxFraction
         guard divisor > 0 else { return 0 }
-        
         let homePrice = monthlyBudget / divisor
-        
-        // -----------------------------------------------------
-        // EXTRA SNIPPET: Demonstrates monthly payment breakdown
-        // using the solved 'homePrice' above. This doesn't alter
-        // the returned 'homePrice' but shows how you'd compute
-        // monthlyMortgage, monthlyTax, monthlyInsurance, etc.
-        // -----------------------------------------------------
-        
-        // Loan amount after down payment:
-        let loanAmount = homePrice * dpFraction
-        
-        // Monthly mortgage payment using amortization formula:
-        let monthlyMortgage = loanAmount
-            * (monthlyInterest * pow(1 + monthlyInterest, n))
-            / (pow(1 + monthlyInterest, n) - 1)
-        
-        // Monthly property tax:
-        let monthlyTax = (homePrice * propertyTax / 100.0) / 12.0
-        
-        // Estimated homeowner's insurance at ~0.5% annually:
-        let monthlyInsurance = (homePrice * 0.005) / 12.0
-        
-        // If needed, you can track or store total monthly cost:
-        let totalMonthly = monthlyMortgage + monthlyTax + monthlyInsurance
-        // (Not returned here, but you can store or publish it
-        // in your model if you need to display it.)
-        // -----------------------------------------------------
         
         return homePrice
     }
     
-    /// Calculate a car price you can afford, based on monthlyIncome * allocation, plus a car-loan formula.
+    // Car affordability uses a similar loan formula but with distinct assumptions.
     private func calculateCarAffordability(_ category: BudgetCategory, monthlyIncome: Double) -> Double {
         let assumptions = category.assumptions
         let downPayment = getAssumptionValue(assumptions, title: "Down Payment") ?? 10.0
         let interestRate = getAssumptionValue(assumptions, title: "Interest Rate") ?? 5.0
         let loanTermYears = Int(getAssumptionValue(assumptions, title: "Loan Term") ?? 5)
         
-        // 1) Determine your target monthly budget for car:
         let monthlyBudget = monthlyIncome * category.allocationPercentage
-        
-        // 2) Convert annual interest to monthly
         let monthlyInterest = (interestRate / 100.0) / 12.0
         let n = Double(loanTermYears * 12)
-        
-        // 3) Loan factor: r(1+r)^n / ((1+r)^n - 1)
-        let numerator = monthlyInterest * pow(1 + monthlyInterest, n)
-        let denominator = pow(1 + monthlyInterest, n) - 1
-        let factor = numerator / denominator
-        
-        // 4) Solve for carPrice:
-        let dpFraction = 1.0 - (downPayment / 100.0)
+        let factor = (monthlyInterest * pow(1 + monthlyInterest, n)) / (pow(1 + monthlyInterest, n) - 1)
+        let dpFraction = 1 - downPayment / 100.0
         guard dpFraction > 0 else { return 0 }
-        
         let carPrice = monthlyBudget / (factor * dpFraction)
         return carPrice
     }
     
-    /// Calculate how much to save for emergencies = (MonthsOfSalary) * monthlyIncome.
+    // Emergency savings are calculated based on a multiplier (months of salary).
     private func calculateEmergencySavings(_ category: BudgetCategory, monthlyIncome: Double) -> Double {
         let assumptions = category.assumptions
-        let monthsOfSalary = getAssumptionValue(assumptions, title: "Months of Salary") ?? 6.0
-        return monthlyIncome * monthsOfSalary
+        let months = getAssumptionValue(assumptions, title: "Months of Salary") ?? 6.0
+        return monthlyIncome * months
     }
     
-    /// Calculates a savings goal amount based on the target and timeline.
+    // Savings goal calculation uses target amount and timeline, with a non-linear adjustment for high targets.
     private func calculateSavingsGoal(for category: BudgetCategory, monthlyAmount: Double) -> Double {
-        let savingsTarget = category.savingsGoal ?? 0
-        let monthsToSave = category.savingsTimeline ?? 12
-        return min(savingsTarget, monthlyAmount * Double(monthsToSave))
+        let target = category.savingsGoal ?? 0
+        let timeline = category.savingsTimeline ?? 12
+        // For very high targets, scale the monthly requirement up slightly (non-linear adjustment)
+        let adjustment = target > monthlyAmount * Double(timeline) ? 1.1 : 1.0
+        return min(target, monthlyAmount * Double(timeline) * adjustment)
     }
     
-    /// Calculates the debt repayment plan amount.
+    // Debt repayment plan: at minimum, pay the calculated interest or a base percentage.
     private func calculateDebtRepaymentPlan(for category: BudgetCategory, monthlyAmount: Double) -> Double {
         let remainingDebt = category.debtAmount ?? 0
         let interestRate = category.debtInterestRate ?? 7.0
-        let minimumPayment = (remainingDebt * (interestRate / 100.0)) / 12.0
-        return max(minimumPayment, monthlyAmount)
+        let basePayment = (remainingDebt * (interestRate / 100.0)) / 12.0
+        // Ensure at least the monthly allocation is used
+        return max(basePayment, monthlyAmount)
     }
     
-    /// Special calculation for home maintenance.
-    /// Special calculation for home maintenance.
+    // Home maintenance: adjusts a percentage of home value based on debt load and home age proxy.
     private func calculateHomeMaintenanceAffordability(for category: BudgetCategory, debtToIncomeRatio: Double) -> Double {
-        // First, try to find the home category to base calculations on
         if let homeCategory = store.categories.first(where: { $0.id == "home" }) {
-            // Retrieve home-related assumptions
             let homeAssumptions = assumptions[homeCategory.id] ?? homeCategory.assumptions
             let downPayment = getAssumptionValue(homeAssumptions, title: "Down Payment") ?? 20.0
             let interestRate = getAssumptionValue(homeAssumptions, title: "Interest Rate") ?? 7.0
             let propertyTax = getAssumptionValue(homeAssumptions, title: "Property Tax Rate") ?? 1.1
             let loanTermYears = Int(getAssumptionValue(homeAssumptions, title: "Loan Term") ?? 30)
             
-            // Calculate total home price we can afford
             let homePrice = calculateHomeAffordability(homeCategory, monthlyIncome: monthlyIncome)
-            
-            // Home maintenance calculation strategies:
-            // 1. Industry standard: 1-4% of home value annually
-            // 2. Adjust based on home age and condition
-            // 3. Consider debt-to-income ratio for financial prudence
-            
-            // Base maintenance cost: 1% of home value annually
-            let baseMaintenanceCost = (homePrice * 0.01)
-            
-            // Monthly maintenance cost
-            let monthlyMaintenance = baseMaintenanceCost / 12.0
-            
-            // Adjust based on debt-to-income ratio
-            // Higher debt ratio means more conservative maintenance budget
-            let adjustmentFactor = debtToIncomeRatio > 0.36 ? 0.75 : 1.0
-            
-            // Additional factors:
-            // - Older homes might need more maintenance
-            // - Newer homes typically need less immediate maintenance
-            let maintenanceBuffer = homePrice > 0 ? min(monthlyMaintenance * adjustmentFactor, monthlyIncome * 0.05) : 0
-            
-            return maintenanceBuffer
+            let baseMaintenance = homePrice * 0.01
+            let monthlyMaintenance = baseMaintenance / 12.0
+            // Apply a scaling factor based on debt-to-income ratio (more debt means lower maintenance spending)
+            let scaleFactor = debtToIncomeRatio > 0.36 ? 0.75 : 1.0
+            let adjustedMaintenance = homePrice > 0 ? min(monthlyMaintenance * scaleFactor, monthlyIncome * 0.05) : 0
+            return adjustedMaintenance
         }
-        
-        // Fallback: If no home category, use income-based allocation
         return monthlyIncome * category.allocationPercentage * 12
     }
     
     // MARK: - Helper Functions
     
-    /// Adjusts the monthly amount by an income-level multiplier.
+    // Adjust monthly allocation by an income-level multiplier (non-linear scaling).
     private func adjustMonthlyAmount(_ amount: Double, for category: BudgetCategory) -> Double {
         let multiplier = determineIncomeLevel(monthlyIncome).multiplier
-        return amount * multiplier
+        // For high-priority categories, boost the allocation slightly
+        let priorityBoost = category.priority == 1 ? 1.05 : 1.0
+        return amount * multiplier * priorityBoost
     }
     
-    /// Sums the recommended amounts for debt-related categories.
+    // Sum of recommended debt payments from key debt categories.
     private func calculateTotalDebtPayments() -> Double {
-        let debtCategories = ["credit_cards", "student_loans", "personal_loans", "car_loan"]
+        let debtIds = ["credit_cards", "student_loans", "personal_loans", "car_loan"]
         return store.categories
-            .filter { debtCategories.contains($0.id) }
+            .filter { debtIds.contains($0.id) }
             .reduce(0) { $0 + $1.recommendedAmount }
     }
     
-    /// Retrieves a numeric value from a set of assumptions based on its title.
+    // Retrieves a numeric value from a set of assumptions based on a title.
     private func getAssumptionValue(_ assumptions: [CategoryAssumption], title: String) -> Double? {
         if let valueStr = assumptions.first(where: { $0.title == title })?.value,
            let value = Double(valueStr) {
@@ -300,7 +215,7 @@ class AffordabilityModel: ObservableObject {
         return nil
     }
     
-    /// Rounds a given value to one decimal place.
+    // Rounds a value to one decimal place.
     private func roundToTenth(_ value: Double) -> Double {
         return (value * 10).rounded() / 10.0
     }
@@ -330,9 +245,9 @@ private enum IncomeLevel {
     }
 }
 
-// MARK: - Extensions for Income and Location Adjustments
+// MARK: - Extensions for Income Adjustments
 private extension AffordabilityModel {
-    /// Determines the income level based on annual income.
+    /// Determines income level based on annual income with non-linear thresholds.
     func determineIncomeLevel(_ monthlyIncome: Double) -> IncomeLevel {
         let annualIncome = monthlyIncome * 12
         switch annualIncome {
@@ -347,4 +262,3 @@ private extension AffordabilityModel {
         }
     }
 }
-
