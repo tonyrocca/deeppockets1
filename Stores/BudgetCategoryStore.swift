@@ -276,12 +276,24 @@ class BudgetCategoryStore: ObservableObject {
                 type: .transportation,
                 priority: 4
             ),
+            // Split from the old Public Transit & Fuel category:
             BudgetCategory(
-                id: "transportation",
-                name: "Public Transit & Fuel",
-                emoji: "🚇",
-                description: "Monthly costs for fuel, parking, tolls, and public transit.",
-                allocationPercentage: 0.07,
+                id: "public_transit",
+                name: "Public Transit",
+                emoji: "🚌",
+                description: "Monthly costs for public transit and related expenses.",
+                allocationPercentage: 0.035,
+                displayType: .monthly,
+                assumptions: [],
+                type: .transportation,
+                priority: 3
+            ),
+            BudgetCategory(
+                id: "fuel",
+                name: "Fuel",
+                emoji: "⛽",
+                description: "Monthly costs for fuel for your vehicle.",
+                allocationPercentage: 0.035,
                 displayType: .monthly,
                 assumptions: [],
                 type: .transportation,
@@ -294,10 +306,35 @@ class BudgetCategoryStore: ObservableObject {
                 id: "utilities",
                 name: "Utilities",
                 emoji: "💡",
-                description: "Monthly costs for electricity, water, and gas.",
+                description: "Monthly costs for utilities including electricity, gas, water, and trash collection.",
                 allocationPercentage: 0.08,
                 displayType: .monthly,
-                assumptions: [],
+                assumptions: [
+                    CategoryAssumption(
+                        title: "Electricity",
+                        value: "100",
+                        inputType: .textField,
+                        description: "Monthly cost for electricity in dollars."
+                    ),
+                    CategoryAssumption(
+                        title: "Gas",
+                        value: "50",
+                        inputType: .textField,
+                        description: "Monthly cost for gas in dollars."
+                    ),
+                    CategoryAssumption(
+                        title: "Water",
+                        value: "40",
+                        inputType: .textField,
+                        description: "Monthly cost for water in dollars."
+                    ),
+                    CategoryAssumption(
+                        title: "Trash",
+                        value: "30",
+                        inputType: .textField,
+                        description: "Monthly cost for trash collection in dollars."
+                    )
+                ],
                 type: .utilities,
                 priority: 2
             ),
