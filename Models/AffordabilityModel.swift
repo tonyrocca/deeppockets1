@@ -40,22 +40,26 @@ class AffordabilityModel: ObservableObject {
     
     /// Calculates an affordability amount for a category and rounds the result to one decimal.
     func calculateAffordableAmount(for category: BudgetCategory) -> Double {
-        let monthlyAmount = monthlyIncome * category.allocationPercentage
-        let totalDebtPayments = calculateTotalDebtPayments()
-        let debtToIncomeRatio = (monthlyIncome > 0) ? totalDebtPayments / monthlyIncome : 0.0
-        
-        let rawAmount: Double
-        if category.id == "home_maintenance" {
-            rawAmount = calculateHomeMaintenanceAffordability(for: category, debtToIncomeRatio: debtToIncomeRatio)
-        } else {
-            switch category.displayType {
-            case .monthly:
-                rawAmount = adjustMonthlyAmount(monthlyAmount, for: category)
-            case .total:
-                rawAmount = calculateTotalAffordability(category: category, monthlyAmount: monthlyAmount, debtToIncomeRatio: debtToIncomeRatio)
+            if category.id == "utilities" {
+                return calculateUtilitiesAmount(for: category)
             }
-        }
-        return roundToTenth(rawAmount)
+
+            let monthlyAmount = monthlyIncome * category.allocationPercentage
+            let totalDebtPayments = calculateTotalDebtPayments()
+            let debtToIncomeRatio = (monthlyIncome > 0) ? totalDebtPayments / monthlyIncome : 0.0
+            
+            let rawAmount: Double
+            if category.id == "home_maintenance" {
+                rawAmount = calculateHomeMaintenanceAffordability(for: category, debtToIncomeRatio: debtToIncomeRatio)
+            } else {
+                switch category.displayType {
+                case .monthly:
+                    rawAmount = adjustMonthlyAmount(monthlyAmount, for: category)
+                case .total:
+                    rawAmount = calculateTotalAffordability(category: category, monthlyAmount: monthlyAmount, debtToIncomeRatio: debtToIncomeRatio)
+                }
+            }
+            return roundToTenth(rawAmount)
     }
     
     // MARK: - Category-Specific Calculations
@@ -82,6 +86,41 @@ class AffordabilityModel: ObservableObject {
     }
     
     // MARK: - SPECIAL CALCULATIONS
+    
+    /// Calculate utilities cost based on assumptions and income
+    private func calculateUtilitiesAmount(for category: BudgetCategory) -> Double {
+        // Get the current assumptions for utilities
+        let currentAssumptions = assumptions[category.id] ?? category.assumptions
+        
+        // Calculate total from explicit assumptions
+        let totalFromAssumptions = currentAssumptions.reduce(0) { total, assumption in
+            if let value = Double(assumption.value) {
+                return total + value
+            }
+            return total
+        }
+        
+        // Income-based baseline
+        let incomeBasedAmount = monthlyIncome * category.allocationPercentage
+        
+        // Sanity checks
+        let minUtilitiesCost = 50.0   // Minimum reasonable utilities cost
+        let maxUtilitiesCost = monthlyIncome * 0.15  // Cap at 15% of monthly income
+        
+        // Adjust the total based on reasonable bounds
+        let adjustedTotal = max(minUtilitiesCost, min(totalFromAssumptions, maxUtilitiesCost))
+        
+        // Final amount: use assumption-based total, but ensure it's not too far from income-based allocation
+        let finalAmount = adjustedTotal
+        
+        // Optional logging or debugging
+        print("Utilities Breakdown:")
+        print("- From Assumptions: $\(totalFromAssumptions)")
+        print("- Income-Based Amount: $\(incomeBasedAmount)")
+        print("- Final Amount: $\(finalAmount)")
+        
+        return finalAmount
+    }
     
     /// Calculate a home price you can afford, based on monthlyIncome * allocation, plus a mortgage formula.
     private func calculateHomeAffordability(_ category: BudgetCategory, monthlyIncome: Double) -> Double {
@@ -195,17 +234,44 @@ class AffordabilityModel: ObservableObject {
     }
     
     /// Special calculation for home maintenance.
+    /// Special calculation for home maintenance.
     private func calculateHomeMaintenanceAffordability(for category: BudgetCategory, debtToIncomeRatio: Double) -> Double {
+        // First, try to find the home category to base calculations on
         if let homeCategory = store.categories.first(where: { $0.id == "home" }) {
-            let homeMonthlyAmount = monthlyIncome * homeCategory.allocationPercentage
+            // Retrieve home-related assumptions
             let homeAssumptions = assumptions[homeCategory.id] ?? homeCategory.assumptions
             let downPayment = getAssumptionValue(homeAssumptions, title: "Down Payment") ?? 20.0
             let interestRate = getAssumptionValue(homeAssumptions, title: "Interest Rate") ?? 7.0
             let propertyTax = getAssumptionValue(homeAssumptions, title: "Property Tax Rate") ?? 1.1
+            let loanTermYears = Int(getAssumptionValue(homeAssumptions, title: "Loan Term") ?? 30)
             
-            let homePrice = calculateHomeAffordability(homeCategory, monthlyIncome: homeMonthlyAmount)
-            return (homePrice * 0.01) / 12.0
+            // Calculate total home price we can afford
+            let homePrice = calculateHomeAffordability(homeCategory, monthlyIncome: monthlyIncome)
+            
+            // Home maintenance calculation strategies:
+            // 1. Industry standard: 1-4% of home value annually
+            // 2. Adjust based on home age and condition
+            // 3. Consider debt-to-income ratio for financial prudence
+            
+            // Base maintenance cost: 1% of home value annually
+            let baseMaintenanceCost = (homePrice * 0.01)
+            
+            // Monthly maintenance cost
+            let monthlyMaintenance = baseMaintenanceCost / 12.0
+            
+            // Adjust based on debt-to-income ratio
+            // Higher debt ratio means more conservative maintenance budget
+            let adjustmentFactor = debtToIncomeRatio > 0.36 ? 0.75 : 1.0
+            
+            // Additional factors:
+            // - Older homes might need more maintenance
+            // - Newer homes typically need less immediate maintenance
+            let maintenanceBuffer = homePrice > 0 ? min(monthlyMaintenance * adjustmentFactor, monthlyIncome * 0.05) : 0
+            
+            return maintenanceBuffer
         }
+        
+        // Fallback: If no home category, use income-based allocation
         return monthlyIncome * category.allocationPercentage * 12
     }
     
@@ -281,3 +347,4 @@ private extension AffordabilityModel {
         }
     }
 }
+

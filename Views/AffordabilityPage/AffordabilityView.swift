@@ -1,9 +1,6 @@
 import SwiftUI
 
 // MARK: - AffordabilityView
-import SwiftUI
-
-// MARK: - AffordabilityView
 struct AffordabilityView: View {
     @ObservedObject var model: AffordabilityModel
     @StateObject private var store = BudgetCategoryStore.shared
@@ -866,7 +863,7 @@ struct CategoryRowView: View {
     }
 }
 
-// MARK: - AssumptionView
+// MARK: - AssumptionView (Updated)
 struct AssumptionView: View {
     @Binding var assumption: CategoryAssumption
     @FocusState var focusedField: String?
@@ -928,7 +925,48 @@ struct AssumptionView: View {
                     .tint(Theme.tint)
                 }
                 
-            case .yearSlider, .textField, .percentageDistribution:
+            case .textField:
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(assumption.title)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(Theme.label)
+                    
+                    if let description = assumption.description {
+                        Text(description)
+                            .font(.system(size: 13))
+                            .foregroundColor(Theme.secondaryLabel)
+                    }
+                    
+                    HStack {
+                        Text("$")
+                            .foregroundColor(.white)
+                        TextField("", text: $assumption.value)
+                            .keyboardType(.decimalPad)
+                            .font(.system(size: 17))
+                            .foregroundColor(.white)
+                            .focused($focusedField, equals: assumption.id)
+                            .toolbar {
+                                ToolbarItemGroup(placement: .keyboard) {
+                                    Spacer()
+                                    Button("Done") {
+                                        focusedField = nil
+                                    }
+                                }
+                            }
+                            .onChange(of: assumption.value) { newValue in
+                                let filtered = newValue.filter { "0123456789.".contains($0) }
+                                if filtered != newValue {
+                                    assumption.value = filtered
+                                }
+                                onChanged(assumption)
+                            }
+                    }
+                    .padding()
+                    .background(Theme.surfaceBackground)
+                    .cornerRadius(8)
+                }
+            
+            case .yearSlider, .percentageDistribution:
                 // For brevity, handle these as needed
                 EmptyView()
             }
