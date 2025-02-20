@@ -4,10 +4,18 @@ import SwiftUI
 struct MainContentView: View {
     @AppStorage("monthlyIncome") var monthlyIncomeStored: Double = 0
     @AppStorage("selectedPayPeriod") var selectedPayPeriodRaw: String = "Monthly"
-    // Create a computed binding for the pay period based on the AppStorage value.
+    
+    // Computed property to get a PayPeriod from the stored raw value.
     private var payPeriodStored: PayPeriod {
-        get { PayPeriod(rawValue: selectedPayPeriodRaw) ?? .monthly }
-        set { selectedPayPeriodRaw = newValue.rawValue }
+        PayPeriod(rawValue: selectedPayPeriodRaw) ?? .monthly
+    }
+    
+    // Computed binding for the pay period that avoids mutable self issues.
+    private var payPeriodBinding: Binding<PayPeriod> {
+        Binding<PayPeriod>(
+            get: { PayPeriod(rawValue: selectedPayPeriodRaw) ?? .monthly },
+            set: { newValue in selectedPayPeriodRaw = newValue.rawValue }
+        )
     }
     
     @StateObject private var model: AffordabilityModel = AffordabilityModel()
@@ -60,7 +68,6 @@ struct MainContentView: View {
                     .gesture(
                         DragGesture()
                             .onChanged { value in
-                                // Only update horizontal offset if horizontal drag is dominant.
                                 if abs(value.translation.width) > abs(value.translation.height) {
                                     currentDragOffset = value.translation.width
                                 }
@@ -71,7 +78,7 @@ struct MainContentView: View {
                                     let threshold: CGFloat = geometry.size.width * 0.3
                                     withAnimation(.interactiveSpring(response: 0.35, dampingFraction: 0.8, blendDuration: 0.3)) {
                                         if combinedTranslation < -threshold {
-                                            selectedTab = min(selectedTab + 1, 1) // Cap at 1 since we have 2 tabs.
+                                            selectedTab = min(selectedTab + 1, 1)
                                         } else if combinedTranslation > threshold {
                                             selectedTab = max(selectedTab - 1, 0)
                                         }
@@ -98,10 +105,7 @@ struct MainContentView: View {
         .sheet(isPresented: $showProfile) {
             ProfileView(
                 monthlyIncome: $model.monthlyIncome,
-                payPeriod: Binding<PayPeriod>(
-                    get: { PayPeriod(rawValue: selectedPayPeriodRaw) ?? .monthly },
-                    set: { newValue in selectedPayPeriodRaw = newValue.rawValue }
-                )
+                payPeriod: payPeriodBinding
             )
             .environmentObject(userModel)
         }
@@ -174,11 +178,7 @@ struct MainContentView: View {
                         }
                     },
                     monthlyIncome: $model.monthlyIncome,
-                    // Create a binding for the pay period using the AppStorage's projected value.
-                    payPeriod: Binding<PayPeriod>(
-                        get: { PayPeriod(rawValue: selectedPayPeriodRaw) ?? .monthly },
-                        set: { newValue in selectedPayPeriodRaw = newValue.rawValue }
-                    ),
+                    payPeriod: payPeriodBinding,
                     showProfile: $showProfile,
                     isShowing: $showActionMenu
                 )

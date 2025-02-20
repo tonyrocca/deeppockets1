@@ -64,9 +64,17 @@ class UserModel: ObservableObject {
             throw AuthError.invalidCredentials
         }
         
-        let user = User(email: email)
-        self.currentUser = user
-        self.email = email
+        // Attempt to load saved user data for this email, if available.
+        if let userData = UserDefaults.standard.data(forKey: "userData"),
+           let savedUser = try? JSONDecoder().decode(User.self, from: userData),
+           savedUser.email == email {
+            self.currentUser = savedUser
+            self.email = email
+        } else {
+            let user = User(email: email)
+            self.currentUser = user
+            self.email = email
+        }
     }
     
     func updatePassword(currentPassword: String, newPassword: String) throws {
@@ -288,7 +296,6 @@ extension UserModel {
     }
 }
 
-// Make BiometricCredentials Codable
 extension UserModel.BiometricCredentials: Codable {
     private enum CodingKeys: String, CodingKey {
         case email, password

@@ -20,8 +20,7 @@ struct CustomPickerView: View {
                         .background(selectedPayPeriod == period ? Theme.tint.opacity(0.2) : Color.clear)
                 }
                 if period != PayPeriod.allCases.last {
-                    Divider()
-                        .background(Theme.separator)
+                    Divider().background(Theme.separator)
                 }
             }
         }
@@ -48,8 +47,7 @@ struct SalaryInputView: View {
     
     var body: some View {
         ZStack {
-            Theme.background
-                .ignoresSafeArea()
+            Theme.background.ignoresSafeArea()
             VStack(alignment: .leading, spacing: 24) {
                 // Navigation Bar
                 HStack {
@@ -158,6 +156,8 @@ struct SalaryInputView: View {
                         if let amount = Double(paycheck) {
                             monthlyIncome = amount * selectedPayPeriod.multiplier
                             affordabilityModel.monthlyIncome = monthlyIncome
+                            // Mark onboarding as complete
+                            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
                             showAffordability = true
                         }
                     } label: {
@@ -177,7 +177,6 @@ struct SalaryInputView: View {
         }
         .navigationBarHidden(true)
         .navigationDestination(isPresented: $showAffordability) {
-            // Since your MainContentView initializer takes no arguments, call it without arguments.
             MainContentView()
         }
     }

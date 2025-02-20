@@ -118,6 +118,14 @@ struct WelcomeView: View {
                                 .scaleEffect(1.5)
                         )
                 }
+                
+                // Hidden NavigationLink for automatic navigation if already authenticated
+                NavigationLink(
+                    destination: MainContentView(),
+                    isActive: $showSalaryInput,
+                    label: { EmptyView() }
+                )
+                .hidden()
             }
             .preferredColorScheme(.dark)
         }
@@ -125,6 +133,9 @@ struct WelcomeView: View {
             loadSavedCredentials()
             if useBiometrics {
                 authenticateWithBiometrics()
+            }
+            if userModel.isAuthenticated {
+                showSalaryInput = true
             }
         }
         .onChange(of: userModel.isAuthenticated) { isAuthenticated in
@@ -152,7 +163,7 @@ struct WelcomeView: View {
         
         if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
             context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
-                                 localizedReason: "Sign in to your account") { success, error in
+                                   localizedReason: "Sign in to your account") { success, error in
                 DispatchQueue.main.async {
                     if success {
                         if let credentials = userModel.getBiometricCredentials() {

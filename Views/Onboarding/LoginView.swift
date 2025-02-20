@@ -11,7 +11,7 @@ struct LoginView: View {
     @State private var rememberMe = false
     @State private var showAlert = false
     @State private var alertMessage = ""
-    @State private var navigateToSalary = false
+    @State private var navigateToMain = false
     @AppStorage("useBiometrics") private var useBiometrics = false
     
     var body: some View {
@@ -139,14 +139,11 @@ struct LoginView: View {
                 .padding(.bottom, 16)
             }
         }
-        .navigationBarBackButtonHidden(true) // Hide the default back button
+        .navigationBarBackButtonHidden(true)
         .onAppear {
-            // Check if we should attempt biometric login
             if useBiometrics {
                 authenticateWithBiometrics()
             }
-            
-            // Load saved credentials if remember me was enabled
             if let savedEmail = UserDefaults.standard.string(forKey: "savedEmail") {
                 email = savedEmail
             }
@@ -156,8 +153,8 @@ struct LoginView: View {
         } message: {
             Text(alertMessage)
         }
-        .navigationDestination(isPresented: $navigateToSalary) {
-            SalaryInputView()
+        .navigationDestination(isPresented: $navigateToMain) {
+            MainContentView()
         }
     }
     
@@ -165,19 +162,17 @@ struct LoginView: View {
         do {
             try userModel.signIn(email: email, password: password)
             
-            // Save credentials if remember me is enabled
             if rememberMe {
                 UserDefaults.standard.set(email, forKey: "savedEmail")
             } else {
                 UserDefaults.standard.removeObject(forKey: "savedEmail")
             }
             
-            // Save biometric preference
             if useBiometrics {
                 try userModel.saveBiometricCredentials(email: email, password: password)
             }
             
-            navigateToSalary = true
+            navigateToMain = true
         } catch {
             alertMessage = error.localizedDescription
             showAlert = true
@@ -193,10 +188,9 @@ struct LoginView: View {
                                    localizedReason: "Sign in to your account") { success, error in
                 DispatchQueue.main.async {
                     if success {
-                        // Try to get stored credentials
                         if let credentials = userModel.getBiometricCredentials() {
-                            self.email = credentials.email
-                            self.password = credentials.password
+                            email = credentials.email
+                            password = credentials.password
                             login()
                         }
                     }

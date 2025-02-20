@@ -44,6 +44,7 @@ enum PasswordRequirement: CaseIterable {
 // MARK: - Sign Up Views
 struct SignUpView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var userModel: UserModel
     @State private var email = ""
     @State private var isTyping = false
     @FocusState private var isEmailFieldFocused: Bool
@@ -59,14 +60,11 @@ struct SignUpView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background layer with tap gesture to dismiss keyboard
                 Theme.background
                     .ignoresSafeArea()
                     .onTapGesture {
                         isEmailFieldFocused = false
                     }
-                
-                // Main content layer
                 VStack(alignment: .leading, spacing: 0) {
                     // Back Button
                     Button(action: { dismiss() }) {
@@ -150,7 +148,7 @@ struct SignUpView: View {
 
 struct CreatePasswordView: View {
     let email: String
-    @StateObject private var userModel = UserModel()
+    @EnvironmentObject var userModel: UserModel
     @Environment(\.dismiss) private var dismiss
     @State private var password = ""
     @State private var confirmPassword = ""
