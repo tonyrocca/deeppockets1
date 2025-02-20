@@ -303,9 +303,9 @@ class BudgetCategoryStore: ObservableObject {
             ),
             BudgetCategory(
                 id: "internet",
-                name: "Internet & Cable",
+                name: "Internet",
                 emoji: "📶",
-                description: "Monthly internet and cable TV expenses.",
+                description: "Monthly internet expenses.",
                 allocationPercentage: 0.03,
                 displayType: .monthly,
                 assumptions: [],
@@ -654,42 +654,6 @@ class BudgetCategoryStore: ObservableObject {
                 type: .savings,
                 priority: 1
             ),
-            BudgetCategory(
-                id: "investment_fees",
-                name: "Investment Fees",
-                emoji: "💼",
-                description: "Monthly management fees or commissions for investments.",
-                allocationPercentage: 0.01,
-                displayType: .monthly,
-                assumptions: [
-                    CategoryAssumption(
-                        title: "Monthly Cost",
-                        value: "20",
-                        inputType: .textField,
-                        description: "Average monthly investment fees."
-                    )
-                ],
-                type: .savings,
-                priority: 3
-            ),
-            BudgetCategory(
-                id: "charitable_donations",
-                name: "Charitable Donations",
-                emoji: "🤝",
-                description: "Additional donations beyond basic charity.",
-                allocationPercentage: 0.01,
-                displayType: .monthly,
-                assumptions: [
-                    CategoryAssumption(
-                        title: "Monthly Donation",
-                        value: "25",
-                        inputType: .textField,
-                        description: "Budget for extra charitable donations."
-                    )
-                ],
-                type: .savings,
-                priority: 4
-            ),
             // -------------------------------
             // Education
             // -------------------------------
@@ -985,24 +949,6 @@ class BudgetCategoryStore: ObservableObject {
                 type: .personal,
                 priority: 3
             ),
-            BudgetCategory(
-                id: "legal_expenses",
-                name: "Legal Expenses",
-                emoji: "⚖️",
-                description: "Costs for legal fees and advice.",
-                allocationPercentage: 0.01,
-                displayType: .monthly,
-                assumptions: [
-                    CategoryAssumption(
-                        title: "Monthly Budget",
-                        value: "30",
-                        inputType: .textField,
-                        description: "Average monthly legal expense."
-                    )
-                ],
-                type: .personal,
-                priority: 3
-            ),
             // -------------------------------
             // Health Expenses
             // -------------------------------
@@ -1076,24 +1022,6 @@ class BudgetCategoryStore: ObservableObject {
                         value: "100",
                         inputType: .textField,
                         description: "Budget for miscellaneous expenses."
-                    )
-                ],
-                type: .other,
-                priority: 4
-            ),
-            BudgetCategory(
-                id: "travel",
-                name: "Travel",
-                emoji: "✈️",
-                description: "Expenses for travel (non-vacation) or weekend trips.",
-                allocationPercentage: 0.03,
-                displayType: .monthly,
-                assumptions: [
-                    CategoryAssumption(
-                        title: "Monthly Budget",
-                        value: "150",
-                        inputType: .textField,
-                        description: "Average monthly travel expense."
                     )
                 ],
                 type: .other,
