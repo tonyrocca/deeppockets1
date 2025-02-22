@@ -756,12 +756,9 @@ struct CategoryRowView: View {
 }
 
 // MARK: - Assumption View
-
-import SwiftUI
-
 struct AssumptionView: View {
     @Binding var assumption: CategoryAssumption
-    @FocusState var focusedField: String?
+    @FocusState private var isFocused: Bool
     let onChanged: (CategoryAssumption) -> Void
     
     @State private var localValue: String = ""
@@ -791,8 +788,8 @@ struct AssumptionView: View {
                 
                 // Text Field
                 TextField("", text: $localValue)
-                    .keyboardType(.decimalPad)
-                    .focused($focusedField, equals: assumption.id)
+                    .keyboardType(.numberPad)
+                    .focused($isFocused)
                     .font(.system(size: 17))
                     .foregroundColor(.white)
                     .onChange(of: localValue) { newValue in
@@ -801,6 +798,10 @@ struct AssumptionView: View {
                         if filtered != newValue {
                             localValue = filtered
                         }
+                    }
+                    .contentShape(Rectangle()) // Makes the entire text field tappable
+                    .onTapGesture {
+                        isFocused = true
                     }
                 
                 // Different suffix based on input type
@@ -818,15 +819,18 @@ struct AssumptionView: View {
             .padding()
             .background(Theme.surfaceBackground)
             .cornerRadius(8)
+            .contentShape(Rectangle()) // Makes the entire area tappable
+            .onTapGesture {
+                isFocused = true
+            }
         }
         .onAppear {
             localValue = assumption.value
         }
-        .onChange(of: focusedField) { field in
-            if field != assumption.id && !localValue.isEmpty {
+        .onChange(of: isFocused) { newFocus in
+            if !newFocus {
                 // When focus is lost, update the binding
-                assumption.value = localValue
-                onChanged(assumption)
+                updateAssumption()
             }
         }
         .toolbar {
@@ -834,20 +838,21 @@ struct AssumptionView: View {
                 Spacer()
                 Button("Done") {
                     // When Done is tapped, update the binding and hide keyboard
-                    assumption.value = localValue
-                    onChanged(assumption)
-                    focusedField = nil
+                    updateAssumption()
+                    isFocused = false
                 }
             }
         }
-        // Handle tap outside the field
-        .onTapGesture {
-            if focusedField == assumption.id {
-                assumption.value = localValue
-                onChanged(assumption)
-                focusedField = nil
-            }
-        }
+    }
+    
+    private func updateAssumption() {
+        // Ensure non-empty value
+        let finalValue = localValue.isEmpty ? assumption.value : localValue
+        
+        // Update the assumption
+        assumption.value = finalValue
+        localValue = finalValue
+        onChanged(assumption)
     }
 }
 
