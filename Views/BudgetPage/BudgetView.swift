@@ -433,103 +433,39 @@ struct BudgetView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 24) {
-                        // Period Selector
-                        HStack(spacing: 0) {
-                            ForEach(IncomePeriod.allCases, id: \.self) { period in
-                                Button(action: { withAnimation { selectedPeriod = period }}) {
-                                    Text(period.rawValue)
-                                        .font(.system(size: 15))
-                                        .foregroundColor(selectedPeriod == period ? .white : Theme.secondaryLabel)
-                                        .frame(maxWidth: .infinity)
-                                        .frame(height: 32)
-                                        .background(
-                                            selectedPeriod == period
-                                            ? Theme.tint
-                                            : Color.clear
-                                        )
-                                }
-                            }
-                        }
-                        .background(Theme.surfaceBackground)
-                        .cornerRadius(8)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
-                        
-                        // Budget Summary
-                        VStack(spacing: 0) {
-                            // Calculations
-                            let debtTotal = budgetModel.budgetItems
+                        // Enhanced Budget Header
+                        EnhancedBudgetHeader(
+                            selectedPeriod: $selectedPeriod,
+                            monthlyIncome: monthlyIncome,
+                            payPeriod: payPeriod,
+                            showDetailedSummary: $showDetailedSummary,
+                            debtTotal: budgetModel.budgetItems
                                 .filter { $0.type == .expense && isDebtCategory($0.category.id) }
-                                .reduce(0) { $0 + $1.allocatedAmount }
-                            let expenseTotal = budgetModel.budgetItems
+                                .reduce(0) { $0 + $1.allocatedAmount },
+                            expenseTotal: budgetModel.budgetItems
                                 .filter { $0.type == .expense && !isDebtCategory($0.category.id) }
-                                .reduce(0) { $0 + $1.allocatedAmount }
-                            let savingsTotal = budgetModel.budgetItems
+                                .reduce(0) { $0 + $1.allocatedAmount },
+                            savingsTotal: budgetModel.budgetItems
                                 .filter { $0.type == .savings }
                                 .reduce(0) { $0 + $1.allocatedAmount }
-                            let totalBudget = debtTotal + expenseTotal + savingsTotal
-                            let remaining = monthlyIncome - totalBudget
-                            
-                            // Income Row
-                            HStack {
-                                Text("\(selectedPeriod.rawValue) Income")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
-                                Spacer()
-                                Text(formatCurrency(monthlyIncome * periodMultiplier))
-                                    .font(.system(size: 20, weight: .bold))
-                                    .foregroundColor(.white)
-                            }
-                            .padding(.bottom, 8)
-                            
-                            // Surplus/Deficit Row
-                            HStack {
-                                Text(remaining >= 0 ? "Budget Surplus" : "Budget Deficit")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
-                                Spacer()
-                                Text(formatCurrency(abs(remaining * periodMultiplier)))
-                                    .font(.system(size: 20, weight: .bold))
-                                    .foregroundColor(remaining >= 0 ? Theme.tint : .red)
-                            }
-                            .padding(.bottom, 6)
-                            
-                            if showDetailedSummary {
-                                Divider()
-                                    .background(Theme.separator)
-                                    .padding(.vertical, 8)
-                                
-                                VStack(spacing: 12) {
-                                    // Reordered: Savings first, then Expenses, then Debt.
-                                    summaryRow(title: "Savings", amount: savingsTotal * periodMultiplier)
-                                    summaryRow(title: "Expenses", amount: expenseTotal * periodMultiplier)
-                                    summaryRow(title: "Debt", amount: debtTotal * periodMultiplier)
-                                }
-                            }
-                        }
-                        .padding(16)
-                        .background(Theme.surfaceBackground)
-                        .cornerRadius(16)
+                        )
                         .padding(.horizontal)
-                        .onTapGesture {
-                            withAnimation {
-                                showDetailedSummary.toggle()
-                            }
-                        }
                         
                         // Categories List
                         VStack(spacing: 16) {
-                            // Reordered: Savings, then Expenses, then Debt.
+                            // Savings Categories
                             let savingsItems = budgetModel.budgetItems.filter {
                                 $0.isActive && $0.type == .savings
                             }
                             categorySection(title: "SAVINGS", items: savingsItems)
                             
+                            // Expense Categories
                             let expenseItems = budgetModel.budgetItems.filter {
                                 $0.isActive && $0.type == .expense && !isDebtCategory($0.category.id)
                             }
                             categorySection(title: "EXPENSES", items: expenseItems)
                             
+                            // Debt Categories
                             let debtItems = budgetModel.budgetItems.filter {
                                 $0.isActive && $0.type == .expense && isDebtCategory($0.category.id)
                             }

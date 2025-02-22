@@ -1,154 +1,84 @@
 import SwiftUI
 
 struct EnhancedBudgetHeader: View {
-    let income: Double
-    let budgetSurplus: Double
-    let expenses: Double
-    let savings: Double
-    let debt: Double
-    let periodType: String // "Annual", "Monthly", or "Per Paycheck"
+    @Binding var selectedPeriod: IncomePeriod
+    let monthlyIncome: Double
+    let payPeriod: PayPeriod
+    @Binding var showDetailedSummary: Bool
+    let debtTotal: Double
+    let expenseTotal: Double
+    let savingsTotal: Double
     
-    @State private var isExpanded = false
-    
-    private var totalAllocated: Double {
-        return expenses + savings + debt
+    private var periodMultiplier: Double {
+        switch selectedPeriod {
+        case .annual: return 12
+        case .monthly: return 1
+        case .perPaycheck: return 1 / payPeriod.multiplier
+        }
     }
     
-    // Calculate percentage heights (capped at minimum 10% for visibility)
-    private var expensesHeight: CGFloat {
-        totalAllocated > 0 ? max(0.1, CGFloat(expenses / totalAllocated)) : 0.1
+    private var totalIncome: Double {
+        monthlyIncome * periodMultiplier
     }
     
-    private var savingsHeight: CGFloat {
-        totalAllocated > 0 ? max(0.1, CGFloat(savings / totalAllocated)) : 0.1
+    private var totalBudget: Double {
+        (debtTotal + expenseTotal + savingsTotal) * periodMultiplier
     }
     
-    private var debtHeight: CGFloat {
-        totalAllocated > 0 ? max(0.1, CGFloat(debt / totalAllocated)) : 0.1
+    private var remaining: Double {
+        totalIncome - totalBudget
     }
-
+    
     var body: some View {
-        ZStack {
-            // Background
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Theme.surfaceBackground)
-            
-            VStack(spacing: 0) {
-                // Header section
-                VStack(spacing: 16) {
-                    // Income row
-                    HStack {
-                        Text("\(periodType) Income")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.white)
-                        Spacer()
-                        Text(formatCurrency(income))
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(.white)
+        VStack(spacing: 16) {
+            // Period Selector
+            HStack(spacing: 0) {
+                ForEach(IncomePeriod.allCases, id: \.self) { period in
+                    Button(action: { withAnimation { selectedPeriod = period }}) {
+                        Text(period.rawValue)
+                            .font(.system(size: 15))
+                            .foregroundColor(selectedPeriod == period ? .white : Theme.secondaryLabel)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 32)
+                            .background(
+                                selectedPeriod == period
+                                ? Theme.tint
+                                : Color.clear
+                            )
                     }
-                    
-                    // Budget Surplus row
-                    HStack {
-                        Text("Budget Surplus")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.white)
-                        Spacer()
-                        Text(formatCurrency(budgetSurplus))
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(Theme.tint)
-                    }
-                    
-                    // Divider with chevron indicator to show expandability
-                    HStack {
-                        VStack(spacing: 0) {
-                            Divider()
-                                .background(Theme.separator)
-                        }
-                        
-                        Image(systemName: isExpanded ? "chevron.up.circle.fill" : "chevron.down.circle.fill")
-                            .font(.system(size: 22))
-                            .foregroundColor(Theme.secondaryLabel)
-                            .background(Theme.surfaceBackground)
-                            .padding(.horizontal, 8)
-                        
-                        VStack(spacing: 0) {
-                            Divider()
-                                .background(Theme.separator)
-                        }
-                    }
-                    .padding(.top, 8)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        isExpanded.toggle()
-                    }
+            }
+            .background(Theme.surfaceBackground)
+            .cornerRadius(8)
+            
+            // Income and Budget Summary
+            VStack(spacing: 8) {
+                // Monthly Income Row
+                HStack {
+                    Text("\(selectedPeriod.rawValue) Income")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundColor(.white)
+                    Spacer()
+                    Text(formatCurrency(totalIncome))
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.white)
                 }
                 
-                // Expandable budget breakdown with columns
-                if isExpanded {
-                    VStack(spacing: 24) {
-                        // Bar chart
-                        HStack(alignment: .bottom, spacing: 24) {
-                            // Expenses Column
-                            budgetColumn(
-                                amount: expenses,
-                                label: "Expenses",
-                                height: expensesHeight,
-                                color: Color.red.opacity(0.7)
-                            )
-                            
-                            // Savings Column
-                            budgetColumn(
-                                amount: savings,
-                                label: "Savings",
-                                height: savingsHeight,
-                                color: Theme.tint.opacity(0.8)
-                            )
-                            
-                            // Debt Column
-                            budgetColumn(
-                                amount: debt,
-                                label: "Debt",
-                                height: debtHeight,
-                                color: Color.blue.opacity(0.7)
-                            )
-                        }
-                        .frame(height: 150)
-                        .padding(.top, 16)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
+                // Budget Status
+                HStack {
+                    Text(remaining >= 0 ? "Budget Surplus" : "Budget Deficit")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundColor(.white)
+                    Spacer()
+                    Text(formatCurrency(abs(remaining)))
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(remaining >= 0 ? Theme.tint : .red)
                 }
             }
+            .padding(16)
+            .background(Theme.surfaceBackground)
+            .cornerRadius(16)
         }
-    }
-    
-    private func budgetColumn(amount: Double, label: String, height: CGFloat, color: Color) -> some View {
-        VStack(spacing: 8) {
-            // Amount label
-            Text(formatCurrency(amount))
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(.white)
-            
-            // Column visualization
-            VStack {
-                Spacer(minLength: 0)
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(color)
-                    .frame(height: 100 * height)
-                    .frame(maxWidth: .infinity)
-            }
-            .frame(height: 100)
-            
-            // Category label
-            Text(label)
-                .font(.system(size: 14))
-                .foregroundColor(Theme.secondaryLabel)
-        }
-        .frame(maxWidth: .infinity)
     }
     
     private func formatCurrency(_ value: Double) -> String {
@@ -159,20 +89,17 @@ struct EnhancedBudgetHeader: View {
     }
 }
 
-struct EnhancedBudgetHeader_Previews: PreviewProvider {
-    static var previews: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-            
-            EnhancedBudgetHeader(
-                income: 4500,
-                budgetSurplus: 675,
-                expenses: 3562,
-                savings: 263,
-                debt: 0,
-                periodType: "Per Paycheck"
-            )
-            .padding(.horizontal, 16)
-        }
-    }
+#Preview {
+    EnhancedBudgetHeader(
+        selectedPeriod: .constant(.monthly),
+        monthlyIncome: 5000,
+        payPeriod: .monthly,
+        showDetailedSummary: .constant(false),
+        debtTotal: 1000,
+        expenseTotal: 2000,
+        savingsTotal: 500
+    )
+    .padding()
+    .background(Theme.background)
 }
+
