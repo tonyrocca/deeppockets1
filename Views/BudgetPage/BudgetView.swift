@@ -454,16 +454,18 @@ struct BudgetView: View {
                         
                         if !budgetModel.budgetItems.isEmpty {
                             Button(action: { showImprovements = true }) {
-                                HStack {
-                                    Image(systemName: "wand.and.stars")
-                                    Text("Improve Budget")
-                                }
-                                .font(.system(size: 17, weight: .medium))
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 44)
-                                .background(Theme.surfaceBackground)
-                                .cornerRadius(12)
+                                Text("Enhance Your Budget")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 52)
+                                    .background(Theme.tint)
+                                    .cornerRadius(12)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Theme.tint.opacity(0.3), lineWidth: 1)
+                                    )
+                                    .shadow(color: Theme.tint.opacity(0.3), radius: 8, x: 0, y: 4)
                             }
                             .padding(.horizontal)
                         }
@@ -497,11 +499,8 @@ struct BudgetView: View {
         .background(Theme.background)
         // At the end of the VStack, with other .sheet modifiers
         .sheet(isPresented: $showImprovements) {
-            BudgetImprovementModal(
-                isPresented: $showImprovements,
-                initialOptimizations: budgetModel.generateOptimizations()
-            )
-            .environmentObject(budgetModel)
+            BudgetImprovementModal(isPresented: $showImprovements)
+                .environmentObject(budgetModel)
         }
         .sheet(isPresented: $showBudgetBuilder, onDismiss: {
             budgetModel.setupInitialBudget(selectedCategoryIds: Set(budgetStore.configurations.keys))
