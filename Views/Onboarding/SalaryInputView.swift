@@ -111,12 +111,12 @@ struct SalaryInputView: View {
                 }
                 .padding(.horizontal, 16)
                 
-                // Take Home Pay Section
+                // Take Home Pay Section - Updated wording
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Take Home Pay")
+                    Text("After-Tax Income")
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(Theme.label)
-                    Text("Enter your take-home pay per paycheck")
+                    Text("Enter your after-tax income per paycheck")
                         .font(.system(size: 17))
                         .foregroundColor(Theme.secondaryLabel)
                         .padding(.bottom, 4)
