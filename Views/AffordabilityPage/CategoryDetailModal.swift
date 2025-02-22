@@ -90,18 +90,65 @@ struct CategoryDetailModal: View {
                         
                         // Assumptions Section
                         if !localAssumptions.isEmpty {
-                            VStack(alignment: .leading, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 16) {
                                 Text("ASSUMPTIONS")
                                     .sectionHeader()
                                 
                                 ForEach(localAssumptions.indices, id: \.self) { index in
-                                    AssumptionView(
-                                        assumption: $localAssumptions[index],
-                                        focusedField: _focusedField,
-                                        onChanged: { _ in
-                                            onAssumptionsChanged(category.id, localAssumptions)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        // Title
+                                        Text(localAssumptions[index].title)
+                                            .font(.system(size: 15, weight: .medium))
+                                            .foregroundColor(Theme.label)
+                                        
+                                        // Description (if available)
+                                        if let description = localAssumptions[index].description {
+                                            Text(description)
+                                                .font(.system(size: 13))
+                                                .foregroundColor(Theme.secondaryLabel)
+                                                .padding(.bottom, 2)
                                         }
-                                    )
+                                        
+                                        // Input Field
+                                        HStack {
+                                            // Different prefix based on input type
+                                            if case .textField = localAssumptions[index].inputType {
+                                                Text("$")
+                                                    .foregroundColor(.white)
+                                            }
+                                            
+                                            // Text Field
+                                            TextField("", text: $localAssumptions[index].value)
+                                                .keyboardType(.decimalPad)
+                                                .focused($focusedField, equals: localAssumptions[index].id)
+                                                .font(.system(size: 17))
+                                                .foregroundColor(.white)
+                                                .onChange(of: localAssumptions[index].value) { newValue in
+                                                    // Filter invalid characters
+                                                    let filtered = newValue.filter { "0123456789.".contains($0) }
+                                                    if filtered != newValue {
+                                                        localAssumptions[index].value = filtered
+                                                    }
+                                                    onAssumptionsChanged(category.id, localAssumptions)
+                                                }
+                                            
+                                            // Different suffix based on input type
+                                            switch localAssumptions[index].inputType {
+                                            case .percentageSlider:
+                                                Text("%")
+                                                    .foregroundColor(Theme.secondaryLabel)
+                                            case .yearSlider:
+                                                Text("yrs")
+                                                    .foregroundColor(Theme.secondaryLabel)
+                                            default:
+                                                EmptyView()
+                                            }
+                                        }
+                                        .padding()
+                                        .background(Theme.surfaceBackground)
+                                        .cornerRadius(8)
+                                    }
+                                    .padding(.bottom, 8)
                                 }
                             }
                         }
@@ -171,11 +218,20 @@ struct CategoryDetailModal: View {
                 }
             )
             .background(Theme.background)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        focusedField = nil
+                        onAssumptionsChanged(category.id, localAssumptions)
+                    }
+                }
+            }
             .gesture(
                 TapGesture()
                     .onEnded { _ in
-                        // Call the hideKeyboard() extension to dismiss the keyboard.
-                        hideKeyboard()
+                        focusedField = nil
+                        onAssumptionsChanged(category.id, localAssumptions)
                     }
             )
         }
@@ -188,5 +244,3 @@ struct CategoryDetailModal: View {
         return formatter.string(from: NSNumber(value: value)) ?? "$0"
     }
 }
-
-

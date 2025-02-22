@@ -757,102 +757,95 @@ struct CategoryRowView: View {
 
 // MARK: - Assumption View
 
+import SwiftUI
+
 struct AssumptionView: View {
     @Binding var assumption: CategoryAssumption
     @FocusState var focusedField: String?
     let onChanged: (CategoryAssumption) -> Void
     
+    @State private var localValue: String = ""
+    
     var body: some View {
-        Group {
-            switch assumption.inputType {
-            case .percentageSlider(let step):
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text(assumption.title)
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(Theme.label)
-                        Spacer()
-                        HStack {
-                            TextField("", text: $assumption.value)
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .focused($focusedField, equals: assumption.id)
-                                .font(.system(size: 17))
-                                .foregroundColor(.white)
-                                .frame(width: 60)
-                                .toolbar {
-                                    ToolbarItemGroup(placement: .keyboard) {
-                                        Spacer()
-                                        Button("Done") { focusedField = nil }
-                                    }
-                                }
-                                .onChange(of: assumption.value) { newValue in
-                                    let filtered = newValue.filter { "0123456789.".contains($0) }
-                                    if filtered != newValue { assumption.value = filtered }
-                                    onChanged(assumption)
-                                }
-                            Text("%")
-                                .foregroundColor(Theme.secondaryLabel)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Theme.surfaceBackground)
-                        .cornerRadius(8)
-                    }
-                    
-                    Slider(
-                        value: Binding(
-                            get: { Double(assumption.value) ?? 0 },
-                            set: { newValue in
-                                assumption.value = String(format: "%.2f", newValue)
-                                onChanged(assumption)
-                            }
-                        ),
-                        in: 0...100,
-                        step: step
-                    )
-                    .tint(Theme.tint)
+        VStack(alignment: .leading, spacing: 4) {
+            // Title
+            Text(assumption.title)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(Theme.label)
+            
+            // Description (if available)
+            if let description = assumption.description {
+                Text(description)
+                    .font(.system(size: 13))
+                    .foregroundColor(Theme.secondaryLabel)
+                    .padding(.bottom, 2)
+            }
+            
+            // Input Field
+            HStack {
+                // Different prefix based on input type
+                if case .textField = assumption.inputType {
+                    Text("$")
+                        .foregroundColor(.white)
                 }
                 
-            case .textField:
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(assumption.title)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(Theme.label)
-                    
-                    if let description = assumption.description {
-                        Text(description)
-                            .font(.system(size: 13))
-                            .foregroundColor(Theme.secondaryLabel)
+                // Text Field
+                TextField("", text: $localValue)
+                    .keyboardType(.decimalPad)
+                    .focused($focusedField, equals: assumption.id)
+                    .font(.system(size: 17))
+                    .foregroundColor(.white)
+                    .onChange(of: localValue) { newValue in
+                        // Filter invalid characters
+                        let filtered = newValue.filter { "0123456789.".contains($0) }
+                        if filtered != newValue {
+                            localValue = filtered
+                        }
                     }
-                    
-                    HStack {
-                        Text("$")
-                            .foregroundColor(.white)
-                        TextField("", text: $assumption.value)
-                            .keyboardType(.decimalPad)
-                            .font(.system(size: 17))
-                            .foregroundColor(.white)
-                            .focused($focusedField, equals: assumption.id)
-                            .toolbar {
-                                ToolbarItemGroup(placement: .keyboard) {
-                                    Spacer()
-                                    Button("Done") { focusedField = nil }
-                                }
-                            }
-                            .onChange(of: assumption.value) { newValue in
-                                let filtered = newValue.filter { "0123456789.".contains($0) }
-                                if filtered != newValue { assumption.value = filtered }
-                                onChanged(assumption)
-                            }
-                    }
-                    .padding()
-                    .background(Theme.surfaceBackground)
-                    .cornerRadius(8)
+                
+                // Different suffix based on input type
+                switch assumption.inputType {
+                case .percentageSlider:
+                    Text("%")
+                        .foregroundColor(Theme.secondaryLabel)
+                case .yearSlider:
+                    Text("yrs")
+                        .foregroundColor(Theme.secondaryLabel)
+                default:
+                    EmptyView()
                 }
-            
-            case .yearSlider, .percentageDistribution:
-                EmptyView()
+            }
+            .padding()
+            .background(Theme.surfaceBackground)
+            .cornerRadius(8)
+        }
+        .onAppear {
+            localValue = assumption.value
+        }
+        .onChange(of: focusedField) { field in
+            if field != assumption.id && !localValue.isEmpty {
+                // When focus is lost, update the binding
+                assumption.value = localValue
+                onChanged(assumption)
+            }
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    // When Done is tapped, update the binding and hide keyboard
+                    assumption.value = localValue
+                    onChanged(assumption)
+                    focusedField = nil
+                }
+            }
+        }
+        // Handle tap outside the field
+        .onTapGesture {
+            if focusedField == assumption.id {
+                assumption.value = localValue
+                onChanged(assumption)
+                focusedField = nil
             }
         }
     }

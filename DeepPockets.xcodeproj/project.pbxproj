@@ -44,6 +44,7 @@
 				BudgetPage/BudgetView.swift,
 				HomeView/ActionButtonView.swift,
 				HomeView/AffordabilityCalculator.swift,
+				HomeView/AssumptionInputView.swift,
 				HomeView/DebtCalculator.swift,
 				HomeView/MainContentView.swift,
 				HomeView/ProfileView.swift,
