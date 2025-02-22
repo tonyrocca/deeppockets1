@@ -99,6 +99,10 @@ class BudgetModel: ObservableObject {
         }
     }
     
+    private func isDebtCategory(_ id: String) -> Bool {
+        ["credit_cards", "student_loans", "personal_loans", "car_loan", "medical_debt", "mortgage"].contains(id)
+    }
+    
     func calculateUnusedAmount() {
         let totalAllocated = budgetItems
             .filter { $0.isActive }
@@ -343,5 +347,164 @@ private extension CategoryType {
         case .entertainment: return 11
         case .other: return 13
         }
+    }
+}
+
+// MARK: - Budget Optimization Models
+enum BudgetOptimizationType {
+    case increase(String, Double) // categoryId, recommended amount
+    case decrease(String, Double) // categoryId, recommended amount
+    case add(BudgetCategory, Double) // category to add, recommended amount
+    case remove(String) // categoryId to remove
+}
+
+struct BudgetOptimization: Identifiable {
+    let id = UUID()
+    let type: BudgetOptimizationType
+    let reason: String
+    var isSelected: Bool = false
+    
+    var title: String {
+        switch type {
+        case .increase(let categoryId, let amount):
+            guard let category = BudgetCategoryStore.shared.category(for: categoryId) else { return "" }
+            return "Increase \(category.name) to \(formatCurrency(amount))"
+        case .decrease(let categoryId, let amount):
+            guard let category = BudgetCategoryStore.shared.category(for: categoryId) else { return "" }
+            return "Decrease \(category.name) to \(formatCurrency(amount))"
+        case .add(let category, let amount):
+            return "Add \(category.name) with \(formatCurrency(amount))"
+        case .remove(let categoryId):
+            guard let category = BudgetCategoryStore.shared.category(for: categoryId) else { return "" }
+            return "Remove \(category.name)"
+        }
+    }
+    
+    private func formatCurrency(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: value)) ?? "$0"
+    }
+}
+
+// Add to BudgetModel class
+extension BudgetModel {
+    func generateOptimizations() -> [BudgetOptimization] {
+        var optimizations: [BudgetOptimization] = []
+        
+        // Calculate current allocations
+        let debtTotal = budgetItems
+            .filter { $0.type == .expense && isDebtCategory($0.id) }
+            .reduce(0) { $0 + $1.allocatedAmount }
+        let expenseTotal = budgetItems
+            .filter { $0.type == .expense && !isDebtCategory($0.id) }
+            .reduce(0) { $0 + $1.allocatedAmount }
+        let savingsTotal = budgetItems
+            .filter { $0.type == .savings }
+            .reduce(0) { $0 + $1.allocatedAmount }
+        
+        // Check emergency savings
+        let hasEmergencySavings = budgetItems.contains { $0.category.id == "emergency_savings" }
+        if !hasEmergencySavings {
+            let recommendedAmount = monthlyIncome * 0.1 // 10% of income
+            if let category = BudgetCategoryStore.shared.category(for: "emergency_savings") {
+                optimizations.append(BudgetOptimization(
+                    type: .add(category, recommendedAmount),
+                    reason: "It's recommended to save at least 10% of your income for emergencies"
+                ))
+            }
+        }
+        
+        // Check retirement savings
+        let hasRetirement = budgetItems.contains { $0.category.id == "retirement_savings" }
+        if !hasRetirement {
+            let recommendedAmount = monthlyIncome * 0.15 // 15% of income
+            if let category = BudgetCategoryStore.shared.category(for: "retirement_savings") {
+                optimizations.append(BudgetOptimization(
+                    type: .add(category, recommendedAmount),
+                    reason: "Consider saving 15% of your income for retirement"
+                ))
+            }
+        }
+        
+        // Check housing costs (rent/mortgage)
+        let housingCategories = ["rent", "mortgage"]
+        let housingTotal = budgetItems
+            .filter { housingCategories.contains($0.category.id) }
+            .reduce(0) { $0 + $1.allocatedAmount }
+        
+        if housingTotal > monthlyIncome * 0.33 {
+            // Housing costs too high
+            for item in budgetItems where housingCategories.contains(item.category.id) {
+                let recommendedAmount = monthlyIncome * 0.3
+                optimizations.append(BudgetOptimization(
+                    type: .decrease(item.category.id, recommendedAmount),
+                    reason: "Housing costs should be under 30% of your income"
+                ))
+            }
+        }
+        
+        // Check entertainment and discretionary spending
+        let entertainmentTotal = budgetItems
+            .filter { $0.category.type == .entertainment }
+            .reduce(0) { $0 + $1.allocatedAmount }
+        
+        if entertainmentTotal > monthlyIncome * 0.1 {
+            // Entertainment spending too high
+            for item in budgetItems where item.category.type == .entertainment {
+                let recommendedAmount = monthlyIncome * 0.08
+                optimizations.append(BudgetOptimization(
+                    type: .decrease(item.category.id, recommendedAmount),
+                    reason: "Consider reducing entertainment spending to 8% of income"
+                ))
+            }
+        }
+        
+        // Check savings rate
+        let totalIncome = monthlyIncome
+        let savingsRate = savingsTotal / totalIncome
+        
+        if savingsRate < 0.2 {
+            // Increase savings
+            for item in budgetItems where item.type == .savings {
+                let recommendedAmount = item.allocatedAmount * 1.2 // 20% increase
+                optimizations.append(BudgetOptimization(
+                    type: .increase(item.category.id, recommendedAmount),
+                    reason: "Try to increase your savings rate to at least 20% of income"
+                ))
+            }
+        }
+        
+        return optimizations
+    }
+    
+    func applyOptimizations(_ optimizations: [BudgetOptimization]) {
+        for optimization in optimizations where optimization.isSelected {
+            switch optimization.type {
+            case .increase(let categoryId, let amount):
+                updateAllocation(for: categoryId, amount: amount)
+                
+            case .decrease(let categoryId, let amount):
+                updateAllocation(for: categoryId, amount: amount)
+                
+            case .add(let category, let amount):
+                let newItem = BudgetItem(
+                    id: category.id,
+                    category: category,
+                    allocatedAmount: amount,
+                    spentAmount: 0,
+                    type: category.type == .savings ? .savings : .expense,
+                    priority: determinePriority(for: category),
+                    isActive: true
+                )
+                budgetItems.append(newItem)
+                
+            case .remove(let categoryId):
+                deleteCategory(id: categoryId)
+            }
+        }
+        
+        calculateUnusedAmount()
     }
 }

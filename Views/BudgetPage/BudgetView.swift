@@ -332,6 +332,7 @@ struct BudgetView: View {
     let payPeriod: PayPeriod
     
     @State private var selectedPeriod: IncomePeriod = .monthly
+    @State private var showImprovements = false
     @State private var showBudgetBuilder = false
     @State private var showDetailedSummary = false
     @StateObject private var budgetStore = BudgetStore()
@@ -451,6 +452,22 @@ struct BudgetView: View {
                         )
                         .padding(.horizontal)
                         
+                        if !budgetModel.budgetItems.isEmpty {
+                            Button(action: { showImprovements = true }) {
+                                HStack {
+                                    Image(systemName: "wand.and.stars")
+                                    Text("Improve Budget")
+                                }
+                                .font(.system(size: 17, weight: .medium))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 44)
+                                .background(Theme.surfaceBackground)
+                                .cornerRadius(12)
+                            }
+                            .padding(.horizontal)
+                        }
+                        
                         // Categories List
                         VStack(spacing: 16) {
                             // Savings Categories
@@ -478,6 +495,14 @@ struct BudgetView: View {
             }
         }
         .background(Theme.background)
+        // At the end of the VStack, with other .sheet modifiers
+        .sheet(isPresented: $showImprovements) {
+            BudgetImprovementModal(
+                isPresented: $showImprovements,
+                initialOptimizations: budgetModel.generateOptimizations()
+            )
+            .environmentObject(budgetModel)
+        }
         .sheet(isPresented: $showBudgetBuilder, onDismiss: {
             budgetModel.setupInitialBudget(selectedCategoryIds: Set(budgetStore.configurations.keys))
             budgetModel.calculateUnusedAmount()
