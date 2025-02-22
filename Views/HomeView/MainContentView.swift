@@ -18,9 +18,21 @@ struct MainContentView: View {
         )
     }
     
+    // Computed binding for monthly income that also updates AppStorage and models
+    private var monthlyIncomeBinding: Binding<Double> {
+        Binding<Double>(
+            get: { model.monthlyIncome },
+            set: { newValue in
+                model.monthlyIncome = newValue
+                budgetModel.monthlyIncome = newValue
+                monthlyIncomeStored = newValue
+            }
+        )
+    }
+    
     @StateObject private var model: AffordabilityModel = AffordabilityModel()
     @StateObject private var budgetModel: BudgetModel = BudgetModel(monthlyIncome: 0)
-    @StateObject private var userModel = UserModel() // Added this line
+    @StateObject private var userModel = UserModel()
     @State private var selectedTab = 0
     @State private var showActionMenu = false
     @State private var showAffordabilityCalculator = false
@@ -49,7 +61,7 @@ struct MainContentView: View {
                         // Page 1: Affordability
                         ScrollView {
                             LazyVStack(spacing: 0) {
-                                AffordabilityView(model: model, payPeriod: payPeriodStored)
+                                AffordabilityView(model: model)
                                     .environmentObject(budgetModel)
                             }
                         }
@@ -104,7 +116,7 @@ struct MainContentView: View {
         .navigationBarBackButtonHidden(true)
         .sheet(isPresented: $showProfile) {
             ProfileView(
-                monthlyIncome: $model.monthlyIncome,
+                monthlyIncome: monthlyIncomeBinding,
                 payPeriod: payPeriodBinding
             )
             .environmentObject(userModel)
@@ -177,7 +189,7 @@ struct MainContentView: View {
                             showDebtCalculator = true
                         }
                     },
-                    monthlyIncome: $model.monthlyIncome,
+                    monthlyIncome: monthlyIncomeBinding,
                     payPeriod: payPeriodBinding,
                     showProfile: $showProfile,
                     isShowing: $showActionMenu

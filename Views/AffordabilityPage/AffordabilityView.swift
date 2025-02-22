@@ -1,15 +1,149 @@
 import SwiftUI
 
-// MARK: - AffordabilityView
+// MARK: - Improved Income Header
+
+import SwiftUI
+
+// MARK: - Improved Income Header
+struct ImprovedIncomeHeader: View {
+    @Binding var monthlyIncome: Double
+    @Binding var payPeriod: PayPeriod
+    @State private var showEditIncome = false
+    @State private var isExpanded = false
+    
+    private var annualIncome: Double {
+        monthlyIncome * 12
+    }
+    
+    private let incomePercentiles: [(threshold: Double, percentile: Int)] = [
+        (650000, 1),
+        (250000, 5),
+        (180000, 10),
+        (120000, 20),
+        (90000, 30),
+        (70000, 40),
+        (50000, 50),
+        (35000, 60),
+        (25000, 70)
+    ]
+    
+    private var incomePercentile: Int {
+        for (threshold, percentile) in incomePercentiles {
+            if annualIncome >= threshold {
+                return percentile
+            }
+        }
+        return 80 // Default if below all thresholds
+    }
+    
+    var body: some View {
+        ZStack {
+            // Main background
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Theme.surfaceBackground)
+                .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+            
+            VStack(spacing: 0) {
+                // Main income display
+                Button(action: { withAnimation(.spring()) { isExpanded.toggle() } }) {
+                    HStack(alignment: .center) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Annual After-Tax Income")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(Theme.secondaryLabel)
+                            
+                            Text(formatCurrency(annualIncome))
+                                .font(.system(size: 32, weight: .bold))
+                                .foregroundColor(Theme.label)
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: isExpanded ? "chevron.up.circle.fill" : "chevron.down.circle.fill")
+                            .font(.system(size: 22))
+                            .foregroundColor(Theme.tint)
+                            .contentShape(Rectangle())
+                    }
+                    .padding(.vertical, 16)
+                    .padding(.horizontal, 20)
+                }
+                
+                // Expanded content
+                if isExpanded {
+                    Divider()
+                        .background(Theme.separator)
+                        .padding(.horizontal, 16)
+                    
+                    VStack(spacing: 16) {
+                        // Percentile information
+                        HStack(alignment: .center) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Income Percentile")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(Theme.secondaryLabel)
+                                
+                                Text("Top \(incomePercentile)% of earners in USA")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(Theme.label)
+                            }
+                            
+                            Spacer()
+                            
+                            HStack(spacing: 4) {
+                                Image(systemName: "chart.bar.fill")
+                                Text("Top \(incomePercentile)%")
+                            }
+                            .font(.system(size: 13))
+                            .foregroundColor(Theme.tint)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Theme.tint.opacity(0.15))
+                            .cornerRadius(8)
+                        }
+                        
+                        // Edit button
+                        Button(action: { showEditIncome = true }) {
+                            HStack {
+                                Text("Edit Income")
+                                    .font(.system(size: 16, weight: .medium))
+                                Image(systemName: "pencil")
+                            }
+                            .foregroundColor(Theme.tint)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Theme.tint.opacity(0.12))
+                            .cornerRadius(10)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                }
+            }
+        }
+        .sheet(isPresented: $showEditIncome) {
+            SalaryInputSheet(monthlyIncome: $monthlyIncome, payPeriod: $payPeriod)
+        }
+    }
+    
+    private func formatCurrency(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: value)) ?? "$0"
+    }
+}
+
+// MARK: - Affordability View
+
 struct AffordabilityView: View {
     @ObservedObject var model: AffordabilityModel
     @StateObject private var store = BudgetCategoryStore.shared
     @State private var searchText = ""
-    @State private var pinnedCategories: Set<String> = [] // Existing state for pinned categories
-    @State private var selectedPeriod: IncomePeriod = .annual // Existing state for selected income period
+    @State private var pinnedCategories: Set<String> = []
+    @State private var selectedPeriod: IncomePeriod = .annual
     @FocusState private var isSearchFocused: Bool
-    let payPeriod: PayPeriod
-
+    @State private var payPeriod: PayPeriod = .monthly
+    
     // Filtered categories sorted by priority (most important at the top)
     private var filteredCategories: [BudgetCategory] {
         let categories: [BudgetCategory]
@@ -47,9 +181,13 @@ struct AffordabilityView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Income Header
-            StickyIncomeHeader(monthlyIncome: model.monthlyIncome)
-                .padding(.top, 16)
+            // Updated Income Header
+            ImprovedIncomeHeader(
+                monthlyIncome: $model.monthlyIncome,
+                payPeriod: $payPeriod
+            )
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
             
             // Fixed Search Bar
             searchBar
@@ -59,7 +197,6 @@ struct AffordabilityView: View {
             // Scrollable Content
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    // Categories List Section
                     VStack(spacing: 16) {
                         // Pinned Categories Section
                         if !pinnedCategories.isEmpty {
@@ -115,7 +252,6 @@ struct AffordabilityView: View {
                                 .background(Theme.mutedGreen.opacity(0.2))
                                 .cornerRadius(4)
                                 .padding(.horizontal, 10)
-                                .padding(.top, 0)
                             
                             // Main Categories List
                             VStack(spacing: 0) {
@@ -167,15 +303,13 @@ struct AffordabilityView: View {
             .contentShape(Rectangle())
             .onTapGesture {
                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
-                                              to: nil, from: nil, for: nil)
+                                                to: nil, from: nil, for: nil)
             }
         }
         .background(Theme.background)
         .gesture(
             TapGesture()
-                .onEnded { _ in
-                    isSearchFocused = false
-                }
+                .onEnded { _ in isSearchFocused = false }
         )
     }
     
@@ -220,211 +354,8 @@ struct AffordabilityView: View {
     }
 }
 
-// MARK: - StickyIncomeHeader
-struct StickyIncomeHeader: View {
-   let monthlyIncome: Double
-   private let incomePercentiles: [(threshold: Double, percentile: Int)] = [
-       (650000, 1),
-       (250000, 5),
-       (180000, 10),
-       (120000, 20),
-       (90000, 30),
-       (70000, 40),
-       (50000, 50),
-       (35000, 60),
-       (25000, 70)
-   ]
-   
-   private var annualIncome: Double {
-       monthlyIncome * 12
-   }
-   
-   private var incomePercentile: Int {
-       for (threshold, percentile) in incomePercentiles {
-           if annualIncome >= threshold {
-               return percentile
-           }
-       }
-       return 80 // Default if below all thresholds
-   }
-   
-   var body: some View {
-       VStack(spacing: 0) {
-           // Main Income Section
-           VStack(spacing: 12) {
-               // Income Row
-               HStack(alignment: .center) {
-                   Text("Your Annual Income")
-                       .font(.system(size: 17))
-                       .foregroundColor(Theme.label)
-                   
-                   Spacer()
-                   
-                   Text(formatCurrency(annualIncome))
-                       .font(.system(size: 28, weight: .bold))
-                       .foregroundColor(Theme.label)
-               }
-               
-               // Percentile Row
-               HStack(alignment: .center, spacing: 8) {
-                   Text("You are a top \(incomePercentile)% earner in the USA based on your salary")
-                       .font(.system(size: 15))
-                       .foregroundColor(Theme.secondaryLabel)
-                       .lineLimit(2)
-                       .multilineTextAlignment(.leading)
-                   
-                   HStack(spacing: 4) {
-                       Image(systemName: "chart.bar.fill")
-                       Text("Top \(incomePercentile)%")
-                   }
-                   .font(.system(size: 13))
-                   .foregroundColor(Theme.tint)
-                   .padding(.horizontal, 10)
-                   .padding(.vertical, 6)
-                   .background(Theme.tint.opacity(0.15))
-                   .cornerRadius(8)
-               }
-           }
-           .padding(16)
-           .background(Theme.surfaceBackground)
-           .cornerRadius(16)
-           .padding(.horizontal, 16)
-       }
-       .background(Theme.background)
-   }
-   
-   private func formatCurrency(_ value: Double) -> String {
-       let formatter = NumberFormatter()
-       formatter.numberStyle = .currency
-       formatter.maximumFractionDigits = 0
-       return formatter.string(from: NSNumber(value: value)) ?? "$0"
-   }
-}
+// MARK: - Category Row View
 
-// MARK: - AssumptionSliderView
-struct AssumptionSliderView: View {
-    let title: String
-    let range: ClosedRange<Double>
-    let step: Double
-    let suffix: String
-    @Binding var value: String
-    let onChanged: (String) -> Void
-    
-    @State private var isEditing = false
-    @FocusState private var isFocused: Bool
-    
-    private var numericValue: Double {
-        Double(value) ?? range.lowerBound
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Title and Value Row
-            HStack(alignment: .center) {
-                Text(title)
-                    .font(.system(size: 17))
-                    .foregroundColor(.white)
-                
-                Spacer()
-                
-                // Value Box
-                Button(action: { startEditing() }) {
-                    HStack(spacing: 2) {
-                        if isEditing {
-                            TextField("", text: $value)
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .focused($isFocused)
-                                .font(.system(size: 17, weight: .medium))
-                                .foregroundColor(.white)
-                                .frame(width: 60)
-                        } else {
-                            Text(String(format: "%.2f", numericValue))
-                                .font(.system(size: 17, weight: .medium))
-                                .foregroundColor(.white)
-                                .frame(width: 60, alignment: .trailing)
-                        }
-                        
-                        Text(suffix)
-                            .font(.system(size: 17))
-                            .foregroundColor(Theme.secondaryLabel)
-                            .frame(width: 30, alignment: .leading)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Theme.surfaceBackground)
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(isEditing ? Theme.tint : Color.white.opacity(0.2), lineWidth: 1)
-                    )
-                }
-            }
-            
-            // Slider Section
-            VStack(spacing: 8) {
-                Slider(
-                    value: Binding(
-                        get: { numericValue },
-                        set: { newValue in
-                            let rounded = (newValue / step).rounded() * step
-                            value = String(format: "%.2f", rounded)
-                            onChanged(value)
-                        }
-                    ),
-                    in: range,
-                    step: step
-                )
-                .tint(Theme.tint)
-                
-                // Range Labels
-                HStack {
-                    Text("\(String(format: "%.2f", range.lowerBound))\(suffix)")
-                        .font(.system(size: 13))
-                        .foregroundColor(Theme.secondaryLabel)
-                    
-                    Spacer()
-                    
-                    Text("\(String(format: "%.2f", range.upperBound))\(suffix)")
-                        .font(.system(size: 13))
-                        .foregroundColor(Theme.secondaryLabel)
-                }
-            }
-        }
-        .contentShape(Rectangle())
-        .highPriorityGesture(DragGesture(minimumDistance: 0))
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") {
-                    commitEdit()
-                }
-            }
-        }
-    }
-    
-    private func startEditing() {
-        value = String(format: "%.2f", numericValue)
-        isEditing = true
-        isFocused = true
-    }
-    
-    private func commitEdit() {
-        guard let newValue = Double(value) else {
-            isEditing = false
-            return
-        }
-        
-        let clampedValue = min(max(newValue, range.lowerBound), range.upperBound)
-        value = String(format: "%.2f", (clampedValue / step).rounded() * step)
-        onChanged(value)
-        
-        isEditing = false
-        isFocused = false
-    }
-}
-
-// MARK: - CategoryRowView (Updated with realistic monthly cost for .total)
 struct CategoryRowView: View {
     let category: BudgetCategory
     @ObservedObject var model: AffordabilityModel
@@ -432,20 +363,16 @@ struct CategoryRowView: View {
     let isPinned: Bool
     @State private var showInlineDetails = false
     @State private var showFullScreenDetails = false
-    // Initialize local assumptions from the category
     @State private var localAssumptions: [CategoryAssumption]
     let onPinChanged: (String, Bool) -> Void
     @EnvironmentObject private var budgetModel: BudgetModel
     @State private var showAddToBudgetConfirmation = false
     @State private var showingAddedToBudget = false
 
-    // Compute the total “affordable” amount from the model (e.g. total home price).
     private var totalAmount: Double {
         model.affordabilityAmounts[category.id] ?? model.calculateAffordableAmount(for: category)
     }
     
-    /// For categories with `.total` display type (like "home" or "car"),
-    /// we show a realistic monthly cost rather than totalAmount / 12.
     private var estimatedMonthlyCost: Double {
         switch category.id {
         case "home":
@@ -453,7 +380,6 @@ struct CategoryRowView: View {
         case "car":
             return calculateCarMonthlyCost()
         default:
-            // If it's some other “total” category, fallback to dividing by 12.
             return totalAmount / 12
         }
     }
@@ -477,11 +403,9 @@ struct CategoryRowView: View {
         formatter.maximumFractionDigits = 0
         
         if displayType == .monthly {
-            // For monthly categories, just show the monthly cost
             let amount = totalAmount
             return (formatter.string(from: NSNumber(value: amount)) ?? "$0") + "/mo"
         } else {
-            // For total categories, show the total purchase price
             let amount = totalAmount
             let formatted = formatter.string(from: NSNumber(value: amount)) ?? "$0"
             return formatted + " total"
@@ -490,11 +414,8 @@ struct CategoryRowView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header button to toggle inline details
             Button {
-                withAnimation {
-                    showInlineDetails.toggle()
-                }
+                withAnimation { showInlineDetails.toggle() }
             } label: {
                 HStack(alignment: .center, spacing: 12) {
                     Text(category.emoji)
@@ -513,7 +434,6 @@ struct CategoryRowView: View {
             
             if showInlineDetails {
                 VStack(alignment: .leading, spacing: 24) {
-                    // Allocation Section
                     VStack(alignment: .leading, spacing: 8) {
                         Text("ALLOCATION OF SALARY")
                             .sectionHeader()
@@ -522,7 +442,6 @@ struct CategoryRowView: View {
                             .foregroundColor(Theme.label)
                     }
                     
-                    // Monthly Allocation (for total display types)
                     if displayType == .total {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("ESTIMATED MONTHLY ALLOCATION")
@@ -533,7 +452,6 @@ struct CategoryRowView: View {
                         }
                     }
                     
-                    // Description Section
                     VStack(alignment: .leading, spacing: 8) {
                         Text("DESCRIPTION")
                             .sectionHeader()
@@ -543,7 +461,6 @@ struct CategoryRowView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     
-                    // Assumptions Section
                     if !localAssumptions.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("ASSUMPTIONS")
@@ -553,7 +470,6 @@ struct CategoryRowView: View {
                                 AssumptionView(
                                     assumption: $localAssumptions[index],
                                     onChanged: { _ in
-                                        // Update the shared model when an assumption changes.
                                         model.updateAssumptions(for: category.id, assumptions: localAssumptions)
                                     }
                                 )
@@ -561,9 +477,7 @@ struct CategoryRowView: View {
                         }
                     }
                     
-                    // Action Buttons Row
                     HStack(spacing: 12) {
-                        // Expand Button
                         Button(action: {
                             showFullScreenDetails = true
                         }) {
@@ -583,7 +497,6 @@ struct CategoryRowView: View {
                             )
                         }
                         
-                        // Pin/Unpin Button
                         Button(action: {
                             onPinChanged(category.id, !isPinned)
                         }) {
@@ -603,7 +516,6 @@ struct CategoryRowView: View {
                             )
                         }
                         
-                        // Add to Budget Button
                         if !isInBudget {
                             Button(action: { showAddToBudgetConfirmation = true }) {
                                 HStack {
@@ -701,7 +613,6 @@ struct CategoryRowView: View {
         }
     }
     
-    // MARK: - Add to Budget Confirmation
     private var addToBudgetConfirmation: some View {
         ZStack {
             Color.black.opacity(0.5)
@@ -764,8 +675,6 @@ struct CategoryRowView: View {
     }
     
     private func addToBudget() {
-        // If monthly, use totalAmount as the monthly cost
-        // If total, use the “estimatedMonthlyCost”
         let monthlyAllocation = (displayType == .monthly)
             ? totalAmount
             : estimatedMonthlyCost
@@ -779,52 +688,38 @@ struct CategoryRowView: View {
         }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            withAnimation {
-                showingAddedToBudget = false
-            }
+            withAnimation { showingAddedToBudget = false }
         }
     }
     
-    // MARK: - Mortgage Formula for Home
     private func calculateHomeMonthlyCost() -> Double {
-        // Parse assumptions
         let dp = getAssumptionValue("Down Payment") ?? 20.0
         let ir = (getAssumptionValue("Interest Rate") ?? 7.0) / 100.0
         let taxRate = (getAssumptionValue("Property Tax Rate") ?? 1.1) / 100.0
         let termYears = Int(getAssumptionValue("Loan Term") ?? 30)
         
-        // totalAmount is the total home price we can afford
         let homePrice = totalAmount
         let principal = homePrice * (1 - dp/100.0)
-        
-        // monthly interest
         let monthlyInterest = ir / 12.0
         let n = Double(termYears * 12)
         guard n > 0, monthlyInterest >= 0 else { return 0 }
         
-        // Mortgage factor
         let numerator = monthlyInterest * pow(1 + monthlyInterest, n)
         let denominator = pow(1 + monthlyInterest, n) - 1
         if denominator <= 0 { return 0 }
         let factor = numerator / denominator
         
-        // Mortgage payment
         let monthlyMortgage = principal * factor
-        
-        // Monthly property tax
         let monthlyTax = homePrice * taxRate / 12.0
         
         return monthlyMortgage + monthlyTax
     }
     
-    // MARK: - Loan Formula for Car
     private func calculateCarMonthlyCost() -> Double {
-        // Parse assumptions
         let dp = getAssumptionValue("Down Payment") ?? 10.0
         let ir = (getAssumptionValue("Interest Rate") ?? 5.0) / 100.0
         let termYears = Int(getAssumptionValue("Loan Term") ?? 5)
         
-        // totalAmount is the total car price we can afford
         let carPrice = totalAmount
         let principal = carPrice * (1 - dp/100.0)
         
@@ -837,7 +732,6 @@ struct CategoryRowView: View {
         if denominator <= 0 { return 0 }
         let factor = numerator / denominator
         
-        // Monthly car payment
         return principal * factor
     }
     
@@ -849,12 +743,10 @@ struct CategoryRowView: View {
         return nil
     }
     
-    // MARK: - Budget Check
     private var isInBudget: Bool {
         budgetModel.budgetItems.contains { $0.id == category.id && $0.isActive }
     }
     
-    // MARK: - Helpers
     private func formatCurrency(_ value: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
@@ -863,7 +755,8 @@ struct CategoryRowView: View {
     }
 }
 
-// MARK: - AssumptionView (Updated)
+// MARK: - Assumption View
+
 struct AssumptionView: View {
     @Binding var assumption: CategoryAssumption
     @FocusState var focusedField: String?
@@ -890,16 +783,12 @@ struct AssumptionView: View {
                                 .toolbar {
                                     ToolbarItemGroup(placement: .keyboard) {
                                         Spacer()
-                                        Button("Done") {
-                                            focusedField = nil
-                                        }
+                                        Button("Done") { focusedField = nil }
                                     }
                                 }
                                 .onChange(of: assumption.value) { newValue in
                                     let filtered = newValue.filter { "0123456789.".contains($0) }
-                                    if filtered != newValue {
-                                        assumption.value = filtered
-                                    }
+                                    if filtered != newValue { assumption.value = filtered }
                                     onChanged(assumption)
                                 }
                             Text("%")
@@ -948,16 +837,12 @@ struct AssumptionView: View {
                             .toolbar {
                                 ToolbarItemGroup(placement: .keyboard) {
                                     Spacer()
-                                    Button("Done") {
-                                        focusedField = nil
-                                    }
+                                    Button("Done") { focusedField = nil }
                                 }
                             }
                             .onChange(of: assumption.value) { newValue in
                                 let filtered = newValue.filter { "0123456789.".contains($0) }
-                                if filtered != newValue {
-                                    assumption.value = filtered
-                                }
+                                if filtered != newValue { assumption.value = filtered }
                                 onChanged(assumption)
                             }
                     }
@@ -967,7 +852,6 @@ struct AssumptionView: View {
                 }
             
             case .yearSlider, .percentageDistribution:
-                // For brevity, handle these as needed
                 EmptyView()
             }
         }
@@ -983,5 +867,27 @@ extension Text {
             .padding(.vertical, 4)
             .background(Theme.mutedGreen.opacity(0.2))
             .cornerRadius(4)
+    }
+}
+
+// MARK: - Content Example
+
+struct ContentExample: View {
+    @State private var monthlyIncome: Double = 9750 // $117,000 annually
+    @State private var payPeriod: PayPeriod = .monthly
+    
+    var body: some View {
+        VStack {
+            ImprovedIncomeHeader(
+                monthlyIncome: $monthlyIncome,
+                payPeriod: $payPeriod
+            )
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.background)
     }
 }

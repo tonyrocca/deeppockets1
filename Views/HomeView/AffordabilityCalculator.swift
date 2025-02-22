@@ -7,6 +7,160 @@ enum CalculationStep {
     case results(BudgetCategory, Double)
 }
 
+struct AssumptionSliderView: View {
+    let title: String
+    let range: ClosedRange<Double>
+    let step: Double
+    let suffix: String
+    @Binding var value: String
+    let onChanged: (String) -> Void
+    
+    @State private var isEditing = false
+    @FocusState private var isFocused: Bool
+    
+    private var numericValue: Double {
+        Double(value) ?? range.lowerBound
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Title and Value Row
+            HStack(alignment: .center) {
+                Text(title)
+                    .font(.system(size: 17))
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
+                // Value Box
+                Button(action: { startEditing() }) {
+                    HStack(spacing: 2) {
+                        if isEditing {
+                            TextField("", text: $value)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .focused($isFocused)
+                                .font(.system(size: 17, weight: .medium))
+                                .foregroundColor(.white)
+                                .frame(width: 60)
+                                .onChange(of: value) { newValue in
+                                    // Filter out non-numeric characters
+                                    let filtered = newValue.filter { "0123456789.".contains($0) }
+                                    if filtered != newValue {
+                                        value = filtered
+                                    }
+                                }
+                        } else {
+                            Text(String(format: "%.2f", numericValue))
+                                .font(.system(size: 17, weight: .medium))
+                                .foregroundColor(.white)
+                                .frame(width: 60, alignment: .trailing)
+                        }
+                        
+                        Text(suffix)
+                            .font(.system(size: 17))
+                            .foregroundColor(Theme.secondaryLabel)
+                            .frame(width: 30, alignment: .leading)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Theme.surfaceBackground)
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(isEditing ? Theme.tint : Color.white.opacity(0.2), lineWidth: 1)
+                    )
+                }
+            }
+            
+            // Slider Section
+            VStack(spacing: 8) {
+                Slider(
+                    value: Binding(
+                        get: { numericValue },
+                        set: { newValue in
+                            let rounded = (newValue / step).rounded() * step
+                            value = String(format: "%.2f", rounded)
+                            onChanged(value)
+                        }
+                    ),
+                    in: range,
+                    step: step
+                )
+                .tint(Theme.tint)
+                
+                // Range Labels
+                HStack {
+                    Text("\(String(format: "%.2f", range.lowerBound))\(suffix)")
+                        .font(.system(size: 13))
+                        .foregroundColor(Theme.secondaryLabel)
+                    
+                    Spacer()
+                    
+                    Text("\(String(format: "%.2f", range.upperBound))\(suffix)")
+                        .font(.system(size: 13))
+                        .foregroundColor(Theme.secondaryLabel)
+                }
+            }
+        }
+        .contentShape(Rectangle())
+        .highPriorityGesture(DragGesture(minimumDistance: 0))
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    commitEdit()
+                }
+            }
+        }
+    }
+    
+    private func startEditing() {
+        value = String(format: "%.2f", numericValue)
+        isEditing = true
+        isFocused = true
+    }
+    
+    private func commitEdit() {
+        guard let newValue = Double(value) else {
+            isEditing = false
+            return
+        }
+        
+        let clampedValue = min(max(newValue, range.lowerBound), range.upperBound)
+        value = String(format: "%.2f", (clampedValue / step).rounded() * step)
+        onChanged(value)
+        
+        isEditing = false
+        isFocused = false
+    }
+}
+
+#Preview {
+    VStack {
+        AssumptionSliderView(
+            title: "Down Payment",
+            range: 0...100,
+            step: 5,
+            suffix: "%",
+            value: .constant("20.0"),
+            onChanged: { _ in }
+        )
+        .padding()
+        
+        AssumptionSliderView(
+            title: "Loan Term",
+            range: 5...30,
+            step: 1,
+            suffix: "yrs",
+            value: .constant("30.0"),
+            onChanged: { _ in }
+        )
+        .padding()
+    }
+    .background(Theme.background)
+}
+
 // MARK: - Affordability Analysis
 struct AffordabilityAnalysis {
     let canAfford: Bool
