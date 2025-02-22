@@ -41,6 +41,7 @@
 				AffordabilityPage/AffordabilityView.swift,
 				AffordabilityPage/CategoryDetailModal.swift,
 				BudgetPage/BudgetBuilderModal.swift,
+				BudgetPage/BudgetHeader.swift,
 				BudgetPage/BudgetView.swift,
 				HomeView/ActionButtonView.swift,
 				HomeView/AffordabilityCalculator.swift,

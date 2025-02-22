@@ -326,7 +326,7 @@ struct EditAmountModal: View {
     }
 }
 
-// MARK: - BudgetView
+// MARK: - BudgetView (Updated with EnhancedBudgetHeader)
 struct BudgetView: View {
     let monthlyIncome: Double
     let payPeriod: PayPeriod
@@ -452,7 +452,8 @@ struct BudgetView: View {
                         }
                         .background(Theme.surfaceBackground)
                         .cornerRadius(8)
-                        .padding(.horizontal)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
                         
                         // Budget Summary
                         VStack(spacing: 0) {
