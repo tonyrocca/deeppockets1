@@ -1,8 +1,125 @@
 import SwiftUI
 
-// MARK: - Improved Income Header
+// MARK: - Status Button Components
+struct StatusButton: View {
+    let icon: String
+    let label: String
+    let action: () -> Void
+    let variant: ButtonVariant
+    
+    @State private var isPressed = false
+    
+    enum ButtonVariant {
+        case `default`
+        case success
+        case pinned
+        
+        var background: Color {
+            switch self {
+            case .default:
+                return Theme.surfaceBackground
+            case .success, .pinned:
+                return Theme.tint.opacity(0.15)
+            }
+        }
+        
+        var foreground: Color {
+            switch self {
+            case .default:
+                return .white
+            case .success, .pinned:
+                return Theme.tint
+            }
+        }
+    }
+    
+    var body: some View {
+        Button(action: {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                isPressed = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    isPressed = false
+                }
+            }
+            action()
+        }) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 15))
+                Text(label)
+                    .font(.system(size: 15, weight: .medium))
+            }
+            .foregroundColor(variant.foreground)
+            .frame(maxWidth: .infinity)
+            .frame(height: 40)
+            .background(variant.background)
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+            )
+            .scaleEffect(isPressed ? 0.97 : 1)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
 
-import SwiftUI
+struct StatusButtonGroup: View {
+    let onExpand: () -> Void
+    let onPin: () -> Void
+    let onAddToBudget: () -> Void
+    let isPinned: Bool
+    let isInBudget: Bool
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            StatusButton(
+                icon: "arrow.up.left.and.arrow.down.right",
+                label: "Expand",
+                action: onExpand,
+                variant: .default
+            )
+            
+            StatusButton(
+                icon: isPinned ? "pin.fill" : "pin",
+                label: isPinned ? "Pinned" : "Pin",
+                action: onPin,
+                variant: isPinned ? .pinned : .default
+            )
+            
+            Group {
+                if isInBudget {
+                    StatusButton(
+                        icon: "checkmark",
+                        label: "Added",
+                        action: {},
+                        variant: .success
+                    )
+                } else {
+                    StatusButton(
+                        icon: "plus",
+                        label: "Budget",
+                        action: onAddToBudget,
+                        variant: .default
+                    )
+                }
+            }
+            .transition(
+                .opacity
+                .combined(with: .scale)
+            )
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isPinned)
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isInBudget)
+    }
+}
+
+// MARK: - Integration Helper
+extension View {
+    func withButtonAnimation<V: Equatable>(value: V) -> some View {
+        self.animation(.spring(response: 0.3, dampingFraction: 0.8), value: value)
+    }
+}
 
 // MARK: - Improved Income Header
 struct ImprovedIncomeHeader: View {
@@ -33,18 +150,16 @@ struct ImprovedIncomeHeader: View {
                 return percentile
             }
         }
-        return 80 // Default if below all thresholds
+        return 80
     }
     
     var body: some View {
         ZStack {
-            // Main background
             RoundedRectangle(cornerRadius: 16)
                 .fill(Theme.surfaceBackground)
                 .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
             
             VStack(spacing: 0) {
-                // Main income display
                 Button(action: { withAnimation(.spring()) { isExpanded.toggle() } }) {
                     HStack(alignment: .center) {
                         VStack(alignment: .leading, spacing: 6) {
@@ -68,14 +183,12 @@ struct ImprovedIncomeHeader: View {
                     .padding(.horizontal, 20)
                 }
                 
-                // Expanded content
                 if isExpanded {
                     Divider()
                         .background(Theme.separator)
                         .padding(.horizontal, 16)
                     
                     VStack(spacing: 16) {
-                        // Percentile information
                         HStack(alignment: .center) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Income Percentile")
@@ -101,7 +214,6 @@ struct ImprovedIncomeHeader: View {
                             .cornerRadius(8)
                         }
                         
-                        // Edit button
                         Button(action: { showEditIncome = true }) {
                             HStack {
                                 Text("Edit Income")
@@ -134,7 +246,6 @@ struct ImprovedIncomeHeader: View {
 }
 
 // MARK: - Affordability View
-
 struct AffordabilityView: View {
     @ObservedObject var model: AffordabilityModel
     @StateObject private var store = BudgetCategoryStore.shared
@@ -144,7 +255,6 @@ struct AffordabilityView: View {
     @FocusState private var isSearchFocused: Bool
     @State private var payPeriod: PayPeriod = .monthly
     
-    // Filtered categories sorted by priority (most important at the top)
     private var filteredCategories: [BudgetCategory] {
         let categories: [BudgetCategory]
         if searchText.isEmpty {
@@ -157,13 +267,11 @@ struct AffordabilityView: View {
         return categories.sorted { $0.priority < $1.priority }
     }
     
-    // Pinned categories sorted by priority
     private var pinnedCategoryList: [BudgetCategory] {
         return store.categories.filter { pinnedCategories.contains($0.id) }
             .sorted { $0.priority < $1.priority }
     }
     
-    // Unpinned categories (already sorted because filteredCategories is sorted)
     private var unpinnedCategories: [BudgetCategory] {
         filteredCategories.filter { !pinnedCategories.contains($0.id) }
     }
@@ -181,7 +289,6 @@ struct AffordabilityView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Updated Income Header
             ImprovedIncomeHeader(
                 monthlyIncome: $model.monthlyIncome,
                 payPeriod: $payPeriod
@@ -189,16 +296,13 @@ struct AffordabilityView: View {
             .padding(.horizontal, 16)
             .padding(.top, 16)
             
-            // Fixed Search Bar
             searchBar
                 .padding(.vertical, 16)
                 .background(Theme.background)
             
-            // Scrollable Content
             ScrollView {
                 LazyVStack(spacing: 0) {
                     VStack(spacing: 16) {
-                        // Pinned Categories Section
                         if !pinnedCategories.isEmpty {
                             VStack(alignment: .leading, spacing: 16) {
                                 Text("PINNED CATEGORIES")
@@ -253,7 +357,6 @@ struct AffordabilityView: View {
                                 .cornerRadius(4)
                                 .padding(.horizontal, 10)
                             
-                            // Main Categories List
                             VStack(spacing: 0) {
                                 if unpinnedCategories.isEmpty {
                                     Text("No matching categories found")
@@ -355,7 +458,6 @@ struct AffordabilityView: View {
 }
 
 // MARK: - Category Row View
-
 struct CategoryRowView: View {
     let category: BudgetCategory
     @ObservedObject var model: AffordabilityModel
@@ -477,76 +579,26 @@ struct CategoryRowView: View {
                         }
                     }
                     
-                    HStack(spacing: 12) {
-                        Button(action: {
-                            showFullScreenDetails = true
-                        }) {
-                            HStack {
-                                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                Text("Expand")
+                    // New status buttons using StatusButtonGroup
+                    StatusButtonGroup(
+                        onExpand: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                showFullScreenDetails = true
                             }
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.white)
-                            .padding(.vertical, 12)
-                            .frame(maxWidth: .infinity)
-                            .background(Theme.surfaceBackground)
-                            .cornerRadius(8)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                            )
-                        }
-                        
-                        Button(action: {
-                            onPinChanged(category.id, !isPinned)
-                        }) {
-                            HStack {
-                                Image(systemName: isPinned ? "pin.slash.fill" : "pin.fill")
-                                Text(isPinned ? "Unpin" : "Pin")
+                        },
+                        onPin: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                onPinChanged(category.id, !isPinned)
                             }
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.white)
-                            .padding(.vertical, 12)
-                            .frame(maxWidth: .infinity)
-                            .background(Theme.surfaceBackground)
-                            .cornerRadius(8)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                            )
-                        }
-                        
-                        if !isInBudget {
-                            Button(action: { showAddToBudgetConfirmation = true }) {
-                                HStack {
-                                    Text("Budget")
-                                        .font(.system(size: 15, weight: .medium))
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.system(size: 15))
-                                }
-                                .foregroundColor(.white)
-                                .padding(.vertical, 12)
-                                .frame(maxWidth: .infinity)
-                                .background(Theme.surfaceBackground)
-                                .cornerRadius(8)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                                )
+                        },
+                        onAddToBudget: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                showAddToBudgetConfirmation = true
                             }
-                        } else {
-                            HStack {
-                                Text("Added to Budget")
-                                Image(systemName: "checkmark.circle.fill")
-                            }
-                            .font(.system(size: 15))
-                            .foregroundColor(Theme.tint)
-                            .padding(.vertical, 12)
-                            .frame(maxWidth: .infinity)
-                            .background(Theme.surfaceBackground)
-                            .cornerRadius(8)
-                        }
-                    }
+                        },
+                        isPinned: isPinned,
+                        isInBudget: isInBudget
+                    )
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
@@ -765,12 +817,10 @@ struct AssumptionView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            // Title
             Text(assumption.title)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundColor(Theme.label)
             
-            // Description (if available)
             if let description = assumption.description {
                 Text(description)
                     .font(.system(size: 13))
@@ -778,33 +828,28 @@ struct AssumptionView: View {
                     .padding(.bottom, 2)
             }
             
-            // Input Field
             HStack {
-                // Different prefix based on input type
                 if case .textField = assumption.inputType {
                     Text("$")
                         .foregroundColor(.white)
                 }
                 
-                // Text Field
                 TextField("", text: $localValue)
                     .keyboardType(.numberPad)
                     .focused($isFocused)
                     .font(.system(size: 17))
                     .foregroundColor(.white)
                     .onChange(of: localValue) { newValue in
-                        // Filter invalid characters
                         let filtered = newValue.filter { "0123456789.".contains($0) }
                         if filtered != newValue {
                             localValue = filtered
                         }
                     }
-                    .contentShape(Rectangle()) // Makes the entire text field tappable
+                    .contentShape(Rectangle())
                     .onTapGesture {
                         isFocused = true
                     }
                 
-                // Different suffix based on input type
                 switch assumption.inputType {
                 case .percentageSlider:
                     Text("%")
@@ -819,7 +864,7 @@ struct AssumptionView: View {
             .padding()
             .background(Theme.surfaceBackground)
             .cornerRadius(8)
-            .contentShape(Rectangle()) // Makes the entire area tappable
+            .contentShape(Rectangle())
             .onTapGesture {
                 isFocused = true
             }
@@ -829,7 +874,6 @@ struct AssumptionView: View {
         }
         .onChange(of: isFocused) { newFocus in
             if !newFocus {
-                // When focus is lost, update the binding
                 updateAssumption()
             }
         }
@@ -837,7 +881,6 @@ struct AssumptionView: View {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
                 Button("Done") {
-                    // When Done is tapped, update the binding and hide keyboard
                     updateAssumption()
                     isFocused = false
                 }
@@ -846,10 +889,7 @@ struct AssumptionView: View {
     }
     
     private func updateAssumption() {
-        // Ensure non-empty value
         let finalValue = localValue.isEmpty ? assumption.value : localValue
-        
-        // Update the assumption
         assumption.value = finalValue
         localValue = finalValue
         onChanged(assumption)
@@ -869,7 +909,6 @@ extension Text {
 }
 
 // MARK: - Content Example
-
 struct ContentExample: View {
     @State private var monthlyIncome: Double = 9750 // $117,000 annually
     @State private var payPeriod: PayPeriod = .monthly
