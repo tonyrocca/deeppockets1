@@ -501,7 +501,7 @@ struct BudgetView: View {
         }
         .background(Theme.background)
         // At the end of the VStack, with other .sheet modifiers
-        .sheet(isPresented: $showImprovements) {
+        .fullScreenCover(isPresented: $showImprovements) {
             BudgetImprovementModal(isPresented: $showImprovements)
                 .environmentObject(budgetModel)
         }

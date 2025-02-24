@@ -1,4 +1,4 @@
-import SwiftUI  
+import SwiftUI
 
 struct BudgetImprovementModal: View {
     @Binding var isPresented: Bool
@@ -10,136 +10,151 @@ struct BudgetImprovementModal: View {
     @State private var currentSurplus: Double = 0
     
     var body: some View {
-        NavigationView {
-            ZStack {
-                Theme.background
-                    .ignoresSafeArea()
-                
+        ZStack {
+            Color.black
+                .opacity(1)
+                .ignoresSafeArea()
+            
+            GeometryReader { geometry in
                 VStack(spacing: 0) {
-                    // Fixed Header with Budget Status
-                    VStack(spacing: 8) {
-                        Text("Current Budget Status")
-                            .font(.system(size: 15))
-                            .foregroundColor(Theme.secondaryLabel)
-                        
-                        Text(projectedSurplus >= 0 ? "Budget Surplus" : "Budget Deficit")
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundColor(.white)
-                        
-                        Text(formatCurrency(abs(projectedSurplus)))
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(projectedSurplus >= 0 ? Theme.tint : .red)
-                        
-                        if projectedSurplus != currentSurplus {
-                            let impact = projectedSurplus - currentSurplus
-                            Text(impact > 0 ? "▲ \(formatCurrency(abs(impact)))" : "▼ \(formatCurrency(abs(impact)))")
-                                .font(.system(size: 15))
-                                .foregroundColor(impact > 0 ? Theme.tint : .red)
+                    // Header Area
+                    ZStack {
+                        // Close Button
+                        HStack {
+                            Spacer()
+                            Button(action: { isPresented = false }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(Theme.secondaryLabel)
+                            }
                         }
+                        
+                        // Title Center-aligned
+                        Text("Improve Your Budget")
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
                     }
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Theme.surfaceBackground)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 20)
                     
                     // Description
                     Text("Select the improvements you'd like to make to your budget.")
                         .font(.system(size: 17))
                         .foregroundColor(Theme.secondaryLabel)
                         .multilineTextAlignment(.center)
-                        .padding(.vertical, 16)
+                        .padding(.top, 8)
                     
-                    // Scrollable Optimizations List
                     ScrollView {
-                        VStack(spacing: 1) {
-                            ForEach(0..<optimizations.count, id: \.self) { index in
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Toggle(isOn: Binding(
-                                        get: { optimizations[index].isSelected },
-                                        set: { newValue in
-                                            optimizations[index].isSelected = newValue
-                                            updateProjectedSurplus()
-                                        }
-                                    )) {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(optimizations[index].title)
-                                                .font(.system(size: 17))
-                                                .foregroundColor(.white)
-                                            
-                                            Text(optimizations[index].reason)
-                                                .font(.system(size: 15))
-                                                .foregroundColor(Theme.secondaryLabel)
-                                                .fixedSize(horizontal: false, vertical: true)
-                                        }
-                                    }
-                                    .tint(Theme.tint)
-                                }
-                                .padding()
-                                .background(Theme.surfaceBackground)
+                        VStack(spacing: 32) {
+                            // Budget Status
+                            VStack(spacing: 8) {
+                                Text("Current Budget Status")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(Theme.secondaryLabel)
                                 
-                                if index < optimizations.count - 1 {
-                                    Divider()
-                                        .background(Theme.separator)
+                                Text(projectedSurplus >= 0 ? "Budget Surplus" : "Budget Deficit")
+                                    .font(.system(size: 17, weight: .bold))
+                                    .foregroundColor(.white)
+                                
+                                Text(formatCurrency(abs(projectedSurplus)))
+                                    .font(.system(size: 24, weight: .bold))
+                                    .foregroundColor(projectedSurplus >= 0 ? Theme.tint : .red)
+                                
+                                if projectedSurplus != currentSurplus {
+                                    let impact = projectedSurplus - currentSurplus
+                                    Text(impact > 0 ? "▲ \(formatCurrency(abs(impact)))" : "▼ \(formatCurrency(abs(impact)))")
+                                        .font(.system(size: 15))
+                                        .foregroundColor(impact > 0 ? Theme.tint : .red)
                                 }
                             }
-                        }
-                        .background(Theme.surfaceBackground)
-                        .cornerRadius(12)
-                    }
-                    
-                    Spacer()
-                        .frame(height: 80) // Space for the button
-                }
-            }
-            .onAppear {
-                // Initialize optimizations and surplus when the view appears
-                let generatedOptimizations = budgetModel.generateOptimizations()
-                
-                // Calculate initial surplus
-                let totalAllocated = budgetModel.budgetItems
-                    .filter { $0.isActive }
-                    .reduce(0) { $0 + $1.allocatedAmount }
-                let surplus = budgetModel.monthlyIncome - totalAllocated
-                
-                // Update state
-                optimizations = generatedOptimizations
-                currentSurplus = surplus
-                projectedSurplus = surplus
-            }
-            .overlay(
-                // Fixed Improve Button at Bottom
-                VStack {
-                    Spacer()
-                    Button(action: applyImprovements) {
-                        Text("Improve Budget")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.white)
+                            .padding()
                             .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(
-                                optimizations.contains { $0.isSelected } ? Theme.tint : Theme.surfaceBackground
-                            )
+                            .background(Theme.surfaceBackground)
                             .cornerRadius(12)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 16)
+                            
+                            // Optimizations List
+                            VStack(spacing: 1) {
+                                ForEach(0..<optimizations.count, id: \.self) { index in
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Toggle(isOn: Binding(
+                                            get: { optimizations[index].isSelected },
+                                            set: { newValue in
+                                                optimizations[index].isSelected = newValue
+                                                updateProjectedSurplus()
+                                            }
+                                        )) {
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(optimizations[index].title)
+                                                    .font(.system(size: 17))
+                                                    .foregroundColor(.white)
+                                                
+                                                Text(optimizations[index].reason)
+                                                    .font(.system(size: 15))
+                                                    .foregroundColor(Theme.secondaryLabel)
+                                                    .fixedSize(horizontal: false, vertical: true)
+                                            }
+                                        }
+                                        .tint(Theme.tint)
+                                    }
+                                    .padding()
+                                    .background(Theme.surfaceBackground)
+                                    
+                                    if index < optimizations.count - 1 {
+                                        Divider()
+                                            .background(Theme.separator)
+                                    }
+                                }
+                            }
+                            .background(Theme.surfaceBackground)
+                            .cornerRadius(12)
+                            .padding(.horizontal, 20)
+                            
+                            // Spacer at bottom for button
+                            Color.clear.frame(height: 100)
+                        }
                     }
-                    .disabled(!optimizations.contains { $0.isSelected })
-                    .padding(.horizontal)
-                    .padding(.bottom, 16)
-                    .background(
-                        Theme.background
-                            .edgesIgnoringSafeArea(.bottom)
-                    )
-                }
-            )
-            .navigationTitle("Improve Your Budget")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { isPresented = false }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(Theme.secondaryLabel)
+
+                    // Fixed Improve Button at Bottom
+                    VStack {
+                        Spacer()
+                        Button(action: applyImprovements) {
+                            Text("Improve Budget")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56)
+                                .background(
+                                    optimizations.contains { $0.isSelected } ? Theme.tint : Theme.surfaceBackground
+                                )
+                                .cornerRadius(12)
+                        }
+                        .disabled(!optimizations.contains { $0.isSelected })
+                        .padding(.horizontal, 36)
+                        .padding(.bottom, geometry.safeAreaInsets.bottom + 36)
                     }
                 }
+                .background(Theme.background)
+                .cornerRadius(20)
+                .padding()
             }
+        }
+        .onAppear {
+            // Initialize optimizations and surplus when the view appears
+            let generatedOptimizations = budgetModel.generateOptimizations()
+            
+            // Calculate initial surplus
+            let totalAllocated = budgetModel.budgetItems
+                .filter { $0.isActive }
+                .reduce(0) { $0 + $1.allocatedAmount }
+            let surplus = budgetModel.monthlyIncome - totalAllocated
+            
+            // Update state
+            optimizations = generatedOptimizations
+            currentSurplus = surplus
+            projectedSurplus = surplus
         }
     }
     
