@@ -1,6 +1,5 @@
 import SwiftUI
 
-// MARK: - CategoryDetailModal
 struct CategoryDetailModal: View {
     let category: BudgetCategory
     let amount: Double
@@ -37,203 +36,194 @@ struct CategoryDetailModal: View {
     }
     
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Header
-                    HStack {
+            NavigationView {
+                ZStack {
+                    Theme.background
+                        .ignoresSafeArea()
+                    
+                    VStack(spacing: 0) {
+                        // Close button
+                        HStack {
+                            Spacer()
+                            Button(action: { isPresented = false }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(Theme.secondaryLabel)
+                            }
+                        }
+                        .padding(.top, 20)
+                        .padding(.trailing, 20)
+                        
+                        // Sticky Header
+                        HStack(spacing: 12) {
                         Text(category.emoji)
                             .font(.title2)
                         Text(category.name)
                             .font(.system(size: 20, weight: .semibold))
                             .foregroundColor(.white)
                         Spacer()
-                        Text(formatCurrency(amount))
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.white)
+                        Text(formatCurrency(amount) + (displayType == .monthly ? "/mo" : " total"))
+                            .font(.system(size: 17))
+                            .foregroundColor(Theme.secondaryLabel)
                     }
-                    .padding()
-                    .background(Theme.surfaceBackground)
-                    .cornerRadius(12)
+                    .padding(.vertical, 16)
+                    .padding(.horizontal, 20)
+                    .background(Theme.background)
                     
-                    // Content sections
-                    VStack(alignment: .leading, spacing: 24) {
-                        // Allocation Section
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("ALLOCATION OF SALARY")
-                                .sectionHeader()
-                            Text(category.formattedAllocation)
-                                .font(.system(size: 17))
-                                .foregroundColor(Theme.label)
-                        }
-                        
-                        // Monthly Section (if total)
-                        if displayType == .total {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 24) {
+                            // Allocation Section
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("ESTIMATED MONTHLY ALLOCATION")
+                                Text("ALLOCATION OF SALARY")
                                     .sectionHeader()
-                                Text(formatCurrency(amount / 12))
+                                Text(category.formattedAllocation)
                                     .font(.system(size: 17))
-                                    .foregroundColor(Theme.label)
-                            }
-                        }
-                        
-                        // Description Section
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("DESCRIPTION")
-                                .sectionHeader()
-                            Text(category.description)
-                                .font(.system(size: 15))
-                                .foregroundColor(Theme.secondaryLabel)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        
-                        // Assumptions Section
-                        if !localAssumptions.isEmpty {
-                            VStack(alignment: .leading, spacing: 16) {
-                                Text("ASSUMPTIONS")
-                                    .sectionHeader()
-                                
-                                ForEach(localAssumptions.indices, id: \.self) { index in
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        // Title
-                                        Text(localAssumptions[index].title)
-                                            .font(.system(size: 15, weight: .medium))
-                                            .foregroundColor(Theme.label)
-                                        
-                                        // Description (if available)
-                                        if let description = localAssumptions[index].description {
-                                            Text(description)
-                                                .font(.system(size: 13))
-                                                .foregroundColor(Theme.secondaryLabel)
-                                                .padding(.bottom, 2)
-                                        }
-                                        
-                                        // Input Field
-                                        HStack {
-                                            // Different prefix based on input type
-                                            if case .textField = localAssumptions[index].inputType {
-                                                Text("$")
-                                                    .foregroundColor(.white)
-                                            }
-                                            
-                                            // Text Field
-                                            TextField("", text: $localAssumptions[index].value)
-                                                .keyboardType(.decimalPad)
-                                                .focused($focusedField, equals: localAssumptions[index].id)
-                                                .font(.system(size: 17))
-                                                .foregroundColor(.white)
-                                                .onChange(of: localAssumptions[index].value) { newValue in
-                                                    // Filter invalid characters
-                                                    let filtered = newValue.filter { "0123456789.".contains($0) }
-                                                    if filtered != newValue {
-                                                        localAssumptions[index].value = filtered
-                                                    }
-                                                    onAssumptionsChanged(category.id, localAssumptions)
-                                                }
-                                            
-                                            // Different suffix based on input type
-                                            switch localAssumptions[index].inputType {
-                                            case .percentageSlider:
-                                                Text("%")
-                                                    .foregroundColor(Theme.secondaryLabel)
-                                            case .yearSlider:
-                                                Text("yrs")
-                                                    .foregroundColor(Theme.secondaryLabel)
-                                            default:
-                                                EmptyView()
-                                            }
-                                        }
-                                        .padding()
-                                        .background(Theme.surfaceBackground)
-                                        .cornerRadius(8)
-                                    }
-                                    .padding(.bottom, 8)
-                                }
-                            }
-                        }
-                        
-                        // Action Buttons Row
-                        VStack(spacing: 12) {
-                            if !isInBudget {
-                                Button(action: { showAddToBudgetConfirmation = true }) {
-                                    HStack {
-                                        Text("Add to Budget")
-                                        Image(systemName: "plus.circle.fill")
-                                    }
-                                    .font(.system(size: 15, weight: .medium))
                                     .foregroundColor(.white)
-                                    .padding(.vertical, 12)
-                                    .frame(maxWidth: .infinity)
-                                    .background(Theme.surfaceBackground)
-                                    .cornerRadius(8)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                                    )
-                                }
-                            } else {
-                                HStack {
-                                    Text("Added to Budget")
-                                    Image(systemName: "checkmark.circle.fill")
-                                }
-                                .font(.system(size: 15))
-                                .foregroundColor(Theme.tint)
-                                .padding(.vertical, 12)
-                                .frame(maxWidth: .infinity)
-                                .background(Theme.surfaceBackground)
-                                .cornerRadius(8)
                             }
                             
-                            Button(action: {
-                                onPinChanged(category.id, !isPinned)
-                            }) {
-                                HStack {
-                                    Image(systemName: isPinned ? "pin.slash.fill" : "pin.fill")
-                                    Text(isPinned ? "Unpin" : "Pin")
+                            // Monthly Allocation (if total)
+                            if displayType == .total {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("ESTIMATED MONTHLY ALLOCATION")
+                                        .sectionHeader()
+                                    Text(formatCurrency(amount / 12))
+                                        .font(.system(size: 17))
+                                        .foregroundColor(Theme.label)
                                 }
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(.white)
-                                .padding(.vertical, 12)
-                                .frame(maxWidth: .infinity)
-                                .background(Theme.surfaceBackground)
-                                .cornerRadius(8)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                                )
                             }
+                            
+                            // Description Section
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("DESCRIPTION")
+                                    .sectionHeader()
+                                Text(category.description)
+                                    .font(.system(size: 15))
+                                    .foregroundColor(Theme.secondaryLabel)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            
+                            // Assumptions Section
+                            if !localAssumptions.isEmpty {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("ASSUMPTIONS")
+                                        .sectionHeader()
+                                    
+                                    ForEach(localAssumptions.indices, id: \.self) { index in
+                                        AssumptionView(
+                                            assumption: $localAssumptions[index],
+                                            onChanged: { _ in
+                                                onAssumptionsChanged(category.id, localAssumptions)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            // Action Buttons
+                            StatusButtonGroup(
+                                onExpand: { }, // Not needed in modal
+                                onPin: {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                        onPinChanged(category.id, !isPinned)
+                                    }
+                                },
+                                onAddToBudget: { showAddToBudgetConfirmation = true },
+                                isPinned: isPinned,
+                                isInBudget: isInBudget
+                            )
                         }
-                        .padding(.top, 8)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 24)
                     }
                 }
-                .padding()
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(
-                trailing: Button(action: { isPresented = false }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 24))
+            .navigationBarHidden(true)
+            .overlay {
+                if showAddToBudgetConfirmation {
+                    addToBudgetConfirmation
+                }
+            }
+        }
+    }
+    
+    private var addToBudgetConfirmation: some View {
+        ZStack {
+            Color.black.opacity(0.5)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 24) {
+                VStack(spacing: 8) {
+                    Text("Add to Budget")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.white)
+                    Text("Would you like to add \(category.name) to your budget with the recommended amount?")
+                        .font(.system(size: 17))
                         .foregroundColor(Theme.secondaryLabel)
+                        .multilineTextAlignment(.center)
                 }
-            )
-            .background(Theme.background)
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Done") {
-                        focusedField = nil
-                        onAssumptionsChanged(category.id, localAssumptions)
+                
+                VStack(spacing: 4) {
+                    Text("Recommended Monthly Amount")
+                        .font(.system(size: 15))
+                        .foregroundColor(Theme.secondaryLabel)
+                    Text(formatCurrency(displayType == .monthly ? amount : amount / 12))
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.white)
+                }
+                
+                VStack(spacing: 12) {
+                    Button(action: {
+                        addToBudget()
+                        showAddToBudgetConfirmation = false
+                    }) {
+                        Text("Yes, Add to Budget")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(Theme.tint)
+                            .cornerRadius(12)
+                    }
+                    
+                    Button(action: { showAddToBudgetConfirmation = false }) {
+                        Text("Cancel")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(Theme.surfaceBackground)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
                     }
                 }
             }
-            .gesture(
-                TapGesture()
-                    .onEnded { _ in
-                        focusedField = nil
-                        onAssumptionsChanged(category.id, localAssumptions)
-                    }
-            )
+            .padding(24)
+            .background(Theme.background)
+            .cornerRadius(20)
+            .padding(.horizontal, 20)
+        }
+    }
+    
+    private func addToBudget() {
+        let monthlyAllocation = (displayType == .monthly)
+            ? amount
+            : amount / 12
+        
+        budgetModel.toggleCategory(id: category.id)
+        budgetModel.updateAllocation(for: category.id, amount: monthlyAllocation)
+        
+        withAnimation {
+            showingAddedToBudget = true
+            showAddToBudgetConfirmation = false
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation {
+                showingAddedToBudget = false
+            }
         }
     }
     
@@ -242,5 +232,12 @@ struct CategoryDetailModal: View {
         formatter.numberStyle = .currency
         formatter.maximumFractionDigits = 0
         return formatter.string(from: NSNumber(value: value)) ?? "$0"
+    }
+}
+// MARK: - Header Height Preference Key
+private struct HeaderHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
