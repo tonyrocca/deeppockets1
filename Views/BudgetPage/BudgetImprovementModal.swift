@@ -4,7 +4,6 @@ struct BudgetImprovementModal: View {
     @Binding var isPresented: Bool
     @EnvironmentObject private var budgetModel: BudgetModel
     
-    // Track current impact
     @State private var optimizations: [BudgetOptimization] = []
     @State private var projectedSurplus: Double = 0
     @State private var currentSurplus: Double = 0
@@ -17,9 +16,8 @@ struct BudgetImprovementModal: View {
             
             GeometryReader { geometry in
                 VStack(spacing: 0) {
-                    // Header Area
+                    // Header
                     ZStack {
-                        // Close Button
                         HStack {
                             Spacer()
                             Button(action: { isPresented = false }) {
@@ -29,7 +27,6 @@ struct BudgetImprovementModal: View {
                             }
                         }
                         
-                        // Title Center-aligned
                         Text("Improve Your Budget")
                             .font(.system(size: 28, weight: .bold))
                             .foregroundColor(.white)
@@ -38,98 +35,109 @@ struct BudgetImprovementModal: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
                     
-                    // Description
-                    Text("Select the improvements you'd like to make to your budget.")
-                        .font(.system(size: 17))
-                        .foregroundColor(Theme.secondaryLabel)
-                        .multilineTextAlignment(.center)
-                        .padding(.top, 8)
-                    
-                    ScrollView {
-                        VStack(spacing: 32) {
-                            // Budget Status
-                            VStack(spacing: 8) {
-                                Text("Current Budget Status")
-                                    .font(.system(size: 15))
-                                    .foregroundColor(Theme.secondaryLabel)
+                    // Budget Status Card
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(projectedSurplus >= 0 ? "Budget Surplus" : "Budget Deficit")
+                                .font(.system(size: 17, weight: .medium))
+                                .foregroundColor(.white)
                                 
-                                Text(projectedSurplus >= 0 ? "Budget Surplus" : "Budget Deficit")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
-                                
-                                Text(formatCurrency(abs(projectedSurplus)))
-                                    .font(.system(size: 24, weight: .bold))
-                                    .foregroundColor(projectedSurplus >= 0 ? Theme.tint : .red)
-                                
-                                if projectedSurplus != currentSurplus {
-                                    let impact = projectedSurplus - currentSurplus
-                                    Text(impact > 0 ? "▲ \(formatCurrency(abs(impact)))" : "▼ \(formatCurrency(abs(impact)))")
-                                        .font(.system(size: 15))
-                                        .foregroundColor(impact > 0 ? Theme.tint : .red)
-                                }
+                            if projectedSurplus != currentSurplus {
+                                let impact = projectedSurplus - currentSurplus
+                                Text(impact > 0 ? "▲ Improvement" : "▼ Reduction")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(impact > 0 ? Theme.tint : .red)
                             }
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Theme.surfaceBackground)
-                            .cornerRadius(12)
-                            .padding(.horizontal, 20)
-                            .padding(.top, 16)
-                            
-                            // Optimizations List
-                            VStack(spacing: 1) {
-                                ForEach(0..<optimizations.count, id: \.self) { index in
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Toggle(isOn: Binding(
+                        }
+                        
+                        Spacer()
+                        
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text(formatCurrency(abs(projectedSurplus)))
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(projectedSurplus >= 0 ? Theme.tint : .red)
+                                
+                            if projectedSurplus != currentSurplus {
+                                let impact = projectedSurplus - currentSurplus
+                                Text(formatCurrency(abs(impact)))
+                                    .font(.system(size: 13))
+                                    .foregroundColor(impact > 0 ? Theme.tint : .red)
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(Theme.surfaceBackground)
+                    .cornerRadius(12)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 20)
+                    
+                    // Optimization Categories
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            ForEach(0..<optimizations.count, id: \.self) { index in
+                                VStack(alignment: .leading, spacing: 12) {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            // Title with amount
+                                            Text(optimizations[index].title)
+                                                .font(.system(size: 17))
+                                                .foregroundColor(.white)
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        // Toggle
+                                        Toggle("", isOn: Binding(
                                             get: { optimizations[index].isSelected },
                                             set: { newValue in
                                                 optimizations[index].isSelected = newValue
-                                                updateProjectedSurplus()
+                                                withAnimation {
+                                                    updateProjectedSurplus()
+                                                }
                                             }
-                                        )) {
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text(optimizations[index].title)
-                                                    .font(.system(size: 17))
-                                                    .foregroundColor(.white)
-                                                
-                                                Text(optimizations[index].reason)
-                                                    .font(.system(size: 15))
-                                                    .foregroundColor(Theme.secondaryLabel)
-                                                    .fixedSize(horizontal: false, vertical: true)
-                                            }
-                                        }
+                                        ))
                                         .tint(Theme.tint)
                                     }
-                                    .padding()
-                                    .background(Theme.surfaceBackground)
                                     
-                                    if index < optimizations.count - 1 {
-                                        Divider()
-                                            .background(Theme.separator)
-                                    }
+                                    // Description
+                                    Text(optimizations[index].reason)
+                                        .font(.system(size: 15))
+                                        .foregroundColor(Theme.secondaryLabel)
+                                        .fixedSize(horizontal: false, vertical: true)
                                 }
+                                .padding()
+                                .background(Theme.surfaceBackground)
+                                .cornerRadius(12)
                             }
-                            .background(Theme.surfaceBackground)
-                            .cornerRadius(12)
-                            .padding(.horizontal, 20)
                             
-                            // Spacer at bottom for button
+                            // Bottom spacing for button
                             Color.clear.frame(height: 100)
                         }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 16)
                     }
-
-                    // Fixed Improve Button at Bottom
+                    
+                    // Improve Budget Button
                     VStack {
                         Spacer()
                         Button(action: applyImprovements) {
-                            Text("Improve Budget")
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 56)
-                                .background(
-                                    optimizations.contains { $0.isSelected } ? Theme.tint : Theme.surfaceBackground
-                                )
-                                .cornerRadius(12)
+                            HStack {
+                                Text("Improve Budget")
+                                    .font(.system(size: 17, weight: .semibold))
+                                
+                                if projectedSurplus != currentSurplus {
+                                    let impact = projectedSurplus - currentSurplus
+                                    Text(impact > 0 ? "• \(formatCurrency(abs(impact))) Improvement" : "• \(formatCurrency(abs(impact))) Reduction")
+                                        .font(.system(size: 15))
+                                }
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(
+                                optimizations.contains { $0.isSelected } ? Theme.tint : Theme.surfaceBackground
+                            )
+                            .cornerRadius(12)
                         }
                         .disabled(!optimizations.contains { $0.isSelected })
                         .padding(.horizontal, 36)
@@ -142,16 +150,12 @@ struct BudgetImprovementModal: View {
             }
         }
         .onAppear {
-            // Initialize optimizations and surplus when the view appears
             let generatedOptimizations = budgetModel.generateOptimizations()
-            
-            // Calculate initial surplus
             let totalAllocated = budgetModel.budgetItems
                 .filter { $0.isActive }
                 .reduce(0) { $0 + $1.allocatedAmount }
             let surplus = budgetModel.monthlyIncome - totalAllocated
             
-            // Update state
             optimizations = generatedOptimizations
             currentSurplus = surplus
             projectedSurplus = surplus
