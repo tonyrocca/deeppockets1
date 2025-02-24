@@ -454,20 +454,23 @@ struct BudgetView: View {
                         
                         if !budgetModel.budgetItems.isEmpty {
                             Button(action: { showImprovements = true }) {
-                                Text("Enhance Your Budget")
-                                    .font(.system(size: 17, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 52)
-                                    .background(Theme.tint)
-                                    .cornerRadius(12)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Theme.tint.opacity(0.3), lineWidth: 1)
-                                    )
-                                    .shadow(color: Theme.tint.opacity(0.3), radius: 8, x: 0, y: 4)
-                            }
-                            .padding(.horizontal)
+                                                            HStack {
+                                                                Image(systemName: "sparkles")
+                                                                    .font(.system(size: 16))
+                                                                Text("Enhance Your Budget")
+                                                                    .font(.system(size: 17, weight: .medium))
+                                                            }
+                                                            .foregroundColor(Theme.tint)
+                                                            .frame(maxWidth: .infinity)
+                                                            .frame(height: 48)
+                                                            .background(Theme.tint.opacity(0.15))
+                                                            .cornerRadius(12)
+                                                            .overlay(
+                                                                RoundedRectangle(cornerRadius: 12)
+                                                                    .stroke(Theme.tint.opacity(0.3), lineWidth: 1)
+                                                            )
+                                                        }
+                                                        .padding(.horizontal)
                         }
                         
                         // Categories List
