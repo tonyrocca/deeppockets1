@@ -435,3 +435,256 @@ extension BudgetModel {
         calculateUnusedAmount()
     }
 }
+
+// MARK: - Budget Enhancement Features
+extension BudgetModel {
+    /// Generates intelligent budget optimization recommendations based on current budget state
+    func generateOptimizations() -> [BudgetOptimization] {
+        var optimizations: [BudgetOptimization] = []
+        
+        // PART 1: ESSENTIAL CATEGORIES CHECK
+        // Check for missing essential categories
+        let essentialCategoryIds = [
+            "rent", "mortgage", // Housing (need one of these)
+            "groceries",        // Food
+            "utilities",        // Utilities
+            "transportation",   // Getting around
+            "emergency_savings" // Emergency fund
+        ]
+        
+        let hasHousing = budgetItems.contains { $0.category.id == "rent" || $0.category.id == "mortgage" }
+        if !hasHousing {
+            if let housingCategory = store.categories.first(where: { $0.id == "rent" }) {
+                let recommendedAmount = monthlyIncome * 0.3
+                optimizations.append(BudgetOptimization(
+                    type: .add(housingCategory, recommendedAmount),
+                    reason: "Housing is typically the largest expense and should be included in your budget"
+                ))
+            }
+        }
+        
+        for categoryId in essentialCategoryIds {
+            // Skip housing check (already handled)
+            if categoryId == "rent" || categoryId == "mortgage" { continue }
+            
+            let hasCategory = budgetItems.contains { $0.category.id == categoryId }
+            if !hasCategory {
+                if let category = store.categories.first(where: { $0.id == categoryId }) {
+                    let recommendedAmount = monthlyIncome * category.allocationPercentage
+                    optimizations.append(BudgetOptimization(
+                        type: .add(category, recommendedAmount),
+                        reason: "This is an essential category for a complete budget"
+                    ))
+                }
+            }
+        }
+        
+        // PART 2: SAVINGS GOALS CHECK
+        // Ensure proper savings categories based on income
+        let savingsTotal = budgetItems
+            .filter { $0.type == .savings }
+            .reduce(0) { $0 + $1.allocatedAmount }
+        let savingsRate = savingsTotal / monthlyIncome
+        
+        // Check emergency savings
+        let hasEmergencySavings = budgetItems.contains { $0.category.id == "emergency_savings" }
+        if !hasEmergencySavings {
+            if let emergencyCategory = store.categories.first(where: { $0.id == "emergency_savings" }) {
+                let recommendedAmount = monthlyIncome * 0.1
+                optimizations.append(BudgetOptimization(
+                    type: .add(emergencyCategory, recommendedAmount),
+                    reason: "Emergency savings protect against unexpected expenses and should be part of every budget"
+                ))
+            }
+        }
+        
+        // Check retirement savings for higher incomes
+        if monthlyIncome >= 4000 {
+            let hasRetirement = budgetItems.contains { $0.category.id == "retirement_savings" }
+            if !hasRetirement {
+                if let retirementCategory = store.categories.first(where: { $0.id == "retirement_savings" }) {
+                    let recommendedAmount = monthlyIncome * 0.15
+                    optimizations.append(BudgetOptimization(
+                        type: .add(retirementCategory, recommendedAmount),
+                        reason: "With your income level, you should be saving for retirement"
+                    ))
+                }
+            }
+        }
+        
+        // PART 3: LIFESTYLE CATEGORIES BASED ON INCOME
+        if monthlyIncome >= 3500 {
+            // Check for entertainment/dining
+            let hasEntertainment = budgetItems.contains { $0.category.id == "entertainment" }
+            let hasDining = budgetItems.contains { $0.category.id == "dining" }
+            
+            if !hasEntertainment && !hasDining {
+                if let entertainmentCategory = store.categories.first(where: { $0.id == "entertainment" }) {
+                    let recommendedAmount = monthlyIncome * 0.05
+                    optimizations.append(BudgetOptimization(
+                        type: .add(entertainmentCategory, recommendedAmount),
+                        reason: "A balanced budget includes some funds for entertainment and personal enjoyment"
+                    ))
+                }
+            }
+        }
+        
+        // PART 4: BALANCE CHECK AND ADJUSTMENTS
+        // Check for housing costs being too high
+        let housingItems = budgetItems.filter { $0.category.id == "rent" || $0.category.id == "mortgage" }
+        let housingTotal = housingItems.reduce(0) { $0 + $1.allocatedAmount }
+        
+        if housingTotal > monthlyIncome * 0.35 {
+            // Housing costs are too high
+            for item in housingItems {
+                let recommendedAmount = monthlyIncome * 0.3
+                optimizations.append(BudgetOptimization(
+                    type: .decrease(item.category.id, recommendedAmount),
+                    reason: "Your housing costs exceed 35% of income - aim to keep them under 30% for better financial balance"
+                ))
+            }
+        }
+        
+        // PART 5: HEALTH/WELLBEING CHECK
+        // Ensure health-related categories
+        let hasHealthCategory = budgetItems.contains {
+            ["medical_expenses", "health_insurance", "dental", "vision_care"].contains($0.category.id)
+        }
+        
+        if !hasHealthCategory {
+            if let healthCategory = store.categories.first(where: { $0.id == "medical_expenses" }) {
+                let recommendedAmount = monthlyIncome * 0.05
+                optimizations.append(BudgetOptimization(
+                    type: .add(healthCategory, recommendedAmount),
+                    reason: "Including healthcare expenses helps prepare for medical costs"
+                ))
+            }
+        }
+        
+        // PART 6: SEASONAL/PERIODIC EXPENSES
+        // Check for important periodic expenses
+        let hasGifts = budgetItems.contains { $0.category.id == "gifts" }
+        if !hasGifts && monthlyIncome > 2500 {
+            if let giftsCategory = store.categories.first(where: { $0.id == "gifts" }) {
+                let recommendedAmount = monthlyIncome * 0.02
+                optimizations.append(BudgetOptimization(
+                    type: .add(giftsCategory, recommendedAmount),
+                    reason: "Setting aside money for gifts helps manage holiday and birthday expenses"
+                ))
+            }
+        }
+        
+        // PART 7: LOOK FOR PERSONAL DEVELOPMENT OPPORTUNITIES
+        let hasPersonalDevelopment = budgetItems.contains {
+            ["education", "personal_development", "professional_development"].contains($0.category.id)
+        }
+        
+        if !hasPersonalDevelopment && monthlyIncome > 4000 {
+            if let developmentCategory = store.categories.first(where: { $0.id == "personal_development" }) {
+                let recommendedAmount = monthlyIncome * 0.03
+                optimizations.append(BudgetOptimization(
+                    type: .add(developmentCategory, recommendedAmount),
+                    reason: "Investing in personal development can improve your career prospects and income"
+                ))
+            }
+        }
+        
+        // PART 8: VACATION/TRAVEL RECOMMENDATIONS
+        if monthlyIncome > 5000 {
+            let hasVacation = budgetItems.contains { $0.category.id == "vacation_savings" || $0.category.id == "travel" }
+            if !hasVacation {
+                if let vacationCategory = store.categories.first(where: { $0.id == "vacation_savings" }) {
+                    let recommendedAmount = monthlyIncome * 0.05
+                    optimizations.append(BudgetOptimization(
+                        type: .add(vacationCategory, recommendedAmount),
+                        reason: "Planning for vacations helps maintain work-life balance"
+                    ))
+                }
+            }
+        }
+        
+        // PART 9: SPECIFIC SAVINGS IMPROVEMENT FOR EXISTING CATEGORIES
+        if savingsRate < 0.2 {
+            // Savings rate is below recommended 20%
+            for item in budgetItems where item.type == .savings {
+                let recommendedIncrease = item.allocatedAmount * 1.2
+                if recommendedIncrease < monthlyIncome * 0.2 { // Cap at 20% of income
+                    optimizations.append(BudgetOptimization(
+                        type: .increase(item.category.id, recommendedIncrease),
+                        reason: "Increasing your savings rate to at least 20% of income helps build financial security"
+                    ))
+                }
+            }
+        }
+        
+        // PART 10: LIMIT OPTIMIZATIONS - DON'T OVERWHELM
+        // If we have too many suggestions, prioritize the most important ones
+        if optimizations.count > 5 {
+            // Sort by importance (add essential categories first, then savings, then others)
+            optimizations.sort { opt1, opt2 in
+                // Helper function to get priority of optimization
+                func getPriority(_ opt: BudgetOptimization) -> Int {
+                    switch opt.type {
+                    case .add(let category, _):
+                        if essentialCategoryIds.contains(category.id) {
+                            return 1 // Highest priority - essential categories
+                        } else if category.type == .savings {
+                            return 2 // High priority - savings categories
+                        } else {
+                            return 3 // Lower priority - other categories
+                        }
+                    case .increase(let categoryId, _):
+                        if let item = budgetItems.first(where: { $0.id == categoryId }),
+                           item.type == .savings {
+                            return 2 // High priority - increasing savings
+                        } else {
+                            return 4 // Lower priority - increasing other categories
+                        }
+                    case .decrease:
+                        return 3 // Medium priority - decreasing excessive spending
+                    case .remove:
+                        return 5 // Lowest priority - removing categories
+                    }
+                }
+                
+                return getPriority(opt1) < getPriority(opt2)
+            }
+            
+            // Limit to top 5 suggestions
+            optimizations = Array(optimizations.prefix(5))
+        }
+        
+        return optimizations
+    }
+    
+    /// Applies selected budget optimizations
+    func applyOptimizations(_ optimizations: [BudgetOptimization]) {
+        for optimization in optimizations where optimization.isSelected {
+            switch optimization.type {
+            case .increase(let categoryId, let amount):
+                updateAllocation(for: categoryId, amount: amount)
+                
+            case .decrease(let categoryId, let amount):
+                updateAllocation(for: categoryId, amount: amount)
+                
+            case .add(let category, let amount):
+                let type: BudgetCategoryType = shouldBeSavingsCategory(category) ? .savings : .expense
+                let newItem = BudgetItem(
+                    id: category.id,
+                    category: category,
+                    allocatedAmount: amount,
+                    spentAmount: 0,
+                    type: type,
+                    priority: determinePriority(for: category),
+                    isActive: true
+                )
+                budgetItems.append(newItem)
+                
+            case .remove(let categoryId):
+                deleteCategory(id: categoryId)
+            }
+        }
+        
+        calculateUnusedAmount()
+    }
+}

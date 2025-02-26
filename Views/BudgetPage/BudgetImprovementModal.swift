@@ -1,15 +1,21 @@
 import SwiftUI
 
 struct BudgetRecommendation: Identifiable {
-    let id: String
-    let emoji: String
-    let name: String
+    let id = UUID()
+    let type: RecommendationType
+    let category: BudgetCategory
     let changeAmount: Double
-    let currentAmount: Double
+    let currentAmount: Double?
     let newAmount: Double
     let explanation: String
     var isEnabled: Bool = false
-    let category: BudgetCategory
+    
+    enum RecommendationType {
+        case increase
+        case decrease
+        case add
+        case remove
+    }
 }
 
 struct BudgetImprovementModal: View {
@@ -30,13 +36,17 @@ struct BudgetImprovementModal: View {
         }
     }
     
+    private var enabledCount: Int {
+        recommendations.filter { $0.isEnabled }.count
+    }
+    
     var body: some View {
         ZStack {
             // Background
             Theme.background.ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Header with close button (fixed at top)
+                // Header with close button
                 HStack {
                     Text("Improve Your Budget")
                         .font(.system(size: 20, weight: .bold))
@@ -52,7 +62,7 @@ struct BudgetImprovementModal: View {
                 }
                 .padding()
                 
-                // Fixed Budget Surplus section
+                // Budget Surplus section
                 HStack {
                     Text(calculateCurrentSurplus() >= 0 ? "Budget Surplus" : "Budget Deficit")
                         .font(.system(size: 17, weight: .semibold))
@@ -78,18 +88,7 @@ struct BudgetImprovementModal: View {
                             .padding(.top, 40)
                     } else {
                         VStack(spacing: 16) {
-                            Text("RECOMMENDED IMPROVEMENTS")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(Theme.tint)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Theme.tint.opacity(0.1))
-                                .cornerRadius(4)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 16)
-                                .padding(.top, 8)
-                            
-                            // Simplified recommendation cards
+                            // Recommendations
                             ForEach(recommendations) { recommendation in
                                 SimplifiedRecommendationCard(
                                     recommendation: recommendation,
@@ -116,9 +115,9 @@ struct BudgetImprovementModal: View {
                     Divider()
                         .background(Theme.separator)
                     
-                    // Improve Budget Button (matching affordability view style)
+                    // Apply Button
                     Button(action: applyRecommendations) {
-                        Text("Improve Budget")
+                        Text("Apply \(enabledCount) Improvement\(enabledCount == 1 ? "" : "s")")
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -126,8 +125,8 @@ struct BudgetImprovementModal: View {
                             .background(Theme.tint)
                             .cornerRadius(12)
                     }
-                    .disabled(!isAnyRecommendationEnabled())
-                    .opacity(isAnyRecommendationEnabled() ? 1.0 : 0.6)
+                    .disabled(enabledCount == 0)
+                    .opacity(enabledCount > 0 ? 1.0 : 0.6)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 16)
                 }
@@ -164,214 +163,63 @@ struct BudgetImprovementModal: View {
         .padding(.horizontal, 16)
     }
     
-    private func calculateCurrentSurplus() -> Double {
-        // Calculate the current budget surplus based on selected recommendations
-        let enabledRecommendationsTotal = recommendations
-            .filter { $0.isEnabled }
-            .reduce(0) { $0 + $1.changeAmount }
-        
-        return initialSurplus - enabledRecommendationsTotal
-    }
-    
-    private func isAnyRecommendationEnabled() -> Bool {
-        recommendations.contains { $0.isEnabled }
-    }
-    
-    private func generateRecommendations() {
-        // Ensure we have a valid budget model and positive surplus
-        guard initialSurplus > 0 else { return }
-        
-        let categoryStore = BudgetCategoryStore.shared
-        var newRecommendations: [BudgetRecommendation] = []
-        
-        // Get all active budget items
-        let activeBudgetItems = budgetModel.budgetItems.filter { $0.isActive }
-        let budgetCategoryIds = Set(activeBudgetItems.map { $0.id })
-        
-        // 1. Analyze the budget for optimal allocation based on financial best practices
-        
-        // 1a. Check savings categories (emergency fund, retirement, investments)
-        let savingsCategories = ["emergency_savings", "retirement_savings", "investments", "college_savings"]
-        let currentSavingsTotal = activeBudgetItems
-            .filter { savingsCategories.contains($0.id) }
-            .reduce(0) { $0 + $1.allocatedAmount }
-        
-        let savingsRatio = currentSavingsTotal / budgetModel.monthlyIncome
-        
-        // Check if total savings are less than 20% of income - a common financial guideline
-        if savingsRatio < 0.2 {
-            // Look for savings categories to improve
-            for savingsId in savingsCategories {
-                if let category = categoryStore.category(for: savingsId) {
-                    let currentAmount = activeBudgetItems
-                        .first(where: { $0.id == savingsId })?.allocatedAmount ?? 0
-                    
-                    let recommendedAmount = budgetModel.monthlyIncome * category.allocationPercentage
-                    let difference = recommendedAmount - currentAmount
-                    
-                    // Only create recommendation if there's a significant difference
-                    // and we can afford it with the current surplus
-                    if difference > 20 && difference <= initialSurplus {
-                        var explanation = ""
-                        switch savingsId {
-                        case "emergency_savings":
-                            explanation = "Increase from \(formatCurrency(currentAmount))/mo to \(formatCurrency(currentAmount + difference))/mo for better protection against unexpected events."
-                        case "retirement_savings":
-                            explanation = "Increase from \(formatCurrency(currentAmount))/mo to \(formatCurrency(currentAmount + difference))/mo to improve your future financial security."
-                        case "investments":
-                            explanation = "Increase from \(formatCurrency(currentAmount))/mo to \(formatCurrency(currentAmount + difference))/mo to help grow your net worth over time."
-                        case "college_savings":
-                            explanation = "Increase from \(formatCurrency(currentAmount))/mo to \(formatCurrency(currentAmount + difference))/mo to reduce future education costs."
-                        default:
-                            explanation = "Increase from \(formatCurrency(currentAmount))/mo to \(formatCurrency(currentAmount + difference))/mo for more financial security."
-                        }
-                        
-                        newRecommendations.append(BudgetRecommendation(
-                            id: savingsId,
-                            emoji: category.emoji,
-                            name: category.name,
-                            changeAmount: difference,
-                            currentAmount: currentAmount,
-                            newAmount: currentAmount + difference,
-                            explanation: explanation,
-                            category: category
-                        ))
-                    }
-                }
-            }
-        }
-        
-        // 1b. Check for missing essential categories
-        let essentialCategories = ["groceries", "utilities", "rent", "health_insurance"]
-        
-        for essentialId in essentialCategories {
-            if !budgetCategoryIds.contains(essentialId),
-               let category = categoryStore.category(for: essentialId) {
-                // Calculate recommended amount
-                let recommendedAmount = min(budgetModel.monthlyIncome * category.allocationPercentage, initialSurplus)
-                
-                if recommendedAmount > 0 {
-                    let explanation = "Add \(formatCurrency(recommendedAmount))/mo to budget for this important category that is currently missing."
-                    
-                    newRecommendations.append(BudgetRecommendation(
-                        id: essentialId,
-                        emoji: category.emoji,
-                        name: category.name,
-                        changeAmount: recommendedAmount,
-                        currentAmount: 0,
-                        newAmount: recommendedAmount,
-                        explanation: explanation,
-                        category: category
-                    ))
-                }
-            }
-        }
-        
-        // 1c. Check for underfunded categories (spending less than recommended)
-        for item in activeBudgetItems {
-            if let category = categoryStore.category(for: item.id) {
-                let recommendedAmount = budgetModel.monthlyIncome * category.allocationPercentage
-                let currentAmount = item.allocatedAmount
-                
-                // If significantly underfunded (>10% less than recommended)
-                // and not a savings category (already handled above)
-                if currentAmount < recommendedAmount * 0.9 &&
-                   !savingsCategories.contains(item.id) &&
-                   item.id != "miscellaneous" {
-                    
-                    let difference = min(recommendedAmount - currentAmount, initialSurplus)
-                    
-                    // Only create recommendation if significant
-                    if difference > 20 {
-                        let explanation = "Increase from \(formatCurrency(currentAmount))/mo to \(formatCurrency(currentAmount + difference))/mo to better meet your needs."
-                        
-                        newRecommendations.append(BudgetRecommendation(
-                            id: item.id,
-                            emoji: category.emoji,
-                            name: category.name,
-                            changeAmount: difference,
-                            currentAmount: currentAmount,
-                            newAmount: currentAmount + difference,
-                            explanation: explanation,
-                            category: category
-                        ))
-                    }
-                }
-            }
-        }
-        
-        // Sort by priority and limit to top 3
-        if !newRecommendations.isEmpty {
-            // Sort by priority (savings first, then essential expenses, then others)
-            newRecommendations.sort { (a, b) -> Bool in
-                // If both are savings or both are essentials, sort by amount
-                if savingsCategories.contains(a.id) && savingsCategories.contains(b.id) ||
-                   essentialCategories.contains(a.id) && essentialCategories.contains(b.id) {
-                    return a.changeAmount > b.changeAmount
-                }
-                
-                // Prioritize savings over essentials, essentials over others
-                if savingsCategories.contains(a.id) && !savingsCategories.contains(b.id) {
-                    return true
-                } else if !savingsCategories.contains(a.id) && savingsCategories.contains(b.id) {
-                    return false
-                } else if essentialCategories.contains(a.id) && !essentialCategories.contains(b.id) {
-                    return true
-                } else {
-                    return false
+    // Sort recommendations by priority
+    private func sortRecommendations() {
+        recommendations.sort { a, b in
+            // Helper function to get priority value (lower is higher priority)
+            func getPriorityValue(_ rec: BudgetRecommendation) -> Int {
+                switch rec.type {
+                case .add:
+                    return determinePriority(for: rec.category) == .essential ? 1 : 3
+                case .increase:
+                    return 2
+                case .decrease:
+                    return 4
+                case .remove:
+                    return 5
                 }
             }
             
-            // Limit to top 3
-            if newRecommendations.count > 3 {
-                newRecommendations = Array(newRecommendations.prefix(3))
+            let priorityA = getPriorityValue(a)
+            let priorityB = getPriorityValue(b)
+            
+            if priorityA == priorityB {
+                // Secondary sort by amount
+                return a.changeAmount > b.changeAmount
             }
+            
+            return priorityA < priorityB
         }
-        
-        self.recommendations = newRecommendations
     }
     
-    private func applyRecommendations() {
-        // Get enabled recommendations
-        let enabledRecommendations = recommendations.filter { $0.isEnabled }
+    private func calculateCurrentSurplus() -> Double {
+        // Calculate the current budget surplus based on selected recommendations
+        var newSurplus = initialSurplus
         
-        // Apply each recommendation to the budget model
-        for recommendation in enabledRecommendations {
-            // Find the corresponding category in the budget
-            if let categoryIndex = budgetModel.budgetItems.firstIndex(where: { $0.id == recommendation.id }) {
-                // Update existing category
-                let currentAmount = budgetModel.budgetItems[categoryIndex].allocatedAmount
-                budgetModel.updateAllocation(for: recommendation.id, amount: currentAmount + recommendation.changeAmount)
-            } else {
-                // Category doesn't exist yet, add it
-                let category = recommendation.category
-                
-                // Determine priority based on category
-                let priority = determinePriority(for: category)
-                
-                // Determine budget type
-                let type: BudgetCategoryType = isSavingsCategory(recommendation.id) ? .savings : .expense
-                
-                // Create and add the budget item
-                let newItem = BudgetItem(
-                    id: category.id,
-                    category: category,
-                    allocatedAmount: recommendation.changeAmount,
-                    spentAmount: 0,
-                    type: type,
-                    priority: priority,
-                    isActive: true
-                )
-                
-                budgetModel.budgetItems.append(newItem)
+        for recommendation in recommendations where recommendation.isEnabled {
+            switch recommendation.type {
+            case .increase:
+                // Increasing allocations reduces surplus
+                if let current = recommendation.currentAmount {
+                    newSurplus -= (recommendation.newAmount - current)
+                }
+            case .decrease:
+                // Decreasing allocations increases surplus
+                if let current = recommendation.currentAmount {
+                    newSurplus += (current - recommendation.newAmount)
+                }
+            case .add:
+                // Adding new categories reduces surplus
+                newSurplus -= recommendation.newAmount
+            case .remove:
+                // Removing categories increases surplus
+                if let current = recommendation.currentAmount {
+                    newSurplus += current
+                }
             }
         }
         
-        // Recalculate unused amount
-        budgetModel.calculateUnusedAmount()
-        
-        // Close modal
-        isPresented = false
+        return newSurplus
     }
     
     private func determinePriority(for category: BudgetCategory) -> BudgetCategoryPriority {
@@ -386,8 +234,277 @@ struct BudgetImprovementModal: View {
         }
     }
     
+    private func generateRecommendations() {
+        var newRecommendations: [BudgetRecommendation] = []
+        let categoryStore = BudgetCategoryStore.shared
+        let monthlyIncome = budgetModel.monthlyIncome
+        
+        // Get all active budget items
+        let activeBudgetItems = budgetModel.budgetItems.filter { $0.isActive }
+        let budgetCategoryIds = Set(activeBudgetItems.map { $0.id })
+        
+        // 1. Check for missing essential categories
+        let essentialCategoryIds = ["rent", "groceries", "utilities", "transportation", "emergency_savings"]
+        
+        for essentialId in essentialCategoryIds {
+            if !budgetCategoryIds.contains(essentialId),
+               let category = categoryStore.category(for: essentialId) {
+                let recommendedAmount = monthlyIncome * category.allocationPercentage
+                
+                if recommendedAmount <= initialSurplus {
+                    let explanation: String
+                    switch essentialId {
+                    case "rent":
+                        explanation = "Housing is typically the largest expense in most budgets and should be included for accuracy."
+                    case "groceries":
+                        explanation = "Everyone needs to eat! Adding a groceries category helps track this essential expense."
+                    case "utilities":
+                        explanation = "Basic utilities are an essential monthly expense for most households."
+                    case "transportation":
+                        explanation = "Transportation costs are a regular expense that should be budgeted for."
+                    case "emergency_savings":
+                        explanation = "An emergency fund is crucial for financial security - aim for 3-6 months of expenses."
+                    default:
+                        explanation = "This is an essential category that should be included in your budget."
+                    }
+                    
+                    newRecommendations.append(BudgetRecommendation(
+                        type: .add,
+                        category: category,
+                        changeAmount: recommendedAmount,
+                        currentAmount: nil,
+                        newAmount: recommendedAmount,
+                        explanation: explanation
+                    ))
+                }
+            }
+        }
+        
+        // 2. Check for missing savings categories
+        let savingsIds = ["emergency_savings", "investments", "retirement_savings"]
+        
+        for savingsId in savingsIds where !savingsId.contains("emergency") || !budgetCategoryIds.contains("emergency_savings") {
+            if !budgetCategoryIds.contains(savingsId),
+               let category = categoryStore.category(for: savingsId) {
+                
+                let recommendedAmount = min(monthlyIncome * category.allocationPercentage, initialSurplus * 0.5)
+                
+                if recommendedAmount > 0 && recommendedAmount <= initialSurplus {
+                    let explanation: String
+                    switch savingsId {
+                    case "emergency_savings":
+                        explanation = "An emergency fund provides financial security for unexpected expenses or income loss."
+                    case "investments":
+                        explanation = "Long-term investing helps grow your wealth and beat inflation over time."
+                    case "retirement_savings":
+                        explanation = "Setting aside money for retirement is crucial for your future financial security."
+                    default:
+                        explanation = "Adding this savings category will help you build financial stability."
+                    }
+                    
+                    newRecommendations.append(BudgetRecommendation(
+                        type: .add,
+                        category: category,
+                        changeAmount: recommendedAmount,
+                        currentAmount: nil,
+                        newAmount: recommendedAmount,
+                        explanation: explanation
+                    ))
+                }
+            }
+        }
+        
+        // 3. Check for underfunded essential categories
+        for item in activeBudgetItems {
+            if essentialCategoryIds.contains(item.id) || savingsIds.contains(item.id) {
+                let recommendedAmount = monthlyIncome * item.category.allocationPercentage
+                let currentAmount = item.allocatedAmount
+                
+                // If significantly underfunded (>20% less than recommended)
+                if currentAmount < recommendedAmount * 0.8 {
+                    let difference = min(recommendedAmount - currentAmount, initialSurplus)
+                    
+                    if difference > 0 && difference > currentAmount * 0.1 { // Only if it's a meaningful increase
+                        let explanation = "This essential category is currently underfunded compared to recommended levels."
+                        
+                        newRecommendations.append(BudgetRecommendation(
+                            type: .increase,
+                            category: item.category,
+                            changeAmount: difference,
+                            currentAmount: currentAmount,
+                            newAmount: currentAmount + difference,
+                            explanation: explanation
+                        ))
+                    }
+                }
+            }
+        }
+        
+        // 4. Check for overfunded non-essential categories
+        let nonEssentialIds = Set(budgetCategoryIds).subtracting(essentialCategoryIds).subtracting(savingsIds)
+        
+        for id in nonEssentialIds {
+            if let item = activeBudgetItems.first(where: { $0.id == id }) {
+                let recommendedAmount = monthlyIncome * item.category.allocationPercentage
+                let currentAmount = item.allocatedAmount
+                
+                // If significantly overfunded (>30% more than recommended)
+                if currentAmount > recommendedAmount * 1.3 && initialSurplus < 0 {
+                    let reduction = min(currentAmount - recommendedAmount, currentAmount * 0.3)
+                    
+                    if reduction > 0 && reduction > currentAmount * 0.1 { // Only if it's a meaningful decrease
+                        let explanation = "This category is significantly overfunded. Reducing it could help balance your budget."
+                        
+                        newRecommendations.append(BudgetRecommendation(
+                            type: .decrease,
+                            category: item.category,
+                            changeAmount: reduction,
+                            currentAmount: currentAmount,
+                            newAmount: currentAmount - reduction,
+                            explanation: explanation
+                        ))
+                    }
+                }
+            }
+        }
+        
+        // 5. Suggest removal of low-priority, low-allocation categories if budget is tight
+        if initialSurplus < 0 {
+            for item in activeBudgetItems {
+                if !essentialCategoryIds.contains(item.id) &&
+                   item.allocatedAmount < monthlyIncome * 0.02 && // Very small allocation
+                   item.priority == .discretionary {
+                    
+                    let explanation = "This low-priority category has a small allocation. Removing it would simplify your budget."
+                    
+                    newRecommendations.append(BudgetRecommendation(
+                        type: .remove,
+                        category: item.category,
+                        changeAmount: item.allocatedAmount,
+                        currentAmount: item.allocatedAmount,
+                        newAmount: 0,
+                        explanation: explanation
+                    ))
+                }
+            }
+        }
+        
+        // 6. If surplus is large, suggest quality of life categories
+        if initialSurplus > monthlyIncome * 0.1 {
+            let lifeEnhancementIds = ["entertainment", "dining", "vacation", "personal_development"]
+            
+            for enhancementId in lifeEnhancementIds {
+                if !budgetCategoryIds.contains(enhancementId),
+                   let category = categoryStore.category(for: enhancementId) {
+                    
+                    let recommendedAmount = min(monthlyIncome * category.allocationPercentage, initialSurplus * 0.2)
+                    
+                    if recommendedAmount > 0 {
+                        let explanation = "With your current surplus, you could add this category to enhance your quality of life."
+                        
+                        newRecommendations.append(BudgetRecommendation(
+                            type: .add,
+                            category: category,
+                            changeAmount: recommendedAmount,
+                            currentAmount: nil,
+                            newAmount: recommendedAmount,
+                            explanation: explanation
+                        ))
+                    }
+                }
+            }
+        }
+        
+        // Limit to a reasonable number of recommendations (max 6)
+        if newRecommendations.count > 6 {
+            // Prioritize by type and potential impact
+            newRecommendations.sort { a, b in
+                // Helper function to get priority score (lower is higher priority)
+                func getPriorityScore(_ rec: BudgetRecommendation) -> Int {
+                    switch rec.type {
+                    case .add:
+                        // Essential additions are highest priority
+                        if essentialCategoryIds.contains(rec.category.id) {
+                            return 1
+                        } else if savingsIds.contains(rec.category.id) {
+                            return 3
+                        } else {
+                            return 5
+                        }
+                    case .increase:
+                        // Increasing essentials is high priority
+                        if essentialCategoryIds.contains(rec.category.id) {
+                            return 2
+                        } else {
+                            return 4
+                        }
+                    case .decrease:
+                        return 6
+                    case .remove:
+                        return 7
+                    }
+                }
+                
+                let scoreA = getPriorityScore(a)
+                let scoreB = getPriorityScore(b)
+                
+                if scoreA == scoreB {
+                    // If same type, sort by amount (higher first)
+                    return a.changeAmount > b.changeAmount
+                }
+                
+                return scoreA < scoreB
+            }
+            
+            // Keep top 6
+            newRecommendations = Array(newRecommendations.prefix(6))
+        }
+        
+        self.recommendations = newRecommendations
+    }
+    
+    private func applyRecommendations() {
+        // Get enabled recommendations
+        let enabledRecommendations = recommendations.filter { $0.isEnabled }
+        
+        for recommendation in enabledRecommendations {
+            switch recommendation.type {
+            case .increase:
+                budgetModel.updateAllocation(for: recommendation.category.id, amount: recommendation.newAmount)
+                
+            case .decrease:
+                budgetModel.updateAllocation(for: recommendation.category.id, amount: recommendation.newAmount)
+                
+            case .add:
+                let type: BudgetCategoryType = isSavingsCategory(recommendation.category.id) ? .savings : .expense
+                let priority = determinePriority(for: recommendation.category)
+                
+                let newItem = BudgetItem(
+                    id: recommendation.category.id,
+                    category: recommendation.category,
+                    allocatedAmount: recommendation.newAmount,
+                    spentAmount: 0,
+                    type: type,
+                    priority: priority,
+                    isActive: true
+                )
+                
+                budgetModel.budgetItems.append(newItem)
+                
+            case .remove:
+                budgetModel.deleteCategory(id: recommendation.category.id)
+            }
+        }
+        
+        // Recalculate unused amount
+        budgetModel.calculateUnusedAmount()
+        
+        // Close modal
+        isPresented = false
+    }
+    
     private func isSavingsCategory(_ id: String) -> Bool {
-        ["emergency_savings", "investments", "college_savings", "vacation"].contains(id)
+        ["emergency_savings", "investments", "college_savings", "vacation", "retirement_savings"].contains(id)
     }
     
     private func formatCurrency(_ value: Double) -> String {
@@ -403,24 +520,55 @@ struct SimplifiedRecommendationCard: View {
     let onToggle: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Main row with category, amount and toggle
-            HStack(spacing: 12) {
-                Text(recommendation.emoji)
+        VStack(alignment: .leading, spacing: 8) {
+            // Category name and emoji at the top
+            HStack {
+                Text(recommendation.category.emoji)
                     .font(.title3)
                 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(recommendation.name)
-                        .font(.system(size: 17))
-                        .foregroundColor(.white)
-                    
-                    HStack(spacing: 4) {
-                        Text("+ \(formatCurrency(recommendation.changeAmount))/mo")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(Theme.tint)
-                    }
-                }
+                Text(recommendation.category.name)
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundColor(.white)
                 
+                Spacer()
+            }
+            
+            // Action badge and amount on same line
+            HStack {
+                // Action badge
+                let (text, color) = actionDetails
+                Text(text)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(color)
+                    .cornerRadius(6)
+                
+                // Amount text
+                amountText
+                
+                Spacer()
+            }
+            
+            // Explanation text
+            Text(recommendation.explanation)
+                .font(.system(size: 15))
+                .foregroundColor(Theme.secondaryLabel)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Theme.surfaceBackground)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(recommendation.isEnabled ? Theme.tint.opacity(0.3) : Color.clear, lineWidth: 1)
+        )
+        .overlay(
+            // Toggle positioned at right center
+            HStack {
                 Spacer()
                 
                 Toggle("", isOn: Binding(
@@ -429,17 +577,61 @@ struct SimplifiedRecommendationCard: View {
                 ))
                 .labelsHidden()
                 .toggleStyle(SwitchToggleStyle(tint: Theme.tint))
+                .frame(width: 50)
+                .padding(.trailing, 8)
             }
-            
-            // Description text
-            Text(recommendation.explanation)
-                .font(.system(size: 14))
-                .foregroundColor(Theme.secondaryLabel)
-                .lineLimit(3)
+        )
+    }
+    
+    // Amount text based on recommendation type
+    private var amountText: some View {
+        Group {
+            switch recommendation.type {
+            case .increase:
+                if let current = recommendation.currentAmount {
+                    Text("\(formatCurrency(current)) → \(formatCurrency(recommendation.newAmount))/mo")
+                        .foregroundColor(Theme.tint)
+                } else {
+                    Text("\(formatCurrency(recommendation.newAmount))/mo")
+                        .foregroundColor(Theme.tint)
+                }
+                
+            case .decrease:
+                if let current = recommendation.currentAmount {
+                    Text("\(formatCurrency(current)) → \(formatCurrency(recommendation.newAmount))/mo")
+                        .foregroundColor(.orange)
+                } else {
+                    Text("\(formatCurrency(recommendation.newAmount))/mo")
+                        .foregroundColor(.orange)
+                }
+                
+            case .add:
+                Text("Add \(formatCurrency(recommendation.newAmount))/mo")
+                    .foregroundColor(Theme.tint)
+                
+            case .remove:
+                if let current = recommendation.currentAmount {
+                    Text("Remove \(formatCurrency(current))/mo")
+                        .foregroundColor(.red)
+                }
+            }
         }
-        .padding(16)
-        .background(Theme.surfaceBackground)
-        .cornerRadius(12)
+        .font(.system(size: 15, weight: .medium))
+        .padding(.leading, 4)
+    }
+    
+    // Get action text and color based on recommendation type
+    private var actionDetails: (String, Color) {
+        switch recommendation.type {
+        case .increase:
+            return ("INCREASE", Color.green)
+        case .decrease:
+            return ("DECREASE", Color.orange)
+        case .add:
+            return ("ADD", Theme.tint)
+        case .remove:
+            return ("REMOVE", Color.red)
+        }
     }
     
     private func formatCurrency(_ value: Double) -> String {
