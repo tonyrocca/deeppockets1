@@ -189,136 +189,6 @@ extension BudgetModel {
     }
 }
 
-// MARK: - Improved Smart Budget Generation Extension
-extension BudgetModel {
-    func generateSmartBudget() {
-        budgetItems.removeAll()
-        
-        // Financial constants with target surplus
-        let constants = FinancialConstants(
-            emergencyFundMonths: 6.0,
-            maxHousingRatio: 0.28,    // Reduced from 0.33 to leave more buffer
-            maxDebtToIncomeRatio: 0.36,
-            minRetirementPercentage: 0.15,
-            minEmergencySavings: 1000.0,
-            targetSurplus: 0.15       // Target 15% surplus
-        )
-        
-        // Calculate available income (85% of total)
-        let availableIncome = monthlyIncome * (1 - constants.targetSurplus)
-        
-        // Sort categories by new priority order
-        let sortedCategories = store.categories.sorted { (cat1, cat2) -> Bool in
-            let p1 = determinePriority(for: cat1)
-            let p2 = determinePriority(for: cat2)
-            if p1 != p2 {
-                return p1.rawValue < p2.rawValue
-            }
-            return cat1.type.allocationOrder < cat2.type.allocationOrder
-        }
-        
-        // Compute base recommendations using available income
-        var baseRecommendations: [String: Double] = [:]
-        for category in sortedCategories {
-            let amount = calculateBaseAllocation(
-                for: category,
-                monthlyIncome: availableIncome,
-                constants: constants
-            )
-            baseRecommendations[category.id] = amount
-        }
-        
-        // Group categories by priority
-        let essentialCategories = sortedCategories.filter { determinePriority(for: $0) == .essential }
-        let importantCategories = sortedCategories.filter { determinePriority(for: $0) == .important }
-        let discretionaryCategories = sortedCategories.filter { determinePriority(for: $0) == .discretionary }
-        
-        let sumEssential = essentialCategories.reduce(0) { $0 + (baseRecommendations[$1.id] ?? 0) }
-        let sumImportant = importantCategories.reduce(0) { $0 + (baseRecommendations[$1.id] ?? 0) }
-        let sumDiscretionary = discretionaryCategories.reduce(0) { $0 + (baseRecommendations[$1.id] ?? 0) }
-        
-        // Final allocations dictionary
-        var finalAllocations: [String: Double] = [:]
-        
-        // Allocate essential items
-        for category in essentialCategories {
-            finalAllocations[category.id] = baseRecommendations[category.id] ?? 0
-        }
-        
-        var remaining = availableIncome - sumEssential
-        
-        // Allocate important items if funds remain
-        if remaining > 0 {
-            let importantScale = min(1.0, remaining / sumImportant)
-            for category in importantCategories {
-                let base = baseRecommendations[category.id] ?? 0
-                finalAllocations[category.id] = base * importantScale
-            }
-            remaining -= sumImportant * importantScale
-        }
-        
-        // Allocate discretionary items with remaining funds
-        if remaining > 0 {
-            let discretionaryScale = min(1.0, remaining / sumDiscretionary)
-            for category in discretionaryCategories {
-                let base = baseRecommendations[category.id] ?? 0
-                finalAllocations[category.id] = base * discretionaryScale
-            }
-        }
-        
-        // Build final budget items
-        var allocations: [BudgetItem] = []
-        for category in sortedCategories {
-            let allocatedAmount = finalAllocations[category.id] ?? 0
-            let type: BudgetCategoryType = shouldBeSavingsCategory(category) ? .savings : .expense
-            
-            // Only add categories with non-zero allocations
-            if allocatedAmount > 0 {
-                allocations.append(BudgetItem(
-                    id: category.id,
-                    category: category,
-                    allocatedAmount: allocatedAmount,
-                    spentAmount: 0,
-                    type: type,
-                    priority: determinePriority(for: category),
-                    isActive: true
-                ))
-            }
-        }
-        
-        budgetItems = allocations
-        calculateUnusedAmount()
-    }
-    
-    /// Computes a base allocation for a given category.
-    /// This function uses the category’s allocation percentage along with special rules for certain types.
-    private func calculateBaseAllocation(for category: BudgetCategory, monthlyIncome: Double, constants: FinancialConstants) -> Double {
-        switch category.type {
-        case .savings where category.id == "emergency_savings":
-            // For emergency savings, ensure at least a minimum monthly contribution and cap at 20% of income.
-            let base = monthlyIncome * category.allocationPercentage
-            let minMonthly = constants.minEmergencySavings / 12
-            return min(max(base, minMonthly), monthlyIncome * 0.2)
-            
-        case .housing:
-            // For housing, do not exceed the max housing ratio.
-            return min(monthlyIncome * constants.maxHousingRatio, monthlyIncome * category.allocationPercentage)
-            
-        case .debt:
-            // **Never recommend any allocation for debt.**
-            return 0
-            
-        case .savings where category.id == "retirement_savings":
-            // Ensure a minimum retirement savings percentage.
-            return max(monthlyIncome * constants.minRetirementPercentage, monthlyIncome * category.allocationPercentage)
-            
-        default:
-            // For other categories, use the store’s allocation percentage.
-            return monthlyIncome * category.allocationPercentage
-        }
-    }
-}
-
 // MARK: - Supporting Types
 private struct FinancialConstants {
     let emergencyFundMonths: Double
@@ -388,121 +258,178 @@ struct BudgetOptimization: Identifiable {
     }
 }
 
-// Add to BudgetModel class
+// MARK: - Smart Budget Generation Extension
 extension BudgetModel {
-    func generateOptimizations() -> [BudgetOptimization] {
-        var optimizations: [BudgetOptimization] = []
+    func generateSmartBudget() {
+        budgetItems.removeAll()
         
-        // Calculate current allocations
-        let debtTotal = budgetItems
-            .filter { $0.type == .expense && isDebtCategory($0.id) }
-            .reduce(0) { $0 + $1.allocatedAmount }
-        let expenseTotal = budgetItems
-            .filter { $0.type == .expense && !isDebtCategory($0.id) }
-            .reduce(0) { $0 + $1.allocatedAmount }
-        let savingsTotal = budgetItems
-            .filter { $0.type == .savings }
-            .reduce(0) { $0 + $1.allocatedAmount }
+        // Define a core set of essential categories we want to include
+        // This ensures we have the most important budget categories covered
+        let coreCategories = [
+            "rent", "mortgage", // Housing (will include only one)
+            "groceries",        // Food
+            "utilities",        // Basic utilities
+            "transportation",   // Getting around
+            "emergency_savings" // Safety net
+        ]
         
-        // Check emergency savings
-        let hasEmergencySavings = budgetItems.contains { $0.category.id == "emergency_savings" }
-        if !hasEmergencySavings {
-            let recommendedAmount = monthlyIncome * 0.1 // 10% of income
-            if let category = BudgetCategoryStore.shared.category(for: "emergency_savings") {
-                optimizations.append(BudgetOptimization(
-                    type: .add(category, recommendedAmount),
-                    reason: "It's recommended to save at least 10% of your income for emergencies"
-                ))
-            }
+        // Define secondary categories based on income level
+        let secondaryCategories: [String]
+        if monthlyIncome < 3000 {
+            // Lower income - focus on essentials plus minimal additional categories
+            secondaryCategories = [
+                "personal_care",
+                "medical_expenses"
+            ]
+        } else if monthlyIncome < 6000 {
+            // Middle income - add some saving and quality of life categories
+            secondaryCategories = [
+                "retirement_savings",
+                "personal_care",
+                "medical_expenses",
+                "entertainment"
+            ]
+        } else {
+            // Higher income - more comprehensive with optional categories
+            secondaryCategories = [
+                "retirement_savings",
+                "investments",
+                "personal_care",
+                "medical_expenses",
+                "entertainment",
+                "dining",
+                "vacation_savings"
+            ]
         }
         
-        // Check retirement savings
-        let hasRetirement = budgetItems.contains { $0.category.id == "retirement_savings" }
-        if !hasRetirement {
-            let recommendedAmount = monthlyIncome * 0.15 // 15% of income
-            if let category = BudgetCategoryStore.shared.category(for: "retirement_savings") {
-                optimizations.append(BudgetOptimization(
-                    type: .add(category, recommendedAmount),
-                    reason: "Consider saving 15% of your income for retirement"
-                ))
-            }
+        // Financial constants
+        let constants = FinancialConstants(
+            emergencyFundMonths: 6.0,
+            maxHousingRatio: 0.30,
+            maxDebtToIncomeRatio: 0.36,
+            minRetirementPercentage: 0.15,
+            minEmergencySavings: 1000.0,
+            targetSurplus: 0.10  // Target 10% surplus
+        )
+        
+        // Calculate available income (90% of total)
+        let availableIncome = monthlyIncome * (1 - constants.targetSurplus)
+        
+        // First pass - allocate to housing
+        var remainingIncome = availableIncome
+        var allocations: [String: Double] = [:]
+        
+        // Housing allocation (choose rent or mortgage but not both)
+        let housingCategories = store.categories.filter { $0.id == "rent" || $0.id == "mortgage" }
+        if let housingCategory = housingCategories.first {
+            let housingAmount = min(monthlyIncome * constants.maxHousingRatio, availableIncome * 0.3)
+            allocations[housingCategory.id] = housingAmount
+            remainingIncome -= housingAmount
         }
         
-        // Check housing costs (rent/mortgage)
-        let housingCategories = ["rent", "mortgage"]
-        let housingTotal = budgetItems
-            .filter { housingCategories.contains($0.category.id) }
-            .reduce(0) { $0 + $1.allocatedAmount }
-        
-        if housingTotal > monthlyIncome * 0.33 {
-            // Housing costs too high
-            for item in budgetItems where housingCategories.contains(item.category.id) {
-                let recommendedAmount = monthlyIncome * 0.3
-                optimizations.append(BudgetOptimization(
-                    type: .decrease(item.category.id, recommendedAmount),
-                    reason: "Housing costs should be under 30% of your income"
-                ))
-            }
+        // Core categories allocation
+        let filteredCoreCategories = store.categories.filter {
+            coreCategories.contains($0.id) && $0.id != "rent" && $0.id != "mortgage"
         }
         
-        // Check entertainment and discretionary spending
-        let entertainmentTotal = budgetItems
-            .filter { $0.category.type == .entertainment }
-            .reduce(0) { $0 + $1.allocatedAmount }
+        // Allocate a substantial portion to core categories
+        let coreRatio = 0.6 // Allocate 60% of remaining to core categories
+        let coreAmount = remainingIncome * coreRatio
+        let coreCount = filteredCoreCategories.count
         
-        if entertainmentTotal > monthlyIncome * 0.1 {
-            // Entertainment spending too high
-            for item in budgetItems where item.category.type == .entertainment {
-                let recommendedAmount = monthlyIncome * 0.08
-                optimizations.append(BudgetOptimization(
-                    type: .decrease(item.category.id, recommendedAmount),
-                    reason: "Consider reducing entertainment spending to 8% of income"
-                ))
-            }
-        }
-        
-        // Check savings rate
-        let totalIncome = monthlyIncome
-        let savingsRate = savingsTotal / totalIncome
-        
-        if savingsRate < 0.2 {
-            // Increase savings
-            for item in budgetItems where item.type == .savings {
-                let recommendedAmount = item.allocatedAmount * 1.2 // 20% increase
-                optimizations.append(BudgetOptimization(
-                    type: .increase(item.category.id, recommendedAmount),
-                    reason: "Try to increase your savings rate to at least 20% of income"
-                ))
-            }
-        }
-        
-        return optimizations
-    }
-    
-    func applyOptimizations(_ optimizations: [BudgetOptimization]) {
-        for optimization in optimizations where optimization.isSelected {
-            switch optimization.type {
-            case .increase(let categoryId, let amount):
-                updateAllocation(for: categoryId, amount: amount)
+        if coreCount > 0 {
+            // Weighted allocation based on category importance
+            for category in filteredCoreCategories {
+                var allocationWeight: Double
                 
-            case .decrease(let categoryId, let amount):
-                updateAllocation(for: categoryId, amount: amount)
+                switch category.id {
+                case "groceries":
+                    allocationWeight = 0.35 // 35% of core budget
+                case "utilities":
+                    allocationWeight = 0.25 // 25% of core budget
+                case "transportation":
+                    allocationWeight = 0.20 // 20% of core budget
+                case "emergency_savings":
+                    allocationWeight = 0.20 // 20% of core budget
+                default:
+                    allocationWeight = 0.0
+                }
                 
-            case .add(let category, let amount):
-                let newItem = BudgetItem(
-                    id: category.id,
-                    category: category,
-                    allocatedAmount: amount,
-                    spentAmount: 0,
-                    type: category.type == .savings ? .savings : .expense,
-                    priority: determinePriority(for: category),
-                    isActive: true
-                )
-                budgetItems.append(newItem)
-                
-            case .remove(let categoryId):
-                deleteCategory(id: categoryId)
+                allocations[category.id] = coreAmount * allocationWeight
             }
+        }
+        
+        remainingIncome -= coreAmount
+        
+        // Secondary categories allocation - select based on income and category relevance
+        let filteredSecondaryCategories = store.categories.filter { secondaryCategories.contains($0.id) }
+        let secondaryCount = filteredSecondaryCategories.count
+        
+        if secondaryCount > 0 && remainingIncome > 0 {
+            var weightedAllocations: [String: Double] = [:]
+            var totalWeight = 0.0
+            
+            // Assign weights based on category importance and income level
+            for category in filteredSecondaryCategories {
+                var weight: Double
+                switch category.id {
+                case "retirement_savings":
+                    weight = 0.30
+                case "investments":
+                    weight = 0.15
+                case "medical_expenses":
+                    weight = 0.15
+                case "personal_care":
+                    weight = 0.10
+                case "entertainment":
+                    weight = 0.10
+                case "dining":
+                    weight = 0.10
+                case "vacation_savings":
+                    weight = 0.10
+                default:
+                    weight = 0.05
+                }
+                
+                weightedAllocations[category.id] = weight
+                totalWeight += weight
+            }
+            
+            // Normalize weights and allocate
+            for (id, weight) in weightedAllocations {
+                let normalizedWeight = weight / totalWeight
+                allocations[id] = remainingIncome * normalizedWeight
+            }
+        }
+        
+        // Build final budget items
+        for category in store.categories {
+            if let amount = allocations[category.id], amount > 0 {
+                // Only add if the allocation is meaningful (above a minimum threshold)
+                let minThreshold = monthlyIncome * 0.01 // 1% of income minimum
+                
+                if amount >= minThreshold {
+                    let type: BudgetCategoryType = shouldBeSavingsCategory(category) ? .savings : .expense
+                    
+                    budgetItems.append(BudgetItem(
+                        id: category.id,
+                        category: category,
+                        allocatedAmount: amount,
+                        spentAmount: 0,
+                        type: type,
+                        priority: determinePriority(for: category),
+                        isActive: true
+                    ))
+                }
+            }
+        }
+        
+        // Ensure we don't have too many categories
+        let maxCategories = 10
+        if budgetItems.count > maxCategories {
+            // Sort by allocation amount and keep only the top categories
+            budgetItems.sort { $0.allocatedAmount > $1.allocatedAmount }
+            budgetItems = Array(budgetItems.prefix(maxCategories))
         }
         
         calculateUnusedAmount()
