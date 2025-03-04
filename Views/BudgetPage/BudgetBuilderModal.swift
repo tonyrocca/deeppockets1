@@ -1,5 +1,7 @@
 import SwiftUI
 
+import SwiftUI
+
 // MARK: - Budget Builder Phase
 enum BudgetBuilderPhase {
     case debtSelection
@@ -32,357 +34,7 @@ enum BudgetBuilderPhase {
     }
 }
 
-import SwiftUI
-
-struct BudgetBuilderModal: View {
-    @Binding var isPresented: Bool
-    @ObservedObject var budgetStore: BudgetStore
-    @ObservedObject var budgetModel: BudgetModel
-    let monthlyIncome: Double
-    
-    @State private var phase: BudgetBuilderPhase = .debtSelection
-    @State private var selectedCategories: Set<String> = []
-    @State private var temporaryAmounts: [String: Double] = [:]
-    @State private var debtInputData: [String: DebtInputData] = [:]
-    
-    var body: some View {
-        ZStack {
-            // Background
-            Color.black
-                .opacity(1)     // Fully opaque black background
-                .ignoresSafeArea()
-            
-            // Modal Content
-            GeometryReader { geometry in
-                VStack(spacing: 0) {
-                    // Header
-                    ZStack {
-                        // Back Button
-                        HStack {
-                            if !isInitialPhase {
-                                Button(action: navigateBack) {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "chevron.left")
-                                        Text("Back")
-                                    }
-                                    .font(.system(size: 17))
-                                    .foregroundColor(Theme.secondaryLabel)
-                                }
-                            }
-                            Spacer()
-                        }
-                        
-                        // Close Button
-                        HStack {
-                            Spacer()
-                            Button(action: { isPresented = false }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(Theme.secondaryLabel)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    
-                    // Content
-                    ScrollView {
-                        VStack(spacing: 32) {
-                            // Title Section
-                            VStack(spacing: 8) {
-                                Text(phase.title)
-                                    .font(.system(size: 28, weight: .bold))
-                                    .foregroundColor(.white)
-                                Text(phase.description)
-                                    .font(.system(size: 17))
-                                    .foregroundColor(Theme.secondaryLabel)
-                                    .multilineTextAlignment(.center)
-                            }
-                            
-                            // Phase Content
-                            AnyView(
-                                VStack {
-                                    switch phase {
-                                    case .debtSelection:
-                                        CategorySelectionView(
-                                            categories: debtCategories,
-                                            selectedCategories: $selectedCategories,
-                                            monthlyIncome: monthlyIncome
-                                        )
-                                        
-                                    case .debtConfiguration(let category):
-                                        DebtConfigurationView(
-                                            category: category,
-                                            monthlyIncome: monthlyIncome,
-                                            inputData: Binding(
-                                                get: { debtInputData[category.id] ?? DebtInputData() },
-                                                set: { debtInputData[category.id] = $0 }
-                                            )
-                                        )
-                                        .id(category.id)   // Force a fresh view for each category
-                                        
-                                    case .expenseSelection:
-                                        CategorySelectionView(
-                                            categories: expenseCategories,
-                                            selectedCategories: $selectedCategories,
-                                            monthlyIncome: monthlyIncome
-                                        )
-                                        
-                                    case .expenseConfiguration(let category):
-                                        ExpenseConfigurationView(
-                                            category: category,
-                                            monthlyIncome: monthlyIncome,
-                                            totalCategories: getTotalConfigurableExpenses(),
-                                            currentIndex: getCurrentExpenseIndex(for: category),
-                                            amount: binding(for: category)
-                                        )
-                                        .id(category.id)  // Force a fresh view
-                                        
-                                    case .savingsSelection:
-                                        CategorySelectionView(
-                                            categories: savingsCategories,
-                                            selectedCategories: $selectedCategories,
-                                            monthlyIncome: monthlyIncome
-                                        )
-                                        
-                                    case .savingsConfiguration(let category):
-                                        SavingsConfigurationView(
-                                            category: category,
-                                            monthlyIncome: monthlyIncome,
-                                            amount: binding(for: category)
-                                        )
-                                        .id(category.id)  // Force a fresh view
-                                    }
-                                }
-                            )
-                            
-                            // Spacer to ensure content scrolls above button
-                            Color.clear
-                                .frame(height: 100)
-                        }
-                        .padding(.horizontal, 20)
-                    }
-                }
-                .background(Theme.background)
-                .cornerRadius(20)
-                .padding()
-                
-                // Floating Next Button
-                VStack {
-                    Spacer()
-                    nextButton
-                        .padding(.horizontal, 36)
-                        .padding(.bottom, geometry.safeAreaInsets.bottom + 36)
-                }
-                .ignoresSafeArea()
-            }
-        }
-    }
-    
-    // MARK: - Next Button & Logic
-    private var nextButton: some View {
-        Button(action: handleNext) {
-            Text(nextButtonTitle)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background(Theme.tint)
-                .cornerRadius(12)
-        }
-        .disabled(!canProgress)
-        .opacity(canProgress ? 1 : 0.6)
-        .shadow(color: Theme.tint.opacity(0.3), radius: 8, x: 0, y: 4)
-    }
-    
-    private var nextButtonTitle: String {
-        switch phase {
-        case .debtSelection, .expenseSelection, .savingsSelection:
-            return selectedCategories.isEmpty ? "Skip" : "Next"
-        case .debtConfiguration, .expenseConfiguration, .savingsConfiguration:
-            return "Continue"
-        }
-    }
-    
-    private var canProgress: Bool {
-        switch phase {
-        case .debtSelection, .expenseSelection, .savingsSelection:
-            return true  // Can always skip or move to next phase
-        case .debtConfiguration(let category):
-            return debtInputData[category.id]?.payoffPlan != nil
-                || debtInputData[category.id]?.debtAmount != ""
-        case .expenseConfiguration(let category),
-             .savingsConfiguration(let category):
-            return temporaryAmounts[category.id] != nil  // Ensure an amount is set before enabling "Continue"
-        }
-    }
-    
-    private var isInitialPhase: Bool {
-        switch phase {
-        case .debtSelection:
-            return true
-        default:
-            return false
-        }
-    }
-    
-    private func navigateBack() {
-        switch phase {
-        case .debtConfiguration:
-            phase = .debtSelection
-        case .expenseConfiguration:
-            phase = .expenseSelection
-        case .savingsConfiguration:
-            phase = .savingsSelection
-        default:
-            break
-        }
-    }
-    
-    private func handleNext() {
-        switch phase {
-        case .debtSelection:
-            if let nextCategory = selectedCategories.compactMap({ id in
-                debtCategories.first(where: { $0.id == id })
-            }).first {
-                // Clear completely for new category
-                debtInputData[nextCategory.id] = DebtInputData()
-                temporaryAmounts[nextCategory.id] = nil
-                phase = .debtConfiguration(nextCategory)
-            } else {
-                phase = .expenseSelection
-            }
-            
-        case .debtConfiguration(let category):
-            if let inputData = debtInputData[category.id],
-               let amount = inputData.payoffPlan?.monthlyPayment {
-                budgetStore.setCategory(category, amount: amount)
-                budgetModel.toggleCategory(id: category.id)
-                budgetModel.updateAllocation(for: category.id, amount: amount)
-                selectedCategories.remove(category.id)
-                
-                if let nextCategory = selectedCategories.compactMap({ id in
-                    debtCategories.first(where: { $0.id == id })
-                }).first {
-                    // IMPORTANT: Complete reset for next category
-                    debtInputData.removeAll()  // Clear all previous data
-                    debtInputData[nextCategory.id] = DebtInputData()  // Fresh start
-                    temporaryAmounts.removeAll()  // Clear any temporary amounts
-                    phase = .debtConfiguration(nextCategory)
-                } else {
-                    phase = .expenseSelection
-                }
-            }
-            
-        case .expenseSelection:
-            if let nextCategory = selectedCategories.compactMap({ id in
-                expenseCategories.first(where: { $0.id == id })
-            }).first {
-                // Reset both amount and any previous selection state
-                temporaryAmounts[nextCategory.id] = nil
-                phase = .expenseConfiguration(nextCategory)
-            } else {
-                phase = .savingsSelection
-            }
-            
-        case .expenseConfiguration(let category):
-            if let amount = temporaryAmounts[category.id] {
-                budgetStore.setCategory(category, amount: amount)
-                budgetModel.toggleCategory(id: category.id)
-                budgetModel.updateAllocation(for: category.id, amount: amount)
-                selectedCategories.remove(category.id)
-                
-                if let nextCategory = selectedCategories.compactMap({ id in
-                    expenseCategories.first(where: { $0.id == id })
-                }).first {
-                    temporaryAmounts[nextCategory.id] = nil  // Reset state for the next category
-                    phase = .expenseConfiguration(nextCategory)
-                } else {
-                    budgetModel.calculateUnusedAmount()
-                    phase = .savingsSelection
-                }
-            }
-            
-        case .savingsSelection:
-            if let nextCategory = selectedCategories.compactMap({ id in
-                savingsCategories.first(where: { $0.id == id })
-            }).first {
-                // Reset both amount and any previous selection state
-                temporaryAmounts[nextCategory.id] = nil
-                phase = .savingsConfiguration(nextCategory)
-            } else {
-                isPresented = false
-            }
-            
-        case .savingsConfiguration(let category):
-            if let amount = temporaryAmounts[category.id] {
-                budgetStore.setCategory(category, amount: amount)
-                budgetModel.toggleCategory(id: category.id)
-                budgetModel.updateAllocation(for: category.id, amount: amount)
-                selectedCategories.remove(category.id)
-                
-                if let nextCategory = selectedCategories.compactMap({ id in
-                    savingsCategories.first(where: { $0.id == id })
-                }).first {
-                    temporaryAmounts[nextCategory.id] = nil  // Reset state for subsequent categories
-                    phase = .savingsConfiguration(nextCategory)
-                } else {
-                    budgetModel.setupInitialBudget(selectedCategoryIds: selectedCategories)
-                    isPresented = false
-                }
-            }
-        }
-    }
-    
-    // MARK: - Category Filters and Helpers
-    
-    private var debtCategories: [BudgetCategory] {
-        BudgetCategoryStore.shared.categories.filter { isDebtCategory($0.id) }
-    }
-    
-    private var expenseCategories: [BudgetCategory] {
-        BudgetCategoryStore.shared.categories.filter {
-            !isDebtCategory($0.id) && !isSavingsCategory($0.id)
-        }
-    }
-    
-    private var savingsCategories: [BudgetCategory] {
-        BudgetCategoryStore.shared.categories.filter { isSavingsCategory($0.id) }
-    }
-    
-    private func isDebtCategory(_ id: String) -> Bool {
-        ["credit_cards", "student_loans", "personal_loans", "car_loan"].contains(id)
-    }
-    
-    private func isSavingsCategory(_ id: String) -> Bool {
-        ["emergency_savings", "investments", "college_savings", "vacation"].contains(id)
-    }
-    
-    private func getTotalConfigurableExpenses() -> Int {
-        selectedCategories.filter { id in
-            expenseCategories.contains(where: { $0.id == id })
-        }.count
-    }
-    
-    private func getCurrentExpenseIndex(for category: BudgetCategory) -> Int {
-        let selectedExpenseIds = selectedCategories
-            .filter { id in
-                expenseCategories.contains(where: { $0.id == id })
-            }
-            .sorted() // Sort to maintain consistent order
-        
-        return selectedExpenseIds.firstIndex(of: category.id) ?? 0
-    }
-    
-    private func binding(for category: BudgetCategory) -> Binding<Double?> {
-        Binding(
-            get: { temporaryAmounts[category.id] },
-            set: { temporaryAmounts[category.id] = $0 }
-        )
-    }
-}
-
-// A container for user input in the debt configuration phase
+// MARK: - Debt Input Data
 struct DebtInputData {
     var debtAmount: String = ""
     var interestRate: String = ""
@@ -390,298 +42,7 @@ struct DebtInputData {
     var payoffPlan: DebtPayoffPlan?
 }
 
-// MARK: - Category Selection View
-struct CategorySelectionView: View {
-    let categories: [BudgetCategory]
-    @Binding var selectedCategories: Set<String>
-    let monthlyIncome: Double
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            ForEach(categories) { category in
-                Button(action: { toggleCategory(category) }) {
-                    HStack {
-                        Text(category.emoji)
-                            .font(.title2)
-                        
-                        Text(category.name)
-                            .font(.system(size: 17))
-                            .foregroundColor(.white)
-                        
-                        Spacer()
-                        
-                        Image(systemName: selectedCategories.contains(category.id) ? "checkmark.circle.fill" : "circle")
-                            .font(.system(size: 24))
-                            .foregroundColor(selectedCategories.contains(category.id) ? Theme.tint : Theme.secondaryLabel)
-                    }
-                    .padding()
-                    .background(Theme.surfaceBackground)
-                    .cornerRadius(12)
-                }
-            }
-        }
-    }
-    
-    private func toggleCategory(_ category: BudgetCategory) {
-        if selectedCategories.contains(category.id) {
-            selectedCategories.remove(category.id)
-        } else {
-            selectedCategories.insert(category.id)
-        }
-    }
-    
-    private func formatCurrency(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: NSNumber(value: value)) ?? "$0"
-    }
-}
-
-// MARK: - Configuration Views
-struct DebtConfigurationView: View {
-    let category: BudgetCategory
-    let monthlyIncome: Double
-    @Binding var inputData: DebtInputData
-    @State private var inputMode: DebtInputMode? = nil  // Keep as private state
-    
-    init(category: BudgetCategory, monthlyIncome: Double, inputData: Binding<DebtInputData>) {
-            self.category = category
-            self.monthlyIncome = monthlyIncome
-            self._inputData = inputData
-            // Force reset of input mode
-            self._inputMode = State(initialValue: nil)
-        }
-
-    enum DebtInputMode {
-        case recommended
-        case custom
-    }
-    
-    private var recommendedAmount: Double {
-        monthlyIncome * category.allocationPercentage
-    }
-    
-    var body: some View {
-       VStack(spacing: 24) {
-           // Header
-           HStack(spacing: 8) {
-               Text(category.emoji)
-                   .font(.title)
-               Text(category.name)
-                   .font(.title)
-                   .foregroundColor(.white)
-           }
-           .frame(maxWidth: .infinity, alignment: .leading)
-           
-           // Options Section
-           VStack(spacing: 16) {
-               // Recommended Amount Option
-               Button(action: { selectMode(.recommended) }) {
-                   HStack(spacing: 12) {
-                       Circle()
-                           .stroke(Theme.secondaryLabel, lineWidth: 2)
-                           .frame(width: 24, height: 24)
-                           .overlay {
-                               if inputMode == .recommended {
-                                   Circle()
-                                       .fill(Theme.tint)
-                                       .frame(width: 16, height: 16)
-                               }
-                           }
-                       
-                       VStack(alignment: .leading) {
-                           Text("\(formatCurrency(recommendedAmount))/month")
-                               .font(.system(size: 17))
-                               .foregroundColor(.white)
-                           
-                           Text("(\(Int(category.allocationPercentage * 100))% of income)")
-                               .font(.system(size: 15))
-                               .foregroundColor(Theme.secondaryLabel)
-                       }
-                       
-                       Spacer()
-                   }
-                   .padding()
-                   .frame(maxWidth: .infinity)
-                   .background(Theme.surfaceBackground)
-                   .cornerRadius(12)
-               }
-               
-               // Custom Payment Section
-               VStack(spacing: 0) {
-                   Button(action: { selectMode(.custom) }) {
-                       HStack(spacing: 12) {
-                           Circle()
-                               .stroke(Theme.secondaryLabel, lineWidth: 2)
-                               .frame(width: 24, height: 24)
-                               .overlay {
-                                   if inputMode == .custom {
-                                       Circle()
-                                           .fill(Theme.tint)
-                                           .frame(width: 16, height: 16)
-                                   }
-                               }
-                           
-                           Text("Custom debt setup")
-                               .font(.system(size: 17))
-                               .foregroundColor(.white)
-                           
-                           Spacer()
-                       }
-                       .padding()
-                       .frame(maxWidth: .infinity)
-                   }
-                   
-                   if inputMode == .custom {
-                       VStack(spacing: 16) {
-                           // Debt Amount Input
-                           debtInputField(title: "Total Debt Amount", text: $inputData.debtAmount, placeholder: "Enter amount")
-                           
-                           // Interest Rate Input
-                           debtInputField(title: "Interest Rate", text: $inputData.interestRate, placeholder: "Enter rate", suffix: "%")
-                           
-                           // Minimum Payment Input
-                           debtInputField(title: "Minimum Payment", text: $inputData.minimumPayment, placeholder: "Enter amount", prefix: "$")
-                       }
-                       .padding()
-                   }
-               }
-               .background(Theme.surfaceBackground)
-               .cornerRadius(12)
-               
-               // Payoff Plan Summary (if applicable)
-               if let plan = inputData.payoffPlan {
-                   VStack(alignment: .leading, spacing: 12) {
-                       Text("Payoff Plan Summary")
-                           .font(.system(size: 17, weight: .semibold))
-                           .foregroundColor(.white)
-                       
-                       payoffSummaryRow("Monthly Payment", formatCurrency(plan.monthlyPayment))
-                       payoffSummaryRow("Total Interest", formatCurrency(plan.totalInterest))
-                       payoffSummaryRow("Total Cost", formatCurrency(plan.totalCost))
-                       payoffSummaryRow("Payoff Date", formatDate(plan.payoffDate))
-                   }
-                   .padding()
-                   .background(Theme.surfaceBackground)
-                   .cornerRadius(12)
-               }
-           }
-           
-           Spacer()
-           
-           Text("Almost done! One final review after this.")
-               .font(.system(size: 15))
-               .foregroundColor(Theme.secondaryLabel)
-               .multilineTextAlignment(.center)
-       }
-        // ADD THIS onAppear:
-       .onAppear {
-                   // Force blank data/radio each time
-                   inputMode = nil
-                   inputData.debtAmount = ""
-                   inputData.interestRate = ""
-                   inputData.minimumPayment = ""
-                   inputData.payoffPlan = nil
-               }
-    }
-    
-    private func debtInputField(title: String, text: Binding<String>, placeholder: String, prefix: String = "", suffix: String = "") -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.system(size: 15))
-                .foregroundColor(Theme.secondaryLabel)
-            
-            HStack {
-                if !prefix.isEmpty {
-                    Text(prefix)
-                        .foregroundColor(.white)
-                }
-                
-                TextField("", text: text)
-                    .keyboardType(.decimalPad)
-                    .foregroundColor(.white)
-                    .placeholder(when: text.wrappedValue.isEmpty) {
-                        Text(placeholder)
-                            .foregroundColor(Theme.secondaryLabel)
-                    }
-                    .onChange(of: text.wrappedValue) { _ in
-                        calculatePayoffPlan()
-                    }
-                
-                if !suffix.isEmpty {
-                    Text(suffix)
-                        .foregroundColor(.white)
-                }
-            }
-            .padding()
-            .background(Theme.surfaceBackground)
-            .cornerRadius(8)
-        }
-    }
-    
-    private func payoffSummaryRow(_ title: String, _ value: String) -> some View {
-        HStack {
-            Text(title)
-                .font(.system(size: 15))
-                .foregroundColor(Theme.secondaryLabel)
-            Spacer()
-            Text(value)
-                .font(.system(size: 15))
-                .foregroundColor(.white)
-        }
-    }
-    
-    private func selectMode(_ mode: DebtInputMode) {
-        withAnimation {
-            inputMode = mode
-            if mode == .recommended {
-                inputData.debtAmount = "\(recommendedAmount)"
-                inputData.payoffPlan = DebtPayoffPlan(
-                    debtAmount: recommendedAmount,
-                    interestRate: 0,
-                    minimumPayment: recommendedAmount,
-                    monthlyIncome: monthlyIncome
-                )
-            } else {
-                // Reset for custom input
-                inputData.debtAmount = ""
-                inputData.payoffPlan = nil
-            }
-        }
-    }
-    
-    private func calculatePayoffPlan() {
-        guard let debt = Double(inputData.debtAmount),
-              let rate = Double(inputData.interestRate),
-              let minPayment = Double(inputData.minimumPayment)
-        else {
-            inputData.payoffPlan = nil
-            return
-        }
-        
-        inputData.payoffPlan = DebtPayoffPlan(
-            debtAmount: debt,
-            interestRate: rate,
-            minimumPayment: minPayment,
-            monthlyIncome: monthlyIncome
-        )
-    }
-    
-    private func formatCurrency(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: NSNumber(value: value)) ?? "$0"
-    }
-    
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM yyyy"
-        return formatter.string(from: date)
-    }
-}
-
+// MARK: - DebtPayoffPlan Structure
 struct DebtPayoffPlan {
     let debtAmount: Double
     let interestRate: Double
@@ -725,24 +86,683 @@ struct DebtPayoffPlan {
     }
 }
 
+// MARK: - BudgetBuilderModal View
+struct BudgetBuilderModal: View {
+    @Binding var isPresented: Bool
+    @ObservedObject var budgetStore: BudgetStore
+    @ObservedObject var budgetModel: BudgetModel
+    let monthlyIncome: Double
+    
+    @State private var phase: BudgetBuilderPhase = .debtSelection
+    @State private var selectedCategories: Set<String> = []
+    @State private var temporaryAmounts: [String: Double] = [:]
+    @State private var debtInputData: [String: DebtInputData] = [:]
+    
+    var body: some View {
+        ZStack {
+            // Background
+            Color.black
+                .opacity(1)
+                .ignoresSafeArea()
+            
+            // Modal Content
+            GeometryReader { geometry in
+                ZStack {
+                    // Main content container
+                    VStack(spacing: 0) {
+                        // Header
+                        ZStack {
+                            // Back Button
+                            HStack {
+                                if !isInitialPhase {
+                                    Button(action: navigateBack) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "chevron.left")
+                                            Text("Back")
+                                        }
+                                        .font(.system(size: 17))
+                                        .foregroundColor(Theme.secondaryLabel)
+                                    }
+                                }
+                                Spacer()
+                            }
+                            
+                            // Title - Centered
+                            Text(phase.title)
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.white)
+                            
+                            // Close Button
+                            HStack {
+                                Spacer()
+                                Button(action: { isPresented = false }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 24))
+                                        .foregroundColor(Theme.secondaryLabel)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 20)
+                        
+                        // Description Text
+                        Text(phase.description)
+                            .font(.system(size: 17))
+                            .foregroundColor(Theme.secondaryLabel)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 8)
+                            .padding(.bottom, 24)
+                        
+                        // Content with ScrollView
+                        ScrollView {
+                            VStack(spacing: 32) {
+                                // Phase Content
+                                switch phase {
+                                case .debtSelection:
+                                    selectionView(
+                                        categories: debtCategories,
+                                        emptyMessage: "No debt categories available"
+                                    )
+                                    
+                                case .debtConfiguration(let category):
+                                    DebtConfigurationView(
+                                        category: category,
+                                        monthlyIncome: monthlyIncome,
+                                        inputData: Binding(
+                                            get: { debtInputData[category.id] ?? DebtInputData() },
+                                            set: { debtInputData[category.id] = $0 }
+                                        )
+                                    )
+                                    .id(category.id)
+                                    
+                                case .expenseSelection:
+                                    selectionView(
+                                        categories: expenseCategories,
+                                        emptyMessage: "No expense categories available"
+                                    )
+                                    
+                                case .expenseConfiguration(let category):
+                                    ExpenseConfigurationView(
+                                        category: category,
+                                        monthlyIncome: monthlyIncome,
+                                        totalCategories: getTotalConfigurableExpenses(),
+                                        currentIndex: getCurrentExpenseIndex(for: category),
+                                        amount: binding(for: category)
+                                    )
+                                    .id(category.id)
+                                    
+                                case .savingsSelection:
+                                    selectionView(
+                                        categories: savingsCategories,
+                                        emptyMessage: "No savings categories available"
+                                    )
+                                    
+                                case .savingsConfiguration(let category):
+                                    SavingsConfigurationView(
+                                        category: category,
+                                        monthlyIncome: monthlyIncome,
+                                        amount: binding(for: category)
+                                    )
+                                    .id(category.id)
+                                }
+                                
+                                // Add extra space at bottom to ensure content scrolls above button
+                                Color.clear
+                                    .frame(height: 100)
+                            }
+                            .padding(.horizontal, 20)
+                        }
+                    }
+                    .background(Theme.background)
+                    .cornerRadius(20)
+                    .padding()
+                    
+                    // Fixed Bottom Bar with Next Button
+                    VStack {
+                        Spacer()
+                        ZStack {
+                            // Background for bottom bar
+                            Rectangle()
+                                .fill(Theme.background)
+                                .frame(height: 100)
+                                .shadow(color: Color.black.opacity(0.1), radius: 5, y: -3)
+                                
+                            // Next Button
+                            Button(action: handleNext) {
+                                HStack {
+                                    Image(systemName: getButtonIcon())
+                                        .font(.system(size: 18))
+                                    Text(nextButtonTitle)
+                                        .font(.system(size: 17, weight: .semibold))
+                                }
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56)
+                                .background(Theme.tint)
+                                .cornerRadius(12)
+                            }
+                            .disabled(!canProgress)
+                            .opacity(canProgress ? 1 : 0.6)
+                            .shadow(color: Theme.tint.opacity(0.3), radius: 8, x: 0, y: 4)
+                            .padding(.horizontal, 36)
+                        }
+                        .frame(height: 100)
+                        .padding(.bottom, geometry.safeAreaInsets.bottom)
+                    }
+                    .ignoresSafeArea(.all, edges: .bottom)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Selection View
+    @ViewBuilder
+    private func selectionView(categories: [BudgetCategory], emptyMessage: String) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if categories.isEmpty {
+                Text(emptyMessage)
+                    .font(.system(size: 17))
+                    .foregroundColor(Theme.secondaryLabel)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 32)
+            } else {
+                CategorySelectionView(
+                    categories: categories,
+                    selectedCategories: $selectedCategories,
+                    monthlyIncome: monthlyIncome
+                )
+            }
+        }
+    }
+    
+    // MARK: - Button Logic
+    private var nextButtonTitle: String {
+        switch phase {
+        case .debtSelection, .expenseSelection, .savingsSelection:
+            return selectedCategories.isEmpty ? "Skip" : "Next"
+        case .debtConfiguration, .expenseConfiguration, .savingsConfiguration:
+            return "Continue"
+        }
+    }
+    
+    private func getButtonIcon() -> String {
+        switch phase {
+        case .debtSelection, .expenseSelection, .savingsSelection:
+            return "arrow.right"
+        case .debtConfiguration, .expenseConfiguration, .savingsConfiguration:
+            return "checkmark"
+        }
+    }
+    
+    private var canProgress: Bool {
+        switch phase {
+        case .debtSelection, .expenseSelection, .savingsSelection:
+            return true
+        case .debtConfiguration(let category):
+            return debtInputData[category.id]?.payoffPlan != nil
+                || debtInputData[category.id]?.debtAmount != ""
+        case .expenseConfiguration(let category),
+             .savingsConfiguration(let category):
+            return temporaryAmounts[category.id] != nil
+        }
+    }
+    
+    private var isInitialPhase: Bool {
+        switch phase {
+        case .debtSelection:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    private func navigateBack() {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            switch phase {
+            case .debtConfiguration:
+                phase = .debtSelection
+            case .expenseConfiguration:
+                phase = .expenseSelection
+            case .savingsConfiguration:
+                phase = .savingsSelection
+            default:
+                break
+            }
+        }
+    }
+    
+    private func handleNext() {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            switch phase {
+            case .debtSelection:
+                if let nextCategory = selectedCategories.compactMap({ id in
+                    debtCategories.first(where: { $0.id == id })
+                }).first {
+                    // Initialize new DebtInputData for this category
+                    debtInputData[nextCategory.id] = DebtInputData()
+                    temporaryAmounts[nextCategory.id] = nil
+                    phase = .debtConfiguration(nextCategory)
+                } else {
+                    phase = .expenseSelection
+                }
+                
+            case .debtConfiguration(let category):
+                if let inputData = debtInputData[category.id],
+                   let amount = inputData.payoffPlan?.monthlyPayment {
+                    budgetStore.setCategory(category, amount: amount)
+                    budgetModel.toggleCategory(id: category.id)
+                    budgetModel.updateAllocation(for: category.id, amount: amount)
+                    selectedCategories.remove(category.id)
+                    
+                    if let nextCategory = selectedCategories.compactMap({ id in
+                        debtCategories.first(where: { $0.id == id })
+                    }).first {
+                        // Clear and reset for next category
+                        debtInputData.removeAll()
+                        debtInputData[nextCategory.id] = DebtInputData()
+                        temporaryAmounts.removeAll()
+                        phase = .debtConfiguration(nextCategory)
+                    } else {
+                        phase = .expenseSelection
+                    }
+                }
+                
+            case .expenseSelection:
+                if let nextCategory = selectedCategories.compactMap({ id in
+                    expenseCategories.first(where: { $0.id == id })
+                }).first {
+                    temporaryAmounts[nextCategory.id] = nil
+                    phase = .expenseConfiguration(nextCategory)
+                } else {
+                    phase = .savingsSelection
+                }
+                
+            case .expenseConfiguration(let category):
+                if let amount = temporaryAmounts[category.id] {
+                    budgetStore.setCategory(category, amount: amount)
+                    budgetModel.toggleCategory(id: category.id)
+                    budgetModel.updateAllocation(for: category.id, amount: amount)
+                    selectedCategories.remove(category.id)
+                    
+                    if let nextCategory = selectedCategories.compactMap({ id in
+                        expenseCategories.first(where: { $0.id == id })
+                    }).first {
+                        temporaryAmounts[nextCategory.id] = nil
+                        phase = .expenseConfiguration(nextCategory)
+                    } else {
+                        budgetModel.calculateUnusedAmount()
+                        phase = .savingsSelection
+                    }
+                }
+                
+            case .savingsSelection:
+                if let nextCategory = selectedCategories.compactMap({ id in
+                    savingsCategories.first(where: { $0.id == id })
+                }).first {
+                    temporaryAmounts[nextCategory.id] = nil
+                    phase = .savingsConfiguration(nextCategory)
+                } else {
+                    isPresented = false
+                }
+                
+            case .savingsConfiguration(let category):
+                if let amount = temporaryAmounts[category.id] {
+                    budgetStore.setCategory(category, amount: amount)
+                    budgetModel.toggleCategory(id: category.id)
+                    budgetModel.updateAllocation(for: category.id, amount: amount)
+                    selectedCategories.remove(category.id)
+                    
+                    if let nextCategory = selectedCategories.compactMap({ id in
+                        savingsCategories.first(where: { $0.id == id })
+                    }).first {
+                        temporaryAmounts[nextCategory.id] = nil
+                        phase = .savingsConfiguration(nextCategory)
+                    } else {
+                        budgetModel.setupInitialBudget(selectedCategoryIds: selectedCategories)
+                        isPresented = false
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Category Filters and Helpers
+    private var debtCategories: [BudgetCategory] {
+        BudgetCategoryStore.shared.categories.filter { isDebtCategory($0.id) }
+    }
+    
+    private var expenseCategories: [BudgetCategory] {
+        BudgetCategoryStore.shared.categories.filter {
+            !isDebtCategory($0.id) && !isSavingsCategory($0.id)
+        }
+    }
+    
+    private var savingsCategories: [BudgetCategory] {
+        BudgetCategoryStore.shared.categories.filter { isSavingsCategory($0.id) }
+    }
+    
+    private func isDebtCategory(_ id: String) -> Bool {
+        ["credit_cards", "student_loans", "personal_loans", "car_loan"].contains(id)
+    }
+    
+    private func isSavingsCategory(_ id: String) -> Bool {
+        ["emergency_savings", "investments", "college_savings", "vacation"].contains(id)
+    }
+    
+    private func getTotalConfigurableExpenses() -> Int {
+        selectedCategories.filter { id in
+            expenseCategories.contains(where: { $0.id == id })
+        }.count
+    }
+    
+    private func getCurrentExpenseIndex(for category: BudgetCategory) -> Int {
+        let selectedExpenseIds = selectedCategories
+            .filter { id in
+                expenseCategories.contains(where: { $0.id == id })
+            }
+            .sorted()
+        
+        return selectedExpenseIds.firstIndex(of: category.id) ?? 0
+    }
+    
+    private func binding(for category: BudgetCategory) -> Binding<Double?> {
+        Binding(
+            get: { temporaryAmounts[category.id] },
+            set: { temporaryAmounts[category.id] = $0 }
+        )
+    }
+}
+
+// MARK: - CategorySelectionView with Toggles
+struct CategorySelectionView: View {
+    let categories: [BudgetCategory]
+    @Binding var selectedCategories: Set<String>
+    let monthlyIncome: Double
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            ForEach(categories) { category in
+                CategoryToggleRow(
+                    category: category,
+                    isSelected: selectedCategories.contains(category.id),
+                    onToggle: { toggleCategory(category) }
+                )
+            }
+        }
+    }
+    
+    private func toggleCategory(_ category: BudgetCategory) {
+        if selectedCategories.contains(category.id) {
+            selectedCategories.remove(category.id)
+        } else {
+            selectedCategories.insert(category.id)
+        }
+    }
+}
+
+// MARK: - CategoryToggleRow
+struct CategoryToggleRow: View {
+    let category: BudgetCategory
+    let isSelected: Bool
+    let onToggle: () -> Void
+    
+    var body: some View {
+        HStack {
+            // Category Info
+            HStack(spacing: 12) {
+                Text(category.emoji)
+                    .font(.title2)
+                
+                Text(category.name)
+                    .font(.system(size: 17))
+                    .foregroundColor(.white)
+            }
+            
+            Spacer()
+            
+            // Toggle Component
+            Toggle("", isOn: Binding<Bool>(
+                get: { isSelected },
+                set: { _ in onToggle() }
+            ))
+            .toggleStyle(SwitchToggleStyle(tint: Theme.tint))
+            .labelsHidden()
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Theme.surfaceBackground)
+                .overlay(
+                    Group {
+                        if isSelected {
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Theme.tint.opacity(0.5), lineWidth: 1.5)
+                        }
+                    }
+                )
+        )
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
+    }
+}
+
+// MARK: - DebtConfigurationView with Fixed Binding Issues
+struct DebtConfigurationView: View {
+    let category: BudgetCategory
+    let monthlyIncome: Double
+    @Binding var inputData: DebtInputData
+    @State private var inputMode: DebtInputMode? = nil
+    
+    init(category: BudgetCategory, monthlyIncome: Double, inputData: Binding<DebtInputData>) {
+        self.category = category
+        self.monthlyIncome = monthlyIncome
+        self._inputData = inputData
+        self._inputMode = State(initialValue: nil)
+    }
+    
+    enum DebtInputMode {
+        case recommended
+        case custom
+    }
+    
+    private var recommendedAmount: Double {
+        monthlyIncome * category.allocationPercentage
+    }
+    
+    var body: some View {
+        VStack(spacing: 24) {
+            // Header
+            HStack(spacing: 8) {
+                Text(category.emoji)
+                    .font(.title)
+                Text(category.name)
+                    .font(.title)
+                    .foregroundColor(.white)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            
+            // Options Section
+            VStack(spacing: 16) {
+                // Recommended Amount Toggle Option
+                DebtOptionToggleRow(
+                    title: "\(formatCurrency(recommendedAmount))/month",
+                    subtitle: "(\(Int(category.allocationPercentage * 100))% of income)",
+                    isSelected: inputMode == .recommended,
+                    onToggle: { selectMode(.recommended) }
+                )
+                
+                // Custom Payment Section
+                VStack(spacing: 0) {
+                    DebtOptionToggleRow(
+                        title: "Custom debt setup",
+                        subtitle: nil,
+                        isSelected: inputMode == .custom,
+                        onToggle: { selectMode(.custom) }
+                    )
+                    
+                    if inputMode == .custom {
+                        VStack(spacing: 16) {
+                            // Debt Amount Input
+                            InputField(
+                                title: "Total Debt Amount",
+                                text: $inputData.debtAmount,
+                                placeholder: "Enter amount",
+                                prefix: "",
+                                suffix: "",
+                                onChange: { calculatePayoffPlan() }
+                            )
+                            
+                            // Interest Rate Input
+                            InputField(
+                                title: "Interest Rate",
+                                text: $inputData.interestRate,
+                                placeholder: "Enter rate",
+                                prefix: "",
+                                suffix: "%",
+                                onChange: { calculatePayoffPlan() }
+                            )
+                            
+                            // Minimum Payment Input
+                            InputField(
+                                title: "Minimum Payment",
+                                text: $inputData.minimumPayment,
+                                placeholder: "Enter amount",
+                                prefix: "$",
+                                suffix: "",
+                                onChange: { calculatePayoffPlan() }
+                            )
+                        }
+                        .padding()
+                    }
+                }
+                .background(Theme.surfaceBackground)
+                .cornerRadius(12)
+                
+                // Payoff Plan Summary (if applicable)
+                if let plan = inputData.payoffPlan {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Payoff Plan Summary")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.white)
+                        
+                        payoffSummaryRow("Monthly Payment", formatCurrency(plan.monthlyPayment))
+                        payoffSummaryRow("Total Interest", formatCurrency(plan.totalInterest))
+                        payoffSummaryRow("Total Cost", formatCurrency(plan.totalCost))
+                        payoffSummaryRow("Payoff Date", formatDate(plan.payoffDate))
+                    }
+                    .padding()
+                    .background(Theme.surfaceBackground)
+                    .cornerRadius(12)
+                }
+            }
+            
+            Spacer()
+            
+            Text("Almost done! One final review after this.")
+                .font(.system(size: 15))
+                .foregroundColor(Theme.secondaryLabel)
+                .multilineTextAlignment(.center)
+                .padding(.bottom, 8)
+        }
+        .onAppear {
+            // Initialize with empty values on appear
+            inputMode = nil
+            inputData.debtAmount = ""
+            inputData.interestRate = ""
+            inputData.minimumPayment = ""
+            inputData.payoffPlan = nil
+        }
+    }
+    
+    private func payoffSummaryRow(_ title: String, _ value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 15))
+                .foregroundColor(Theme.secondaryLabel)
+            Spacer()
+            Text(value)
+                .font(.system(size: 15))
+                .foregroundColor(.white)
+        }
+    }
+    
+    private func selectMode(_ mode: DebtInputMode) {
+        withAnimation {
+            inputMode = mode
+            if mode == .recommended {
+                // For recommended mode, create a DebtPayoffPlan with the recommended amount
+                let recommendedValue = recommendedAmount
+                inputData.debtAmount = "\(recommendedValue)"
+                inputData.payoffPlan = DebtPayoffPlan(
+                    debtAmount: recommendedValue,
+                    interestRate: 0,
+                    minimumPayment: recommendedValue,
+                    monthlyIncome: monthlyIncome
+                )
+            } else {
+                // For custom mode, reset values
+                inputData.debtAmount = ""
+                inputData.interestRate = ""
+                inputData.minimumPayment = ""
+                inputData.payoffPlan = nil
+            }
+        }
+    }
+    
+    private func calculatePayoffPlan() {
+        // Only calculate if all fields have valid values
+        guard let debt = Double(inputData.debtAmount),
+              let rate = Double(inputData.interestRate),
+              let minPayment = Double(inputData.minimumPayment),
+              debt > 0, minPayment > 0
+        else {
+            // If any fields are invalid, clear the plan
+            inputData.payoffPlan = nil
+            return
+        }
+        
+        // Create a new payoff plan with the user-provided values
+        inputData.payoffPlan = DebtPayoffPlan(
+            debtAmount: debt,
+            interestRate: rate,
+            minimumPayment: minPayment,
+            monthlyIncome: monthlyIncome
+        )
+    }
+    
+    private func formatCurrency(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: value)) ?? "$0"
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM yyyy"
+        return formatter.string(from: date)
+    }
+}
+
+// MARK: - ExpenseConfigurationView with Toggles
 struct ExpenseConfigurationView: View {
     let category: BudgetCategory
     let monthlyIncome: Double
     let totalCategories: Int
     let currentIndex: Int
     @Binding var amount: Double?
-    @State private var inputMode: ExpenseInputMode? = nil  // Keep as private state
+    @State private var inputMode: ExpenseInputMode? = nil
     @State private var customAmount: String = ""
     
     init(category: BudgetCategory, monthlyIncome: Double, totalCategories: Int, currentIndex: Int, amount: Binding<Double?>) {
-            self.category = category
-            self.monthlyIncome = monthlyIncome
-            self.totalCategories = totalCategories
-            self.currentIndex = currentIndex
-            self._amount = amount
-            self._inputMode = State(initialValue: nil)  // Force nil on creation
-            self._customAmount = State(initialValue: "")
-        }
+        self.category = category
+        self.monthlyIncome = monthlyIncome
+        self.totalCategories = totalCategories
+        self.currentIndex = currentIndex
+        self._amount = amount
+        self._inputMode = State(initialValue: nil)
+        self._customAmount = State(initialValue: "")
+    }
     
     enum ExpenseInputMode {
         case recommended
@@ -767,62 +787,22 @@ struct ExpenseConfigurationView: View {
             
             // Options Section
             VStack(spacing: 16) {
-                // Recommended Amount Option
-                Button(action: { selectMode(.recommended) }) {
-                    HStack(spacing: 12) {
-                        Circle()
-                            .stroke(Theme.secondaryLabel, lineWidth: 2)
-                            .frame(width: 24, height: 24)
-                            .overlay {
-                                if inputMode == .recommended {
-                                    Circle()
-                                        .fill(Theme.tint)
-                                        .frame(width: 16, height: 16)
-                                }
-                            }
-                        
-                        VStack(alignment: .leading) {
-                            Text("\(formatCurrency(recommendedAmount))/month")
-                                .font(.system(size: 17))
-                                .foregroundColor(.white)
-                            
-                            Text("(\(Int(category.allocationPercentage * 100))% of income)")
-                                .font(.system(size: 15))
-                                .foregroundColor(Theme.secondaryLabel)
-                        }
-                        
-                        Spacer()
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Theme.surfaceBackground)
-                    .cornerRadius(12)
-                }
+                // Recommended Amount Toggle Option
+                OptionToggleRow(
+                    title: "\(formatCurrency(recommendedAmount))/month",
+                    subtitle: "(\(Int(category.allocationPercentage * 100))% of income)",
+                    isSelected: inputMode == .recommended,
+                    onToggle: { selectMode(.recommended) }
+                )
                 
                 // Custom Amount Option
                 VStack(spacing: 0) {
-                    Button(action: { selectMode(.custom) }) {
-                        HStack(spacing: 12) {
-                            Circle()
-                                .stroke(Theme.secondaryLabel, lineWidth: 2)
-                                .frame(width: 24, height: 24)
-                                .overlay {
-                                    if inputMode == .custom {
-                                        Circle()
-                                            .fill(Theme.tint)
-                                            .frame(width: 16, height: 16)
-                                    }
-                                }
-                            
-                            Text("Custom amount")
-                                .font(.system(size: 17))
-                                .foregroundColor(.white)
-                            
-                            Spacer()
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                    }
+                    OptionToggleRow(
+                        title: "Custom amount",
+                        subtitle: nil,
+                        isSelected: inputMode == .custom,
+                        onToggle: { selectMode(.custom) }
+                    )
                     
                     if inputMode == .custom {
                         VStack(spacing: 12) {
@@ -847,13 +827,15 @@ struct ExpenseConfigurationView: View {
                                     .foregroundColor(Theme.secondaryLabel)
                             }
                             .padding()
+                            .background(Theme.elevatedBackground)
+                            .cornerRadius(8)
                             
                             if let customValue = Double(customAmount) {
                                 let difference = customValue - recommendedAmount
                                 let percentDifference = (difference / recommendedAmount) * 100
                                 
                                 HStack {
-                                    Image(systemName: difference >= 0 ? "arrow.up.right" : "arrow.down.right")
+                                    Image(systemName: difference >= 0 ? "arrow.up-right" : "arrow.down-right")
                                     Text("\(String(format: "%.1f", abs(percentDifference)))% \(difference >= 0 ? "above" : "below") recommended")
                                         .font(.system(size: 13))
                                         .foregroundColor(difference >= 0 ? .red : Theme.tint)
@@ -862,6 +844,7 @@ struct ExpenseConfigurationView: View {
                                 .padding(.bottom)
                             }
                         }
+                        .padding()
                     }
                 }
                 .background(Theme.surfaceBackground)
@@ -870,23 +853,22 @@ struct ExpenseConfigurationView: View {
             
             Spacer()
             
-            Text("Almost done! One final review after this.")
-                .font(.system(size: 15))
-                .foregroundColor(Theme.secondaryLabel)
-                .multilineTextAlignment(.center)
+            VStack(spacing: 8) {
+                Text("Almost done! One final review after this.")
+                    .font(.system(size: 15))
+                    .foregroundColor(Theme.secondaryLabel)
+                    .multilineTextAlignment(.center)
+            }
         }
-        // ADD THIS onAppear:
         .onAppear {
-                    // Force blank data/radio each time
-                    inputMode = nil
-                    customAmount = ""
-                    amount = nil
-                }
+            inputMode = nil
+            customAmount = ""
+            amount = nil
+        }
     }
     
     private func selectMode(_ mode: ExpenseInputMode) {
         withAnimation {
-            // Only update if selecting a different mode
             if inputMode != mode {
                 inputMode = mode
                 customAmount = ""
@@ -903,22 +885,23 @@ struct ExpenseConfigurationView: View {
     }
 }
 
+// MARK: - SavingsConfigurationView with Toggles
 struct SavingsConfigurationView: View {
     let category: BudgetCategory
     let monthlyIncome: Double
     @Binding var amount: Double?
     @State private var inputMode: SavingsInputMode? = nil
     @State private var targetAmount: String = ""
-    @State private var targetDate = Date().addingTimeInterval(365 * 24 * 60 * 60) // Initial value of 1 year from now
+    @State private var targetDate = Date().addingTimeInterval(365 * 24 * 60 * 60)
     
     init(category: BudgetCategory, monthlyIncome: Double, amount: Binding<Double?>) {
-            self.category = category
-            self.monthlyIncome = monthlyIncome
-            self._amount = amount
-            self._inputMode = State(initialValue: nil)  // Force nil on creation
-            self._targetAmount = State(initialValue: "")
-            self._targetDate = State(initialValue: Date().addingTimeInterval(365 * 24 * 60 * 60))
-        }
+        self.category = category
+        self.monthlyIncome = monthlyIncome
+        self._amount = amount
+        self._inputMode = State(initialValue: nil)
+        self._targetAmount = State(initialValue: "")
+        self._targetDate = State(initialValue: Date().addingTimeInterval(365 * 24 * 60 * 60))
+    }
     
     enum SavingsInputMode {
         case recommended
@@ -952,62 +935,22 @@ struct SavingsConfigurationView: View {
             
             // Options Section
             VStack(spacing: 16) {
-                // Recommended Amount Option
-                Button(action: { selectMode(.recommended) }) {
-                    HStack(spacing: 12) {
-                        Circle()
-                            .stroke(Theme.secondaryLabel, lineWidth: 2)
-                            .frame(width: 24, height: 24)
-                            .overlay {
-                                if inputMode == .recommended {
-                                    Circle()
-                                        .fill(Theme.tint)
-                                        .frame(width: 16, height: 16)
-                                }
-                            }
-                        
-                        VStack(alignment: .leading) {
-                            Text("\(formatCurrency(recommendedAmount))/month")
-                                .font(.system(size: 17))
-                                .foregroundColor(.white)
-                            
-                            Text("(\(Int(category.allocationPercentage * 100))% of income)")
-                                .font(.system(size: 15))
-                                .foregroundColor(Theme.secondaryLabel)
-                        }
-                        
-                        Spacer()
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Theme.surfaceBackground)
-                    .cornerRadius(12)
-                }
+                // Recommended Amount Toggle Option
+                OptionToggleRow(
+                    title: "\(formatCurrency(recommendedAmount))/month",
+                    subtitle: "(\(Int(category.allocationPercentage * 100))% of income)",
+                    isSelected: inputMode == .recommended,
+                    onToggle: { selectMode(.recommended) }
+                )
                 
                 // Custom Goal Section
                 VStack(spacing: 0) {
-                    Button(action: { selectMode(.custom) }) {
-                        HStack(spacing: 12) {
-                            Circle()
-                                .stroke(Theme.secondaryLabel, lineWidth: 2)
-                                .frame(width: 24, height: 24)
-                                .overlay {
-                                    if inputMode == .custom {
-                                        Circle()
-                                            .fill(Theme.tint)
-                                            .frame(width: 16, height: 16)
-                                    }
-                                }
-                            
-                            Text("Set savings goal")
-                                .font(.system(size: 17))
-                                .foregroundColor(.white)
-                            
-                            Spacer()
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                    }
+                    OptionToggleRow(
+                        title: "Set savings goal",
+                        subtitle: nil,
+                        isSelected: inputMode == .custom,
+                        onToggle: { selectMode(.custom) }
+                    )
                     
                     if inputMode == .custom {
                         VStack(spacing: 16) {
@@ -1029,6 +972,8 @@ struct SavingsConfigurationView: View {
                                     .foregroundColor(Theme.secondaryLabel)
                             }
                             .padding()
+                            .background(Theme.elevatedBackground)
+                            .cornerRadius(8)
                             
                             // Target Date
                             HStack {
@@ -1036,8 +981,8 @@ struct SavingsConfigurationView: View {
                                     .foregroundColor(.white)
                                 Spacer()
                                 DatePicker("", selection: $targetDate,
-                                         in: Date()...,
-                                         displayedComponents: .date)
+                                            in: Date()...,
+                                            displayedComponents: .date)
                                     .datePickerStyle(.compact)
                                     .colorScheme(.dark)
                                     .onChange(of: targetDate) { _ in
@@ -1045,6 +990,8 @@ struct SavingsConfigurationView: View {
                                     }
                             }
                             .padding()
+                            .background(Theme.elevatedBackground)
+                            .cornerRadius(8)
                             
                             // Required Monthly Savings
                             if let monthlySavings = requiredMonthlySavings {
@@ -1061,7 +1008,7 @@ struct SavingsConfigurationView: View {
                                     let percentDifference = (difference / recommendedAmount) * 100
                                     
                                     HStack {
-                                        Image(systemName: difference >= 0 ? "arrow.up.right" : "arrow.down.right")
+                                        Image(systemName: difference >= 0 ? "arrow.up-right" : "arrow.down-right")
                                         Text("\(String(format: "%.1f", abs(percentDifference)))% \(difference >= 0 ? "above" : "below") recommended")
                                             .font(.system(size: 13))
                                             .foregroundColor(difference >= 0 ? .red : Theme.tint)
@@ -1071,6 +1018,7 @@ struct SavingsConfigurationView: View {
                                 .padding(.bottom)
                             }
                         }
+                        .padding()
                     }
                 }
                 .background(Theme.surfaceBackground)
@@ -1079,18 +1027,18 @@ struct SavingsConfigurationView: View {
             
             Spacer()
             
-            Text("Almost done! One final review after this.")
-                .font(.system(size: 15))
-                .foregroundColor(Theme.secondaryLabel)
-                .multilineTextAlignment(.center)
+            VStack(spacing: 8) {
+                Text("Almost done! One final review after this.")
+                    .font(.system(size: 15))
+                    .foregroundColor(Theme.secondaryLabel)
+                    .multilineTextAlignment(.center)
+            }
         }
-        // ADD THIS onAppear:
         .onAppear {
-                    // Force blank data/radio each time
-                    inputMode = nil
-                    targetAmount = ""
-                    amount = nil
-                }
+            inputMode = nil
+            targetAmount = ""
+            amount = nil
+        }
     }
     
     private func selectMode(_ mode: SavingsInputMode) {
@@ -1118,3 +1066,153 @@ struct SavingsConfigurationView: View {
         return formatter.string(from: NSNumber(value: value)) ?? "$0"
     }
 }
+
+// MARK: - Shared Components
+
+// Option Toggle Row with Toggle Switch
+struct OptionToggleRow: View {
+    let title: String
+    let subtitle: String?
+    let isSelected: Bool
+    let onToggle: () -> Void
+    
+    var body: some View {
+        Button(action: onToggle) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.system(size: 17))
+                        .foregroundColor(.white)
+                    
+                    if let subtitle = subtitle {
+                        Text(subtitle)
+                            .font(.system(size: 15))
+                            .foregroundColor(Theme.secondaryLabel)
+                    }
+                }
+                
+                Spacer()
+                
+                Toggle("", isOn: Binding<Bool>(
+                    get: { isSelected },
+                    set: { _ in onToggle() }
+                ))
+                .toggleStyle(SwitchToggleStyle(tint: Theme.tint))
+                .labelsHidden()
+            }
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Theme.surfaceBackground)
+                    .overlay(
+                        Group {
+                            if isSelected {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Theme.tint.opacity(0.5), lineWidth: 1.5)
+                            }
+                        }
+                    )
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// Debt Option Toggle Row (Circular Toggle)
+struct DebtOptionToggleRow: View {
+    let title: String
+    let subtitle: String?
+    let isSelected: Bool
+    let onToggle: () -> Void
+    
+    var body: some View {
+        Button(action: onToggle) {
+            HStack(spacing: 12) {
+                Circle()
+                    .stroke(Theme.secondaryLabel, lineWidth: 2)
+                    .frame(width: 24, height: 24)
+                    .overlay {
+                        if isSelected {
+                            Circle()
+                                .fill(Theme.tint)
+                                .frame(width: 16, height: 16)
+                        }
+                    }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.system(size: 17))
+                        .foregroundColor(.white)
+                    
+                    if let subtitle = subtitle {
+                        Text(subtitle)
+                            .font(.system(size: 15))
+                            .foregroundColor(Theme.secondaryLabel)
+                    }
+                }
+                
+                Spacer()
+            }
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Theme.surfaceBackground)
+                    .overlay(
+                        Group {
+                            if isSelected {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Theme.tint.opacity(0.5), lineWidth: 1.5)
+                            }
+                        }
+                    )
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// Input Field Component
+struct InputField: View {
+    let title: String
+    @Binding var text: String
+    let placeholder: String
+    let prefix: String
+    let suffix: String
+    let onChange: () -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 15))
+                .foregroundColor(Theme.secondaryLabel)
+            
+            HStack {
+                if !prefix.isEmpty {
+                    Text(prefix)
+                        .foregroundColor(.white)
+                }
+                
+                TextField("", text: $text)
+                    .keyboardType(.decimalPad)
+                    .foregroundColor(.white)
+                    .placeholder(when: text.isEmpty) {
+                        Text(placeholder)
+                            .foregroundColor(Theme.secondaryLabel)
+                    }
+                    .onChange(of: text) { _ in
+                        onChange()
+                    }
+                
+                if !suffix.isEmpty {
+                    Text(suffix)
+                        .foregroundColor(.white)
+                }
+            }
+            .padding()
+            .background(Theme.elevatedBackground)
+            .cornerRadius(8)
+        }
+    }
+}
+
