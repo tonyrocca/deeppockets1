@@ -520,9 +520,9 @@ struct SimplifiedRecommendationCard: View {
     let onToggle: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Category name and emoji at the top
-            HStack {
+        VStack(alignment: .leading, spacing: 12) {
+            // Category header with emoji, name and toggle
+            HStack(spacing: 12) {
                 Text(recommendation.category.emoji)
                     .font(.title3)
                 
@@ -531,45 +531,6 @@ struct SimplifiedRecommendationCard: View {
                     .foregroundColor(.white)
                 
                 Spacer()
-            }
-            
-            // Action badge and amount on same line
-            HStack {
-                // Action badge
-                let (text, color) = actionDetails
-                Text(text)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(color)
-                    .cornerRadius(6)
-                
-                // Amount text
-                amountText
-                
-                Spacer()
-            }
-            
-            // Explanation text
-            Text(recommendation.explanation)
-                .font(.system(size: 15))
-                .foregroundColor(Theme.secondaryLabel)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Theme.surfaceBackground)
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(recommendation.isEnabled ? Theme.tint.opacity(0.3) : Color.clear, lineWidth: 1)
-        )
-        .overlay(
-            // Toggle positioned at right center
-            HStack {
-                Spacer()
                 
                 Toggle("", isOn: Binding(
                     get: { recommendation.isEnabled },
@@ -577,47 +538,42 @@ struct SimplifiedRecommendationCard: View {
                 ))
                 .labelsHidden()
                 .toggleStyle(SwitchToggleStyle(tint: Theme.tint))
-                .frame(width: 50)
-                .padding(.trailing, 8)
             }
-        )
-    }
-    
-    // Amount text based on recommendation type
-    private var amountText: some View {
-        Group {
-            switch recommendation.type {
-            case .increase:
-                if let current = recommendation.currentAmount {
-                    Text("\(formatCurrency(current)) → \(formatCurrency(recommendation.newAmount))/mo")
-                        .foregroundColor(Theme.tint)
-                } else {
-                    Text("\(formatCurrency(recommendation.newAmount))/mo")
-                        .foregroundColor(Theme.tint)
-                }
+            
+            // Action badge and amount
+            HStack {
+                // Action type pill
+                let (text, color) = actionDetails
+                Text(text)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(color)
+                    .cornerRadius(6)
                 
-            case .decrease:
-                if let current = recommendation.currentAmount {
-                    Text("\(formatCurrency(current)) → \(formatCurrency(recommendation.newAmount))/mo")
-                        .foregroundColor(.orange)
-                } else {
-                    Text("\(formatCurrency(recommendation.newAmount))/mo")
-                        .foregroundColor(.orange)
-                }
+                Spacer()
                 
-            case .add:
-                Text("Add \(formatCurrency(recommendation.newAmount))/mo")
-                    .foregroundColor(Theme.tint)
-                
-            case .remove:
-                if let current = recommendation.currentAmount {
-                    Text("Remove \(formatCurrency(current))/mo")
-                        .foregroundColor(.red)
-                }
+                // Amount text aligned right
+                Text(formattedAmount)
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundColor(actionColor)
             }
+            
+            // Explanation text
+            Text(recommendation.explanation)
+                .font(.system(size: 15))
+                .foregroundColor(Theme.secondaryLabel)
+                .lineLimit(2)
         }
-        .font(.system(size: 15, weight: .medium))
-        .padding(.leading, 4)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
+        .background(Theme.surfaceBackground)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(recommendation.isEnabled ? Theme.tint.opacity(0.3) : Color.clear, lineWidth: 1)
+        )
     }
     
     // Get action text and color based on recommendation type
@@ -631,6 +587,34 @@ struct SimplifiedRecommendationCard: View {
             return ("ADD", Theme.tint)
         case .remove:
             return ("REMOVE", Color.red)
+        }
+    }
+    
+    private var actionColor: Color {
+        switch recommendation.type {
+        case .increase, .add:
+            return Theme.tint
+        case .decrease:
+            return .orange
+        case .remove:
+            return .red
+        }
+    }
+    
+    private var formattedAmount: String {
+        switch recommendation.type {
+        case .increase:
+            return "Add \(formatCurrency(recommendation.changeAmount))/mo"
+        case .decrease:
+            return "Save \(formatCurrency(recommendation.changeAmount))/mo"
+        case .add:
+            return "Add \(formatCurrency(recommendation.newAmount))/mo"
+        case .remove:
+            if let current = recommendation.currentAmount {
+                return "Remove \(formatCurrency(current))/mo"
+            } else {
+                return ""
+            }
         }
     }
     
