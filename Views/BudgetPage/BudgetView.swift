@@ -434,7 +434,7 @@ struct BudgetView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 24) {
-                        // Enhanced Budget Header
+                        // In BudgetView.swift where you use EnhancedBudgetHeader
                         EnhancedBudgetHeader(
                             selectedPeriod: $selectedPeriod,
                             monthlyIncome: monthlyIncome,
@@ -448,30 +448,10 @@ struct BudgetView: View {
                                 .reduce(0) { $0 + $1.allocatedAmount },
                             savingsTotal: budgetModel.budgetItems
                                 .filter { $0.type == .savings }
-                                .reduce(0) { $0 + $1.allocatedAmount }
+                                .reduce(0) { $0 + $1.allocatedAmount },
+                            onAllocationAction: { showImprovements = true }
                         )
                         .padding(.horizontal)
-                        
-                        if !budgetModel.budgetItems.isEmpty {
-                            Button(action: { showImprovements = true }) {
-                                                            HStack {
-                                                                Image(systemName: "sparkles")
-                                                                    .font(.system(size: 16))
-                                                                Text("Enhance Your Budget")
-                                                                    .font(.system(size: 17, weight: .medium))
-                                                            }
-                                                            .foregroundColor(Theme.tint)
-                                                            .frame(maxWidth: .infinity)
-                                                            .frame(height: 48)
-                                                            .background(Theme.tint.opacity(0.15))
-                                                            .cornerRadius(12)
-                                                            .overlay(
-                                                                RoundedRectangle(cornerRadius: 12)
-                                                                    .stroke(Theme.tint.opacity(0.3), lineWidth: 1)
-                                                            )
-                                                        }
-                                                        .padding(.horizontal)
-                        }
                         
                         // Categories List
                         VStack(spacing: 16) {
