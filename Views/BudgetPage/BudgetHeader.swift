@@ -75,7 +75,7 @@ struct EnhancedBudgetHeader: View {
                 // Income Row with improved visual
                 HStack(alignment: .center) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("\(selectedPeriod.rawValue) Income")
+                        Text("\(selectedPeriod.rawValue) After-Tax Income")
                             .font(.system(size: 17))
                             .foregroundColor(Theme.secondaryLabel)
                     }
@@ -190,24 +190,4 @@ struct EnhancedBudgetHeader: View {
     }
 }
 
-#Preview {
-    ZStack {
-        Theme.background.ignoresSafeArea()
-        
-        VStack {
-            EnhancedBudgetHeader(
-                selectedPeriod: .constant(.monthly),
-                monthlyIncome: 9750,
-                payPeriod: .monthly,
-                showDetailedSummary: .constant(false),
-                debtTotal: 5433,
-                expenseTotal: 3000,
-                savingsTotal: 1000,
-                onAllocationAction: {}
-            )
-            .padding()
-            
-            Spacer()
-        }
-    }
-}
+
