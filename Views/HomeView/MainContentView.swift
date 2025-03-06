@@ -5,6 +5,9 @@ struct MainContentView: View {
     @AppStorage("monthlyIncome") var monthlyIncomeStored: Double = 0
     @AppStorage("selectedPayPeriod") var selectedPayPeriodRaw: String = "Monthly"
     
+    // Tutorial state - placed in main view
+    @AppStorage("hasSeenAffordabilityTutorial") private var hasSeenTutorial = false
+    
     // Computed property to get a PayPeriod from the stored raw value.
     private var payPeriodStored: PayPeriod {
         PayPeriod(rawValue: selectedPayPeriodRaw) ?? .monthly
