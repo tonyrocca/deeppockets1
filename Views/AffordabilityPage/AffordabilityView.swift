@@ -808,6 +808,8 @@ struct CategoryRowView: View {
 }
 
 // MARK: - Assumption View
+// MARK: - AssumptionView (Same as in AffordabilityView)
+// MARK: - Improved AssumptionView (matching AffordabilityView style)
 struct AssumptionView: View {
     @Binding var assumption: CategoryAssumption
     @FocusState private var isFocused: Bool
@@ -817,56 +819,67 @@ struct AssumptionView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
+            // Title
             Text(assumption.title)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundColor(Theme.label)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundColor(.white)
             
+            // Description (if available)
             if let description = assumption.description {
                 Text(description)
-                    .font(.system(size: 13))
+                    .font(.system(size: 15))
                     .foregroundColor(Theme.secondaryLabel)
                     .padding(.bottom, 2)
             }
             
-            HStack {
-                if case .textField = assumption.inputType {
-                    Text("$")
+            // Input field - crisp, clear styling matching AffordabilityView
+            HStack(spacing: 8) {
+                // Value field
+                HStack(spacing: 4) {
+                    // Currency symbol for text fields
+                    if case .textField = assumption.inputType {
+                        Text("$")
+                            .foregroundColor(.white)
+                            .font(.system(size: 17))
+                    }
+                    
+                    // The text input
+                    TextField("", text: $localValue)
+                        .keyboardType(.decimalPad)
+                        .font(.system(size: 20, weight: .medium))
                         .foregroundColor(.white)
-                }
-                
-                TextField("", text: $localValue)
-                    .keyboardType(.numberPad)
-                    .focused($isFocused)
-                    .font(.system(size: 17))
-                    .foregroundColor(.white)
-                    .onChange(of: localValue) { newValue in
-                        let filtered = newValue.filter { "0123456789.".contains($0) }
-                        if filtered != newValue {
-                            localValue = filtered
+                        .focused($isFocused)
+                        .multilineTextAlignment(.leading)
+                        .onChange(of: localValue) { newValue in
+                            let filtered = newValue.filter { "0123456789.".contains($0) }
+                            if filtered != newValue {
+                                localValue = filtered
+                            }
                         }
+                    
+                    // Suffix (%, yrs, etc.)
+                    switch assumption.inputType {
+                    case .percentageSlider:
+                        Text("%")
+                            .foregroundColor(Theme.secondaryLabel)
+                            .font(.system(size: 17))
+                    case .yearSlider:
+                        Text("yrs")
+                            .foregroundColor(Theme.secondaryLabel)
+                            .font(.system(size: 17))
+                    default:
+                        EmptyView()
                     }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        isFocused = true
-                    }
-                
-                switch assumption.inputType {
-                case .percentageSlider:
-                    Text("%")
-                        .foregroundColor(Theme.secondaryLabel)
-                case .yearSlider:
-                    Text("yrs")
-                        .foregroundColor(Theme.secondaryLabel)
-                default:
-                    EmptyView()
+                    
+                    Spacer()
                 }
-            }
-            .padding()
-            .background(Theme.surfaceBackground)
-            .cornerRadius(8)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                isFocused = true
+                .padding(16)
+                .background(Theme.surfaceBackground)
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(isFocused ? Theme.tint : Color.clear, lineWidth: 1)
+                )
             }
         }
         .onAppear {
@@ -875,15 +888,6 @@ struct AssumptionView: View {
         .onChange(of: isFocused) { newFocus in
             if !newFocus {
                 updateAssumption()
-            }
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") {
-                    updateAssumption()
-                    isFocused = false
-                }
             }
         }
     }

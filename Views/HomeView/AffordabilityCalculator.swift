@@ -238,7 +238,24 @@ struct AffordabilityCalculatorModal: View {
             .background(Theme.background)
             .cornerRadius(20)
             .padding()
+            .onTapGesture {
+                // Dismiss keyboard when tapping outside of input fields
+                dismissKeyboard()
+            }
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        dismissKeyboard()
+                    }
+                }
+            }
         }
+    }
+    
+    private func dismissKeyboard() {
+        isAmountFocused = false
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 
     // MARK: - Header View
@@ -416,14 +433,11 @@ struct AffordabilityCalculatorModal: View {
                                 .cornerRadius(4)
                             
                             ForEach($localAssumptions) { $assumption in
-                                AssumptionSliderView(
-                                    title: assumption.title,
-                                    range: assumption.inputType.getRange(),
-                                    step: assumption.inputType.getStep(),
-                                    suffix: assumption.inputType.getSuffix(),
-                                    value: $assumption.value,
-                                    onChanged: { newValue in
-                                        assumption.value = newValue
+                                // Uses AffordabilityView's AssumptionView
+                                AssumptionView(
+                                    assumption: $assumption,
+                                    onChanged: { _ in
+                                        // The binding already updates the value
                                     }
                                 )
                             }
@@ -435,16 +449,11 @@ struct AffordabilityCalculatorModal: View {
                 }
                 .padding(.bottom, 100) // space for button at bottom
             }
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 0)
-                    .onEnded { _ in
-                        isAmountFocused = false
-                    }
-            )
             
             // Calculate Button at bottom
             if !amount.isEmpty {
                 Button(action: {
+                    dismissKeyboard()
                     if let amountValue = Double(amount) {
                         let finalAmount = isMonthlyAmount ? amountValue * 12 : amountValue
                         withAnimation {
@@ -461,14 +470,6 @@ struct AffordabilityCalculatorModal: View {
                         .cornerRadius(12)
                 }
                 .padding(.bottom, 16)
-            }
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") {
-                    isAmountFocused = false
-                }
             }
         }
     }
@@ -563,9 +564,17 @@ struct AffordabilityCalculatorModal: View {
                 }
 
                 if showAssumptions {
-                    assumptionsView(category: category)
+                    ForEach($localAssumptions) { $assumption in
+                        // Uses AffordabilityView's AssumptionView
+                        AssumptionView(
+                            assumption: $assumption,
+                            onChanged: { _ in
+                                // The binding already updates the value
+                            }
+                        )
+                    }
                 } else {
-                    ForEach(category.assumptions) { assumption in
+                    ForEach(localAssumptions) { assumption in
                         HStack {
                             Text(assumption.title)
                                 .font(.system(size: 15))
@@ -650,25 +659,9 @@ struct AffordabilityCalculatorModal: View {
         }
     }
 
-    private func assumptionsView(category: BudgetCategory) -> some View {
-        VStack(spacing: 16) {
-            ForEach(category.assumptions) { assumption in
-                // For simplicity while assumptions are being edited, just show their values
-                HStack {
-                    Text(assumption.title)
-                        .font(.system(size: 15))
-                        .foregroundColor(Theme.secondaryLabel)
-                    Spacer()
-                    Text(assumption.displayValue)
-                        .font(.system(size: 15))
-                        .foregroundColor(.white)
-                }
-            }
-        }
-    }
-
     // MARK: - Helper Methods
     private func handleBack() {
+        dismissKeyboard()
         withAnimation {
             switch currentStep {
             case .amountInput:
