@@ -1,5 +1,7 @@
 import SwiftUI
 
+typealias BudgetCompletionStep = BudgetCompletionLoading.BudgetCompletionStep
+
 // MARK: - Income Period Enum
 enum IncomePeriod: String, CaseIterable {
     case annual = "Annual"
@@ -226,6 +228,7 @@ struct CategoryItemView: View {
     }
 }
 
+// MARK: - EditAmountModal
 struct EditAmountModal: View {
     @Binding var isPresented: Bool
     let category: BudgetCategory
@@ -326,7 +329,7 @@ struct EditAmountModal: View {
     }
 }
 
-// MARK: - BudgetView (Updated with EnhancedBudgetHeader)
+// MARK: - BudgetView (Updated with EnhancedBudgetHeader and Budget Completion)
 struct BudgetView: View {
     let monthlyIncome: Double
     let payPeriod: PayPeriod
@@ -346,6 +349,10 @@ struct BudgetView: View {
     @State private var debtInputData: [String: DebtInputData] = [:]
     @State private var temporaryAmounts: [String: Double] = [:]
     
+    // Add these states for the budget completion loading
+    @State private var showBudgetCompletion = false
+    @State private var completedBudgetStep: BudgetCompletionStep = .smartBudget
+
     @EnvironmentObject private var budgetModel: BudgetModel
     
     private var periodMultiplier: Double {
@@ -356,6 +363,7 @@ struct BudgetView: View {
         }
     }
     
+    // Helper computed properties and functions
     private var debtCategories: [BudgetCategory] {
         BudgetCategoryStore.shared.categories.filter { isDebtCategory($0.id) }
     }
@@ -434,7 +442,6 @@ struct BudgetView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 24) {
-                        // In BudgetView.swift where you use EnhancedBudgetHeader
                         EnhancedBudgetHeader(
                             selectedPeriod: $selectedPeriod,
                             monthlyIncome: monthlyIncome,
@@ -480,7 +487,7 @@ struct BudgetView: View {
             }
         }
         .background(Theme.background)
-        // At the end of the VStack, with other .sheet modifiers
+        // Existing sheet modifiers
         .fullScreenCover(isPresented: $showImprovements) {
             BudgetImprovementModal(isPresented: $showImprovements)
                 .environmentObject(budgetModel)
@@ -507,7 +514,6 @@ struct BudgetView: View {
                         // Header
                         ZStack {
                             if case .debtConfiguration = selectedDebtPhase {
-                                // Back Button
                                 HStack {
                                     Button(action: { selectedDebtPhase = .debtSelection }) {
                                         HStack(spacing: 4) {
@@ -521,13 +527,11 @@ struct BudgetView: View {
                                 }
                             }
                             
-                            // Title alignment
                             Text(selectedDebtPhase.title)
                                 .font(.system(size: 28, weight: .bold))
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
                             
-                            // Close Button
                             HStack {
                                 Spacer()
                                 Button(action: {
@@ -543,14 +547,12 @@ struct BudgetView: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 20)
                         
-                        // Description
                         Text(selectedDebtPhase.description)
                             .font(.system(size: 17))
                             .foregroundColor(Theme.secondaryLabel)
                             .multilineTextAlignment(.center)
                             .padding(.top, 8)
                         
-                        // Content
                         ScrollView {
                             VStack(spacing: 32) {
                                 switch selectedDebtPhase {
@@ -582,7 +584,7 @@ struct BudgetView: View {
                             .padding(.horizontal, 20)
                         }
                         
-                        // Next/Add Button
+                        // Next/Add Button with completion integration
                         VStack {
                             Spacer()
                             Button(action: {
@@ -594,13 +596,15 @@ struct BudgetView: View {
                                         debtInputData[nextCategory.id] = DebtInputData()
                                         selectedDebtPhase = .debtConfiguration(nextCategory)
                                     } else {
+                                        // Completion for debt phase
+                                        completedBudgetStep = .debtCategory
+                                        showBudgetCompletion = true
                                         showingDebtSheet = false
                                     }
                                     
                                 case .debtConfiguration(let category):
                                     if let inputData = debtInputData[category.id],
                                        let amount = inputData.payoffPlan?.monthlyPayment {
-                                        // Create the budget item
                                         let newItem = BudgetItem(
                                             id: category.id,
                                             category: category,
@@ -611,12 +615,10 @@ struct BudgetView: View {
                                             isActive: true
                                         )
                                         
-                                        // Add to budget model if not already present
                                         if !budgetModel.budgetItems.contains(where: { $0.id == category.id }) {
                                             budgetModel.budgetItems.append(newItem)
                                         }
                                         
-                                        // Update BudgetStore
                                         budgetStore.setCategory(category, amount: amount)
                                         selectedCategories.remove(category.id)
                                         
@@ -629,6 +631,9 @@ struct BudgetView: View {
                                         } else {
                                             budgetModel.calculateUnusedAmount()
                                             selectedDebtPhase = .debtSelection
+                                            // Completion for debt phase
+                                            completedBudgetStep = .debtCategory
+                                            showBudgetCompletion = true
                                             showingDebtSheet = false
                                         }
                                     }
@@ -666,7 +671,6 @@ struct BudgetView: View {
                         // Header
                         ZStack {
                             if case .expenseConfiguration = selectedExpensePhase {
-                                // Back Button
                                 HStack {
                                     Button(action: { selectedExpensePhase = .expenseSelection }) {
                                         HStack(spacing: 4) {
@@ -680,13 +684,11 @@ struct BudgetView: View {
                                 }
                             }
                             
-                            // Title alignment
                             Text(selectedExpensePhase.title)
                                 .font(.system(size: 28, weight: .bold))
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
                             
-                            // Close Button
                             HStack {
                                 Spacer()
                                 Button(action: {
@@ -702,14 +704,12 @@ struct BudgetView: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 20)
                         
-                        // Description
                         Text(selectedExpensePhase.description)
                             .font(.system(size: 17))
                             .foregroundColor(Theme.secondaryLabel)
                             .multilineTextAlignment(.center)
                             .padding(.top, 8)
                         
-                        // Content
                         ScrollView {
                             VStack(spacing: 32) {
                                 switch selectedExpensePhase {
@@ -740,7 +740,7 @@ struct BudgetView: View {
                             .padding(.horizontal, 20)
                         }
                         
-                        // Next/Add Button
+                        // Next/Add Button with completion integration
                         VStack {
                             Spacer()
                             Button(action: {
@@ -752,12 +752,14 @@ struct BudgetView: View {
                                         temporaryAmounts[nextCategory.id] = nil
                                         selectedExpensePhase = .expenseConfiguration(nextCategory)
                                     } else {
+                                        // Completion for expense phase
+                                        completedBudgetStep = .expenseCategory
+                                        showBudgetCompletion = true
                                         showingExpenseSheet = false
                                     }
                                     
                                 case .expenseConfiguration(let category):
                                     if let amount = temporaryAmounts[category.id] {
-                                        // Create the budget item
                                         let newItem = BudgetItem(
                                             id: category.id,
                                             category: category,
@@ -768,12 +770,10 @@ struct BudgetView: View {
                                             isActive: true
                                         )
                                         
-                                        // Add to budget model if not already present
                                         if !budgetModel.budgetItems.contains(where: { $0.id == category.id }) {
                                             budgetModel.budgetItems.append(newItem)
                                         }
                                         
-                                        // Update BudgetStore
                                         budgetStore.setCategory(category, amount: amount)
                                         selectedCategories.remove(category.id)
                                         
@@ -785,6 +785,9 @@ struct BudgetView: View {
                                         } else {
                                             budgetModel.calculateUnusedAmount()
                                             selectedExpensePhase = .expenseSelection
+                                            // Completion for expense phase
+                                            completedBudgetStep = .expenseCategory
+                                            showBudgetCompletion = true
                                             showingExpenseSheet = false
                                         }
                                     }
@@ -821,7 +824,6 @@ struct BudgetView: View {
                         // Header
                         ZStack {
                             if case .savingsConfiguration = selectedSavingsPhase {
-                                // Back Button
                                 HStack {
                                     Button(action: { selectedSavingsPhase = .savingsSelection }) {
                                         HStack(spacing: 4) {
@@ -835,13 +837,11 @@ struct BudgetView: View {
                                 }
                             }
                             
-                            // Title alignment
                             Text(selectedSavingsPhase.title)
                                 .font(.system(size: 28, weight: .bold))
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
                             
-                            // Close Button
                             HStack {
                                 Spacer()
                                 Button(action: {
@@ -857,14 +857,12 @@ struct BudgetView: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 20)
                         
-                        // Description
                         Text(selectedSavingsPhase.description)
                             .font(.system(size: 17))
                             .foregroundColor(Theme.secondaryLabel)
                             .multilineTextAlignment(.center)
                             .padding(.top, 8)
                         
-                        // Content
                         ScrollView {
                             VStack(spacing: 32) {
                                 switch selectedSavingsPhase {
@@ -893,7 +891,7 @@ struct BudgetView: View {
                             .padding(.horizontal, 20)
                         }
                         
-                        // Next/Add Button
+                        // Next/Add Button with completion integration
                         VStack {
                             Spacer()
                             Button(action: {
@@ -905,12 +903,14 @@ struct BudgetView: View {
                                         temporaryAmounts[nextCategory.id] = nil
                                         selectedSavingsPhase = .savingsConfiguration(nextCategory)
                                     } else {
+                                        // Completion for savings phase
+                                        completedBudgetStep = .savingsCategory
+                                        showBudgetCompletion = true
                                         showingSavingsSheet = false
                                     }
                                     
                                 case .savingsConfiguration(let category):
                                     if let amount = temporaryAmounts[category.id] {
-                                        // Create the budget item
                                         let newItem = BudgetItem(
                                             id: category.id,
                                             category: category,
@@ -921,12 +921,10 @@ struct BudgetView: View {
                                             isActive: true
                                         )
                                         
-                                        // Add to budget model if not already present
                                         if !budgetModel.budgetItems.contains(where: { $0.id == category.id }) {
                                             budgetModel.budgetItems.append(newItem)
                                         }
                                         
-                                        // Update BudgetStore
                                         budgetStore.setCategory(category, amount: amount)
                                         selectedCategories.remove(category.id)
                                         
@@ -938,6 +936,9 @@ struct BudgetView: View {
                                         } else {
                                             budgetModel.calculateUnusedAmount()
                                             selectedSavingsPhase = .savingsSelection
+                                            // Completion for savings phase
+                                            completedBudgetStep = .savingsCategory
+                                            showBudgetCompletion = true
                                             showingSavingsSheet = false
                                         }
                                     }
@@ -963,20 +964,32 @@ struct BudgetView: View {
                 }
             }
         }
+        // Full screen cover for Budget Completion Loading
+        .fullScreenCover(isPresented: $showBudgetCompletion) {
+            BudgetCompletionLoading(
+                isPresented: $showBudgetCompletion,
+                monthlyIncome: monthlyIncome,
+                completedStep: completedBudgetStep
+            )
+        }
     }
     
     private func addSelectedCategoriesToBudget() {
+        // Determine which step was completed based on selected categories
+        if let _ = selectedCategories.first(where: { isDebtCategory($0) }) {
+            completedBudgetStep = .debtCategory
+        } else if let _ = selectedCategories.first(where: { isSavingsCategory($0) }) {
+            completedBudgetStep = .savingsCategory
+        } else {
+            completedBudgetStep = .expenseCategory
+        }
+        
         for categoryId in selectedCategories {
             if let category = BudgetCategoryStore.shared.categories.first(where: { $0.id == categoryId }) {
                 let recommendedAmount = monthlyIncome * category.allocationPercentage
-                
-                // Update BudgetStore
                 budgetStore.setCategory(category, amount: recommendedAmount)
-                
-                // Update BudgetModel
                 let type: BudgetCategoryType = isSavingsCategory(category.id) ? .savings : .expense
                 let priority = determinePriority(for: category)
-                
                 let newItem = BudgetItem(
                     id: category.id,
                     category: category,
@@ -986,19 +999,17 @@ struct BudgetView: View {
                     priority: priority,
                     isActive: true
                 )
-                
-                // Add to budgetItems if not already present
                 if !budgetModel.budgetItems.contains(where: { $0.id == category.id }) {
                     budgetModel.budgetItems.append(newItem)
                 }
             }
         }
         
-        // Recalculate unused amount
         budgetModel.calculateUnusedAmount()
+        showBudgetCompletion = true
         selectedCategories.removeAll()
     }
-
+    
     private func determinePriority(for category: BudgetCategory) -> BudgetCategoryPriority {
         switch category.id {
         case "house", "rent", "groceries", "home_utilities", "medical", "emergency_savings":
@@ -1011,7 +1022,6 @@ struct BudgetView: View {
         }
     }
     
-    // MARK: - Helpers
     private func categorySection(title: String, items: [BudgetItem]) -> some View {
         VStack(spacing: 8) {
             categoryHeader(title: title)
@@ -1093,8 +1103,9 @@ struct BudgetView: View {
             VStack(spacing: 12) {
                 // Smart Budget Builder (Recommended)
                 Button(action: {
-                    // Just generate the smart budget
                     budgetModel.generateSmartBudget()
+                    completedBudgetStep = .smartBudget
+                    showBudgetCompletion = true
                 }) {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
@@ -1190,3 +1201,5 @@ struct BudgetView: View {
         return formatter.string(from: NSNumber(value: value)) ?? "$0"
     }
 }
+
+// Note: The views EnhancedBudgetHeader, BudgetImprovementModal, BudgetBuilderModal, BudgetCompletionLoading, CategorySelectionView, DebtConfigurationView, ExpenseConfigurationView, SavingsConfigurationView and models such as BudgetModel, BudgetStore, BudgetItem, BudgetCategory, BudgetBuilderPhase, DebtInputData, BudgetCompletionStep, etc., are assumed to be defined elsewhere.

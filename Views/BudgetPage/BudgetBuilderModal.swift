@@ -1,7 +1,5 @@
 import SwiftUI
 
-import SwiftUI
-
 // MARK: - Budget Builder Phase
 enum BudgetBuilderPhase {
     case debtSelection
@@ -97,6 +95,8 @@ struct BudgetBuilderModal: View {
     @State private var selectedCategories: Set<String> = []
     @State private var temporaryAmounts: [String: Double] = [:]
     @State private var debtInputData: [String: DebtInputData] = [:]
+    @State private var showBudgetCompletion = false
+    @State private var completedBudgetStep: BudgetCompletionLoading.BudgetCompletionStep = .customBudget
     
     var body: some View {
         ZStack {
@@ -254,6 +254,13 @@ struct BudgetBuilderModal: View {
                 }
             }
         }
+        .fullScreenCover(isPresented: $showBudgetCompletion) {
+            BudgetCompletionLoading(
+                isPresented: $showBudgetCompletion,
+                monthlyIncome: monthlyIncome,
+                completedStep: completedBudgetStep
+            )
+        }
     }
     
     // MARK: - Selection View
@@ -355,6 +362,10 @@ struct BudgetBuilderModal: View {
                     budgetModel.updateAllocation(for: category.id, amount: amount)
                     selectedCategories.remove(category.id)
                     
+                    // Show completion screen for debt category
+                    completedBudgetStep = .debtCategory
+                    showBudgetCompletion = true
+                    
                     if let nextCategory = selectedCategories.compactMap({ id in
                         debtCategories.first(where: { $0.id == id })
                     }).first {
@@ -385,6 +396,10 @@ struct BudgetBuilderModal: View {
                     budgetModel.updateAllocation(for: category.id, amount: amount)
                     selectedCategories.remove(category.id)
                     
+                    // Show completion screen for expense category
+                    completedBudgetStep = .expenseCategory
+                    showBudgetCompletion = true
+                    
                     if let nextCategory = selectedCategories.compactMap({ id in
                         expenseCategories.first(where: { $0.id == id })
                     }).first {
@@ -395,7 +410,7 @@ struct BudgetBuilderModal: View {
                         phase = .savingsSelection
                     }
                 }
-                
+                    
             case .savingsSelection:
                 if let nextCategory = selectedCategories.compactMap({ id in
                     savingsCategories.first(where: { $0.id == id })
@@ -403,6 +418,9 @@ struct BudgetBuilderModal: View {
                     temporaryAmounts[nextCategory.id] = nil
                     phase = .savingsConfiguration(nextCategory)
                 } else {
+                    // Show completion screen for full custom budget
+                    completedBudgetStep = .customBudget
+                    showBudgetCompletion = true
                     isPresented = false
                 }
                 
@@ -412,6 +430,10 @@ struct BudgetBuilderModal: View {
                     budgetModel.toggleCategory(id: category.id)
                     budgetModel.updateAllocation(for: category.id, amount: amount)
                     selectedCategories.remove(category.id)
+                    
+                    // Show completion screen for savings category
+                    completedBudgetStep = .savingsCategory
+                    showBudgetCompletion = true
                     
                     if let nextCategory = selectedCategories.compactMap({ id in
                         savingsCategories.first(where: { $0.id == id })
