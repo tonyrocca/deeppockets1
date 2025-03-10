@@ -100,6 +100,53 @@ struct ProfileView: View {
                         }
                         .padding(.horizontal)
                         
+                        // Tutorial Help Section
+                        VStack(alignment: .leading, spacing: 8) {
+                            sectionHeader("HELP & SUPPORT")
+                            
+                            Button(action: {
+                                // Reset the tutorial flag to show it again
+                                UserDefaults.standard.set(false, forKey: "hasSeenAffordabilityTutorial")
+                                dismiss()
+                            }) {
+                                HStack {
+                                    Image(systemName: "questionmark.circle.fill")
+                                        .font(.system(size: 18))
+                                    Text("View App Tutorial")
+                                        .font(.system(size: 17))
+                                        .foregroundColor(.white)
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(Theme.secondaryLabel)
+                                }
+                                .padding()
+                                .background(Theme.surfaceBackground)
+                                .cornerRadius(12)
+                            }
+                            
+                            // Optional: Add additional help options here
+                            Button(action: {
+                                // You could add an action to open a help website or documentation
+                            }) {
+                                HStack {
+                                    Image(systemName: "doc.text.fill")
+                                        .font(.system(size: 18))
+                                    Text("App Guide")
+                                        .font(.system(size: 17))
+                                        .foregroundColor(.white)
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(Theme.secondaryLabel)
+                                }
+                                .padding()
+                                .background(Theme.surfaceBackground)
+                                .cornerRadius(12)
+                            }
+                        }
+                        .padding(.horizontal)
+                        
                         // Account Section (Only show if authenticated)
                         if userModel.isAuthenticated {
                             VStack(alignment: .leading, spacing: 8) {

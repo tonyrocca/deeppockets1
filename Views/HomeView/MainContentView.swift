@@ -5,8 +5,9 @@ struct MainContentView: View {
     @AppStorage("monthlyIncome") var monthlyIncomeStored: Double = 0
     @AppStorage("selectedPayPeriod") var selectedPayPeriodRaw: String = "Monthly"
     
-    // Tutorial state - placed in main view
+    // Tutorial state
     @AppStorage("hasSeenAffordabilityTutorial") private var hasSeenTutorial = false
+    @State private var showTutorial = false
     
     // Computed property to get a PayPeriod from the stored raw value.
     private var payPeriodStored: PayPeriod {
@@ -113,6 +114,15 @@ struct MainContentView: View {
             
             // Overlay Content (modals, action buttons, etc.)
             overlayContent
+            
+            // Tutorial overlay
+            if showTutorial {
+                EnhancedTutorialView(
+                    isPresented: $showTutorial,
+                    monthlyIncome: model.monthlyIncome
+                )
+                .zIndex(100) // Ensure it's on top of everything
+            }
         }
         .background(Theme.background)
         .navigationBarHidden(true)
@@ -128,6 +138,9 @@ struct MainContentView: View {
             // Initialize your models with the persisted monthly income.
             model.monthlyIncome = monthlyIncomeStored
             budgetModel.monthlyIncome = monthlyIncomeStored
+            
+            // Check if we should show the tutorial
+            checkAndShowTutorial()
         }
     }
     
@@ -203,6 +216,25 @@ struct MainContentView: View {
             }
         }
     }
+    
+    // MARK: - Tutorial Handling
+    private func checkAndShowTutorial() {
+        // Only show tutorial if user hasn't seen it yet
+        if !hasSeenTutorial {
+            // Add a small delay to let the UI load first
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                withAnimation {
+                    showTutorial = true
+                }
+            }
+        }
+    }
+    
+    // Function to be called from the Profile view to reset and show tutorial
+    func resetAndShowTutorial() {
+        hasSeenTutorial = false
+        showTutorial = true
+    }
 }
 
 // MARK: - Extension for Keyboard Dismissal
@@ -210,12 +242,4 @@ extension View {
     func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
-}
-
-// MARK: - Preview
-#Preview {
-    NavigationStack {
-        MainContentView()
-    }
-    .preferredColorScheme(.dark)
 }

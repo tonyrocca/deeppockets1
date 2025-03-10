@@ -33,6 +33,7 @@ struct SalaryInputView: View {
     @AppStorage("paycheck") var paycheck: String = ""
     @AppStorage("selectedPayPeriod") var selectedPayPeriodRaw: String = "Monthly"
     @AppStorage("monthlyIncome") var monthlyIncome: Double = 0
+    @AppStorage("isFirstTimeUser") private var isFirstTimeUser: Bool = true
     
     // Computed property for selected pay period.
     var selectedPayPeriod: PayPeriod {
@@ -156,9 +157,22 @@ struct SalaryInputView: View {
                         if let amount = Double(paycheck) {
                             monthlyIncome = amount * selectedPayPeriod.multiplier
                             affordabilityModel.monthlyIncome = monthlyIncome
+                            
                             // Mark onboarding as complete
                             UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-                            showAffordability = true
+                            
+                            // Always reset the tutorial flag when setting up income for the first time
+                            if isFirstTimeUser {
+                                UserDefaults.standard.set(false, forKey: "hasSeenAffordabilityTutorial")
+                                // Mark that they're no longer a first-time user
+                                isFirstTimeUser = false
+                                
+                                // Navigate to MainContentView with a parameter to show loading immediately
+                                showAffordability = true
+                            } else {
+                                // For returning users just updating income
+                                showAffordability = true
+                            }
                         }
                     } label: {
                         Text("Calculate What You Can Afford")
@@ -177,7 +191,9 @@ struct SalaryInputView: View {
         }
         .navigationBarHidden(true)
         .navigationDestination(isPresented: $showAffordability) {
+            // Create new instance to force the onAppear to run
             MainContentView()
+                .id(UUID()) // Force a new instance with unique ID
         }
     }
 }

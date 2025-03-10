@@ -38,6 +38,8 @@
 		7737C13D2D095EA8002A0CAB /* Exceptions for "Views" folder in "DeepPocketsUITests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				AffordabilityPage/AffordabilityLoading.swift,
+				AffordabilityPage/AffordabilityTutorialButton.swift,
 				AffordabilityPage/AffordabilityView.swift,
 				AffordabilityPage/CategoryDetailModal.swift,
 				BudgetPage/BudgetBuilderModal.swift,
