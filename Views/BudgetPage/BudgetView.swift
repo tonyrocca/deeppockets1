@@ -1,6 +1,12 @@
 import SwiftUI
 
-typealias BudgetCompletionStep = BudgetCompletionLoading.BudgetCompletionStep
+enum BudgetCompletionStep {
+    case smartBudget
+    case customBudget
+    case debtCategory
+    case expenseCategory
+    case savingsCategory
+}
 
 // MARK: - Income Period Enum
 enum IncomePeriod: String, CaseIterable {
@@ -966,7 +972,7 @@ struct BudgetView: View {
         }
         // Full screen cover for Budget Completion Loading
         .fullScreenCover(isPresented: $showBudgetCompletion) {
-            BudgetCompletionLoading(
+            BudgetCompletionFlow(
                 isPresented: $showBudgetCompletion,
                 monthlyIncome: monthlyIncome,
                 completedStep: completedBudgetStep

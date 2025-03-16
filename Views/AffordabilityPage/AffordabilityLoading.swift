@@ -741,7 +741,7 @@ struct EnhancedTutorialView: View {
     }
 }
 
-// Animation effect for pulsating circle
+// Animation effect for pulsating icon
 struct PulsateEffect: ViewModifier {
     @State private var isPulsating = false
     

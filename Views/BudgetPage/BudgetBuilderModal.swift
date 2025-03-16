@@ -96,8 +96,8 @@ struct BudgetBuilderModal: View {
     @State private var temporaryAmounts: [String: Double] = [:]
     @State private var debtInputData: [String: DebtInputData] = [:]
     @State private var showBudgetCompletion = false
-    @State private var completedBudgetStep: BudgetCompletionLoading.BudgetCompletionStep = .customBudget
-    
+    @State private var completedBudgetStep: BudgetCompletionStep = .customBudget
+
     var body: some View {
         ZStack {
             // Background
@@ -255,7 +255,7 @@ struct BudgetBuilderModal: View {
             }
         }
         .fullScreenCover(isPresented: $showBudgetCompletion) {
-            BudgetCompletionLoading(
+            BudgetCompletionFlow(
                 isPresented: $showBudgetCompletion,
                 monthlyIncome: monthlyIncome,
                 completedStep: completedBudgetStep
