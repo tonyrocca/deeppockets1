@@ -571,11 +571,13 @@ struct CategoryToggleRow: View {
 }
 
 // MARK: - DebtConfigurationView with Fixed Binding Issues
+// Modified DebtConfigurationView
 struct DebtConfigurationView: View {
     let category: BudgetCategory
     let monthlyIncome: Double
     @Binding var inputData: DebtInputData
     @State private var inputMode: DebtInputMode? = nil
+    @State private var targetDate = Date().addingTimeInterval(365 * 24 * 60 * 60) // Default to 1 year
     
     init(category: BudgetCategory, monthlyIncome: Double, inputData: Binding<DebtInputData>) {
         self.category = category
@@ -607,17 +609,17 @@ struct DebtConfigurationView: View {
             
             // Options Section
             VStack(spacing: 16) {
-                // Recommended Amount Toggle Option
-                DebtOptionToggleRow(
+                // Recommended Amount Toggle Option - USING PROPER TOGGLE SWITCH
+                OptionToggleRow(
                     title: "\(formatCurrency(recommendedAmount))/month",
                     subtitle: "(\(Int(category.allocationPercentage * 100))% of income)",
                     isSelected: inputMode == .recommended,
                     onToggle: { selectMode(.recommended) }
                 )
                 
-                // Custom Payment Section
+                // Custom Payment Section - USING PROPER TOGGLE SWITCH
                 VStack(spacing: 0) {
-                    DebtOptionToggleRow(
+                    OptionToggleRow(
                         title: "Custom debt setup",
                         subtitle: nil,
                         isSelected: inputMode == .custom,
@@ -631,7 +633,7 @@ struct DebtConfigurationView: View {
                                 title: "Total Debt Amount",
                                 text: $inputData.debtAmount,
                                 placeholder: "Enter amount",
-                                prefix: "",
+                                prefix: "$",
                                 suffix: "",
                                 onChange: { calculatePayoffPlan() }
                             )
@@ -655,6 +657,25 @@ struct DebtConfigurationView: View {
                                 suffix: "",
                                 onChange: { calculatePayoffPlan() }
                             )
+                            
+                            // ADDED TARGET DATE SELECTION
+                            HStack {
+                                Text("Target Payoff Date")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(Theme.secondaryLabel)
+                                Spacer()
+                                DatePicker("", selection: $targetDate,
+                                          in: Date()...,
+                                          displayedComponents: .date)
+                                    .datePickerStyle(.compact)
+                                    .colorScheme(.dark)
+                                    .onChange(of: targetDate) { _ in
+                                        calculatePayoffPlan()
+                                    }
+                            }
+                            .padding()
+                            .background(Theme.elevatedBackground)
+                            .cornerRadius(8)
                         }
                         .padding()
                     }
