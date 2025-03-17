@@ -84,7 +84,6 @@ struct DebtPayoffPlan {
     }
 }
 
-// MARK: - BudgetBuilderModal View
 struct BudgetBuilderModal: View {
     @Binding var isPresented: Bool
     @ObservedObject var budgetStore: BudgetStore
@@ -97,7 +96,7 @@ struct BudgetBuilderModal: View {
     @State private var debtInputData: [String: DebtInputData] = [:]
     @State private var showBudgetCompletion = false
     @State private var completedBudgetStep: BudgetCompletionStep = .customBudget
-
+    
     var body: some View {
         ZStack {
             // Background
@@ -112,7 +111,7 @@ struct BudgetBuilderModal: View {
                     VStack(spacing: 0) {
                         // Header
                         ZStack {
-                            // Back Button
+                            // Back Button - positioned on the left
                             HStack {
                                 if !isInitialPhase {
                                     Button(action: navigateBack) {
@@ -132,7 +131,7 @@ struct BudgetBuilderModal: View {
                                 .font(.system(size: 20, weight: .bold))
                                 .foregroundColor(.white)
                             
-                            // Close Button
+                            // Close Button - positioned on the right
                             HStack {
                                 Spacer()
                                 Button(action: { isPresented = false }) {
@@ -213,10 +212,10 @@ struct BudgetBuilderModal: View {
                             }
                             .padding(.horizontal, 20)
                         }
+                        
+                        // Spacer to push everything up
+                        Spacer()
                     }
-                    .background(Theme.background)
-                    .cornerRadius(20)
-                    .padding()
                     
                     // Fixed Bottom Bar with Next Button
                     VStack {
@@ -252,6 +251,9 @@ struct BudgetBuilderModal: View {
                     }
                     .ignoresSafeArea(.all, edges: .bottom)
                 }
+                .background(Theme.background)
+                .cornerRadius(20)
+                .padding()
             }
         }
         .fullScreenCover(isPresented: $showBudgetCompletion) {
@@ -907,7 +909,6 @@ struct ExpenseConfigurationView: View {
     }
 }
 
-// MARK: - SavingsConfigurationView with Toggles
 struct SavingsConfigurationView: View {
     let category: BudgetCategory
     let monthlyIncome: Double
@@ -922,7 +923,6 @@ struct SavingsConfigurationView: View {
         self._amount = amount
         self._inputMode = State(initialValue: nil)
         self._targetAmount = State(initialValue: "")
-        self._targetDate = State(initialValue: Date().addingTimeInterval(365 * 24 * 60 * 60))
     }
     
     enum SavingsInputMode {
@@ -945,7 +945,7 @@ struct SavingsConfigurationView: View {
     
     var body: some View {
         VStack(spacing: 24) {
-            // Header
+            // Header - simplified to just emoji and name
             HStack(spacing: 8) {
                 Text(category.emoji)
                     .font(.title)
@@ -976,6 +976,12 @@ struct SavingsConfigurationView: View {
                     
                     if inputMode == .custom {
                         VStack(spacing: 16) {
+                            // Goal toggle
+                            Toggle("Set savings goal", isOn: .constant(true))
+                                .tint(Theme.tint)
+                                .padding(.horizontal)
+                                .padding(.top, 12)
+                            
                             // Target Amount
                             HStack {
                                 Text("$")
@@ -996,6 +1002,7 @@ struct SavingsConfigurationView: View {
                             .padding()
                             .background(Theme.elevatedBackground)
                             .cornerRadius(8)
+                            .padding(.horizontal)
                             
                             // Target Date
                             HStack {
@@ -1003,8 +1010,8 @@ struct SavingsConfigurationView: View {
                                     .foregroundColor(.white)
                                 Spacer()
                                 DatePicker("", selection: $targetDate,
-                                            in: Date()...,
-                                            displayedComponents: .date)
+                                          in: Date()...,
+                                          displayedComponents: .date)
                                     .datePickerStyle(.compact)
                                     .colorScheme(.dark)
                                     .onChange(of: targetDate) { _ in
@@ -1014,6 +1021,7 @@ struct SavingsConfigurationView: View {
                             .padding()
                             .background(Theme.elevatedBackground)
                             .cornerRadius(8)
+                            .padding(.horizontal)
                             
                             // Required Monthly Savings
                             if let monthlySavings = requiredMonthlySavings {
@@ -1030,7 +1038,7 @@ struct SavingsConfigurationView: View {
                                     let percentDifference = (difference / recommendedAmount) * 100
                                     
                                     HStack {
-                                        Image(systemName: difference >= 0 ? "arrow.up-right" : "arrow.down-right")
+                                        Image(systemName: difference >= 0 ? "arrow.up.right" : "arrow.down.right")
                                         Text("\(String(format: "%.1f", abs(percentDifference)))% \(difference >= 0 ? "above" : "below") recommended")
                                             .font(.system(size: 13))
                                             .foregroundColor(difference >= 0 ? .red : Theme.tint)
@@ -1040,7 +1048,6 @@ struct SavingsConfigurationView: View {
                                 .padding(.bottom)
                             }
                         }
-                        .padding()
                     }
                 }
                 .background(Theme.surfaceBackground)
@@ -1048,18 +1055,10 @@ struct SavingsConfigurationView: View {
             }
             
             Spacer()
-            
-            VStack(spacing: 8) {
-                Text("Almost done! One final review after this.")
-                    .font(.system(size: 15))
-                    .foregroundColor(Theme.secondaryLabel)
-                    .multilineTextAlignment(.center)
-            }
         }
         .onAppear {
-            inputMode = nil
-            targetAmount = ""
-            amount = nil
+            // Initialize with recommended value by default
+            selectMode(.recommended)
         }
     }
     
@@ -1089,9 +1088,6 @@ struct SavingsConfigurationView: View {
     }
 }
 
-// MARK: - Shared Components
-
-// Option Toggle Row with Toggle Switch
 struct OptionToggleRow: View {
     let title: String
     let subtitle: String?
@@ -1139,6 +1135,7 @@ struct OptionToggleRow: View {
         .buttonStyle(PlainButtonStyle())
     }
 }
+
 
 // Debt Option Toggle Row (Circular Toggle)
 struct DebtOptionToggleRow: View {
